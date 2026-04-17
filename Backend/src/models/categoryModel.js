@@ -21,7 +21,7 @@ const categorySchema = new mongoose.Schema({
 
 // Tối ưu hóa việc tìm kiếm (Tạo index)
 categorySchema.index({ parentId: 1 });
-categorySchema.index({ slug: 1 });
+// categorySchema.index({ slug: 1 });
 
 const Category = mongoose.model('Category', categorySchema);
 
