@@ -42,7 +42,7 @@ const PaymentPage = () => {
       return;
     }
 
-    const socketUrl = import.meta.env.VITE_API_URL || "http://localhost:5001";
+    const socketUrl = import.meta.env.VITE_SOCKET_URL || "http://localhost:5001";
     const socket = io(socketUrl, {
       withCredentials: true,
     });
