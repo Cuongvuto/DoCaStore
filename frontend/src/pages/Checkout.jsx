@@ -9,11 +9,9 @@ import { useNotification } from '../context/NotificationContext';
 const Checkout = () => {
   const navigate = useNavigate();
   const { updateCartCount } = useCart();
-  
-  // Lấy hàm fetchUnreadCount từ NotificationContext ra để dùng
   const { fetchUnreadCount } = useNotification();
 
-  // 1. STATE DỮ LIỆU GIỎ HÀNG (Cập nhật lại cho khớp với Backend mới)
+  // 1. STATE DỮ LIỆU GIỎ HÀNG
   const [cartData, setCartData] = useState({ 
     items: [], 
     subTotal: 0, 
@@ -92,14 +90,15 @@ const Checkout = () => {
     if (code) axios.get(`https://provinces.open-api.vn/api/d/${code}?depth=2`).then((res) => setWards(res.data.wards));
   };
 
-  // --- BƯỚC 3: XỬ LÝ MÃ GIẢM GIÁ ---
+  // --- BƯỚC 3: XỬ LÝ MÃ GIẢM GIÁ (ĐÃ CHUẨN HOÁ) ---
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) return toast.warning("Vui lòng nhập mã giảm giá!");
+    
     try {
       const res = await axiosClient.post("/orders/preview", { couponCode });
       const { finalPrice, totalDiscount, messages } = res.data.data;
       
-      // Ghi đè UI giá tiền chuẩn theo công thức do Backend xử lý
+      // Áp dụng thành công -> Cập nhật lại giá
       setCartData(prev => ({
         ...prev,
         finalPrice: finalPrice, 
@@ -108,13 +107,23 @@ const Checkout = () => {
       }));
 
       setDiscountInfo({
-        amount: 0, // Set về 0 vì tiền đã được gộp vào cartData.finalPrice
+        amount: totalDiscount,
         message: "Đã áp dụng mã thành công",
         isApplied: true
       });
       toast.success("Áp dụng mã thành công!");
+
     } catch (error) {
+      // THẤT BẠI (Mã sai, hết hạn, hoặc user đã dùng) -> Reset lại UI và báo lỗi
       setDiscountInfo({ amount: 0, message: "", isApplied: false });
+      
+      setCartData(prev => ({
+        ...prev,
+        finalPrice: prev.subTotal, // Trả lại giá bằng đúng tiền tạm tính
+        discountAmount: 0,         // Xoá tiền giảm
+        discountMessages: []       // Xoá tin nhắn giảm giá
+      }));
+
       toast.error(error.response?.data?.message || "Mã không hợp lệ hoặc đã hết hạn!");
     }
   };
@@ -170,29 +179,20 @@ const Checkout = () => {
       const res = await axiosClient.post("/orders", orderPayload);
       const orderId = res.data?.data?._id || res.data?.data?.id;
       const checkoutUrl = res.data?.payosCheckoutUrl;
-      const qrCodeString = res.data?.qrCode; // Lấy chuỗi QR từ backend trả về
+      const qrCodeString = res.data?.qrCode; 
       
       toast.success("🎉 Đặt hàng thành công!");
       
-      // Update lại số lượng giỏ hàng trên Header
       updateCartCount(); 
-      
-      // GỌI HÀM NÀY ĐỂ ĐÁ LÔNG NHEO CHO HEADER NHẢY SỐ THÔNG BÁO
       fetchUnreadCount(); 
 
-      // 🔥 LOGIC CHUYỂN TRANG ĐƯỢC CẬP NHẬT TẠI ĐÂY
       if (paymentType === "QR" && qrMethod === "VietQR") {
         toast.info("Đang tạo mã QR thanh toán...");
-        // Chuyển hướng sang trang Payment nội bộ cùng với data cần thiết
         navigate(`/payment/${orderId}`, {
-          state: {
-            qrCode: qrCodeString,
-            amount: cartData.finalPrice,
-          }
+          state: { qrCode: qrCodeString, amount: cartData.finalPrice }
         });
         return;
       } else if (paymentType === "QR" && checkoutUrl) {
-        // Fallback: Dùng cho Momo/VNPay hoặc nếu ko có mã qrCodeString
         toast.info("Đang chuyển hướng đến trang thanh toán...");
         setTimeout(() => {
           window.location.href = checkoutUrl;
@@ -200,7 +200,6 @@ const Checkout = () => {
         return;
       }
 
-      // Mặc định (COD) chuyển sang trang Order Success
       navigate(`/order-success/${orderId}`);
     } catch (error) {
       toast.error(error.response?.data?.message || "❌ Lỗi khi đặt hàng!");
@@ -334,7 +333,6 @@ const Checkout = () => {
               </button>
             </div>
 
-            {/* 🔥 KHỐI CHỌN CỔNG THANH TOÁN DẠNG TILE */}
             {paymentType === "QR" && (
               <div className="mt-4 p-5 bg-gray-50 border border-gray-200 rounded-xl transition-all duration-300">
                 <label className="block text-sm font-semibold text-gray-700 mb-3">
@@ -342,7 +340,6 @@ const Checkout = () => {
                 </label>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {/* VietQR Tile */}
                   <div 
                     onClick={() => setQrMethod("VietQR")}
                     className={`relative cursor-pointer rounded-xl border-2 p-3 flex flex-col items-center justify-center gap-2 transition-all ${qrMethod === 'VietQR' ? 'border-blue-600 bg-blue-50' : 'border-gray-200 bg-white hover:border-blue-300'}`}
@@ -358,7 +355,6 @@ const Checkout = () => {
                     <span className="text-xs font-semibold text-gray-700 text-center">Chuyển khoản NH</span>
                   </div>
 
-                  {/* MoMo Tile */}
                   <div 
                     onClick={() => setQrMethod("Momo")}
                     className={`relative cursor-pointer rounded-xl border-2 p-3 flex flex-col items-center justify-center gap-2 transition-all ${qrMethod === 'Momo' ? 'border-blue-600 bg-blue-50' : 'border-gray-200 bg-white hover:border-blue-300'}`}
@@ -374,7 +370,6 @@ const Checkout = () => {
                     <span className="text-xs font-semibold text-gray-700 text-center">Ví MoMo</span>
                   </div>
 
-                  {/* VNPay Tile */}
                   <div 
                     onClick={() => setQrMethod("VNPay")}
                     className={`relative cursor-pointer rounded-xl border-2 p-3 flex flex-col items-center justify-center gap-2 transition-all ${qrMethod === 'VNPay' ? 'border-blue-600 bg-blue-50' : 'border-gray-200 bg-white hover:border-blue-300'}`}
@@ -408,7 +403,6 @@ const Checkout = () => {
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 sticky top-6">
             <h2 className="text-lg font-bold text-gray-800 mb-6 uppercase border-b pb-4">Đơn hàng của bạn</h2>
             
-            {/* DANH SÁCH SẢN PHẨM */}
             {cartData.items.length === 0 ? (
               <p className="text-gray-500 text-center my-10">Giỏ hàng trống.</p>
             ) : (
@@ -455,14 +449,13 @@ const Checkout = () => {
               )}
             </div>
 
-            {/* TỔNG TIỀN (VỪA NÂNG CẤP) */}
+            {/* TỔNG TIỀN */}
             <div className="space-y-3 mb-6 text-sm">
               <div className="flex justify-between text-gray-600">
                 <span>Tạm tính</span>
                 <span className="font-medium">{cartData.subTotal ? cartData.subTotal.toLocaleString() : 0}đ</span>
               </div>
               
-              {/* --- TỔNG HỢP TẤT CẢ KHUYẾN MÃI (Do backend tính gộp) --- */}
               {cartData.discountAmount > 0 && (
                 <div className="flex flex-col gap-1 text-green-600">
                   <div className="flex justify-between font-medium">

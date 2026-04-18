@@ -354,6 +354,7 @@ export const calculateCheckoutPrice = async (userId, cartItems, couponCode = nul
     else if (!coupon.isActive) appliedDiscounts.push("❌ Mã giảm giá đã bị khóa");
     else if (new Date(coupon.expiryDate) < new Date()) appliedDiscounts.push("❌ Mã giảm giá đã hết hạn");
     else if (coupon.usedCount >= coupon.usageLimit) appliedDiscounts.push("❌ Mã giảm giá đã hết lượt sử dụng");
+    else if (coupon.usedBy && coupon.usedBy.includes(userId)) appliedDiscounts.push("❌ Bạn đã sử dụng mã giảm giá này rồi");
     else {
       let isEligible = true;
       if (coupon.targetAudience === 'group') {

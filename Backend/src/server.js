@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
-import http from 'http'; // Chuyển sang dùng import
-import socketUtil from './utils/socket.js'; // Chuyển sang dùng import
+import http from 'http'; 
+import socketUtil from './utils/socket.js'; 
 import userRoutes from './routes/userRoutes.js';
 import { connectDB } from './config/db.js';
 import dotenv from 'dotenv';
@@ -16,6 +16,7 @@ import addressRoutes from './routes/addressRoutes.js';
 import bannerRoutes from './routes/bannerRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import newsRoutes from './routes/newsRoutes.js';
+import { askBot } from './controller/chatController.js';
 import cors from 'cors';
 import { startCronJobs } from './utils/cronjob.js'; 
 
@@ -70,6 +71,7 @@ app.use('/api/banners', bannerRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/news', newsRoutes);
+app.use('/api/chat', askBot);
 
 // 4. CHẠY SERVER THAY VÌ APP
 server.listen(PORT, ()=>{
