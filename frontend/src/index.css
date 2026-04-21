@@ -74,3 +74,17 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Custom Admin Theme Inputs */
+.admin-theme input:not([type="checkbox"]):not([type="radio"]), 
+.admin-theme textarea, 
+.admin-theme select {
+  background-color: #2a2a35 !important;
+  color: #ffffff !important;
+  border-color: #3f3f46 !important;
+}
+
+.admin-theme input::placeholder,
+.admin-theme textarea::placeholder {
+  color: #a1a1aa !important;
+}

@@ -165,7 +165,7 @@ const NewsManager = () => {
   };
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <div className="p-6 bg-[#151419] min-h-screen">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-black text-[#5a8c76] uppercase">Quản lý Tin Tức</h1>
         <button 
@@ -177,9 +177,9 @@ const NewsManager = () => {
       </div>
 
       {/* DANH SÁCH BÀI VIẾT */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-[#202028] rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <table className="w-full text-left">
-          <thead className="bg-gray-50 text-gray-600 font-bold text-sm uppercase">
+          <thead className="bg-[#151419] text-gray-300 font-bold text-sm uppercase">
             <tr>
               <th className="p-4 w-24">Ảnh bìa</th>
               <th className="p-4">Tiêu đề bài viết</th>
@@ -189,15 +189,15 @@ const NewsManager = () => {
           </thead>
           <tbody>
             {newsList.length === 0 ? (
-              <tr><td colSpan="4" className="text-center py-10 text-gray-500">Chưa có bài viết nào!</td></tr>
+              <tr><td colSpan="4" className="text-center py-10 text-gray-400">Chưa có bài viết nào!</td></tr>
             ) : (
               newsList.map((item) => (
-                <tr key={item._id} className="border-t border-gray-100 hover:bg-gray-50 transition-colors">
+                <tr key={item._id} className="border-t border-gray-100 hover:bg-[#151419] transition-colors">
                   <td className="p-4">
-                    <img src={item.thumbnail} alt={item.title} className="w-20 h-14 object-cover rounded-lg border border-gray-200" />
+                    <img src={item.thumbnail} alt={item.title} className="w-20 h-14 object-cover rounded-lg border border-gray-700" />
                   </td>
                   <td className="p-4">
-                    <p className="font-bold text-gray-800 text-base">{item.title}</p>
+                    <p className="font-bold text-white text-base">{item.title}</p>
                     <p className="text-xs text-gray-400 mt-1">/{item.slug}</p>
                   </td>
                   <td className="p-4">
@@ -229,11 +229,11 @@ const NewsManager = () => {
 
         {/* PHÂN TRANG */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-6 py-4 border-t bg-gray-50/50">
-            <span className="text-sm text-gray-600">Trang <span className="font-bold">{currentPage}</span> / <span className="font-bold">{totalPages}</span> (Tổng: {totalCount} bài)</span>
+          <div className="flex items-center justify-between px-6 py-4 border-t bg-[#151419]/50">
+            <span className="text-sm text-gray-300">Trang <span className="font-bold">{currentPage}</span> / <span className="font-bold">{totalPages}</span> (Tổng: {totalCount} bài)</span>
             <div className="flex gap-2">
-              <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="p-2 border rounded bg-white disabled:opacity-50 hover:bg-gray-100 transition"><ChevronLeft size={16}/></button>
-              <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="p-2 border rounded bg-white disabled:opacity-50 hover:bg-gray-100 transition"><ChevronRight size={16}/></button>
+              <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="p-2 border rounded bg-[#202028] disabled:opacity-50 hover:bg-gray-800 transition"><ChevronLeft size={16}/></button>
+              <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="p-2 border rounded bg-[#202028] disabled:opacity-50 hover:bg-gray-800 transition"><ChevronRight size={16}/></button>
             </div>
           </div>
         )}
@@ -242,9 +242,9 @@ const NewsManager = () => {
       {/* MODAL THÊM/SỬA BÀI VIẾT (POPUP) */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-white w-full max-w-5xl rounded-2xl shadow-2xl mt-20 mb-10 overflow-hidden">
+          <div className="bg-[#202028] w-full max-w-5xl rounded-2xl shadow-2xl mt-20 mb-10 overflow-hidden">
             
-            <div className="flex justify-between items-center p-5 border-b border-gray-100 bg-gray-50">
+            <div className="flex justify-between items-center p-5 border-b border-gray-100 bg-[#151419]">
               <h2 className="text-xl font-black text-[#5a8c76] uppercase">
                 {editingId ? "Cập nhật bài viết" : "Soạn bài viết mới"}
               </h2>
@@ -258,34 +258,34 @@ const NewsManager = () => {
                 {/* Cột Trái */}
                 <div className="space-y-5">
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Tiêu đề bài viết <span className="text-red-500">*</span></label>
+                    <label className="block text-sm font-bold text-gray-300 mb-1">Tiêu đề bài viết <span className="text-red-500">*</span></label>
                     <input type="text" required value={formData.title} onChange={handleTitleChange} 
-                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-[#5a8c76] focus:ring-2 focus:ring-[#5a8c76]/20 outline-none transition-all font-medium"
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-700 focus:border-[#5a8c76] focus:ring-2 focus:ring-[#5a8c76]/20 outline-none transition-all font-medium"
                       placeholder="VD: Kinh nghiệm chọn máy câu..." />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Đường dẫn SEO (Slug tự động)</label>
+                    <label className="block text-sm font-bold text-gray-300 mb-1">Đường dẫn SEO (Slug tự động)</label>
                     <input type="text" required value={formData.slug} readOnly
-                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-100 text-gray-500 outline-none font-mono text-sm cursor-not-allowed" />
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-700 bg-gray-800 text-gray-400 outline-none font-mono text-sm cursor-not-allowed" />
                   </div>
                   
                   {/* UPLOAD FILE SECTION */}
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">
+                    <label className="block text-sm font-bold text-gray-300 mb-1">
                       Ảnh bìa (Thumbnail) {!editingId && <span className="text-red-500">*</span>}
                     </label>
                     <div className="flex items-center gap-4">
                       {imagePreview ? (
                         <div className="relative">
-                           <img src={imagePreview} alt="Preview" className="w-32 h-24 object-cover rounded-xl border border-gray-200 shadow-sm" />
+                           <img src={imagePreview} alt="Preview" className="w-32 h-24 object-cover rounded-xl border border-gray-700 shadow-sm" />
                            <button type="button" onClick={() => {setImageFile(null); setImagePreview('');}} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600">
                              <X size={14} />
                            </button>
                         </div>
                       ) : (
-                        <label className="w-32 h-24 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:bg-gray-50 hover:border-[#5a8c76] transition-colors">
+                        <label className="w-32 h-24 flex flex-col items-center justify-center border-2 border-dashed border-gray-700 rounded-xl cursor-pointer hover:bg-[#151419] hover:border-[#5a8c76] transition-colors">
                           <ImagePlus className="text-gray-400 mb-1" size={24} />
-                          <span className="text-xs text-gray-500 font-medium">Chọn ảnh</span>
+                          <span className="text-xs text-gray-400 font-medium">Chọn ảnh</span>
                           <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
                         </label>
                       )}
@@ -297,29 +297,29 @@ const NewsManager = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Mô tả ngắn <span className="text-red-500">*</span></label>
+                    <label className="block text-sm font-bold text-gray-300 mb-1">Mô tả ngắn <span className="text-red-500">*</span></label>
                     <textarea required value={formData.shortDescription} onChange={(e) => setFormData({...formData, shortDescription: e.target.value})}
-                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-[#5a8c76] focus:ring-2 focus:ring-[#5a8c76]/20 outline-none transition-all min-h-[100px]"
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-700 focus:border-[#5a8c76] focus:ring-2 focus:ring-[#5a8c76]/20 outline-none transition-all min-h-[100px]"
                       placeholder="Viết 1-2 câu tóm tắt để thu hút người đọc..." />
                   </div>
                 </div>
 
                 {/* Cột Phải - ReactQuill */}
                 <div className="flex flex-col">
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Nội dung bài viết <span className="text-red-500">*</span></label>
-                  <div className="flex-1 border border-gray-200 rounded-xl overflow-hidden bg-white">
+                  <label className="block text-sm font-bold text-gray-300 mb-1">Nội dung bài viết <span className="text-red-500">*</span></label>
+                  <div className="flex-1 border border-gray-700 rounded-xl overflow-hidden bg-[#202028]">
                     <ReactQuill 
                       theme="snow" 
                       value={formData.content} 
                       onChange={(content) => setFormData({...formData, content})}
-                      className="h-[430px] bg-white border-none pb-[42px]"
+                      className="h-[430px] bg-[#202028] border-none pb-[42px]"
                     />
                   </div>
                 </div>
               </div>
 
               <div className="flex justify-end gap-3 pt-5 border-t border-gray-100 mt-10">
-                <button type="button" onClick={closeModal} className="px-6 py-2.5 rounded-xl font-bold text-gray-500 hover:bg-gray-100 transition-colors">
+                <button type="button" onClick={closeModal} className="px-6 py-2.5 rounded-xl font-bold text-gray-400 hover:bg-gray-800 transition-colors">
                   Hủy bỏ
                 </button>
                 <button type="submit" disabled={isLoading} className="bg-[#5a8c76] text-white px-8 py-2.5 rounded-xl font-bold hover:bg-[#4a7562] transition-colors shadow-md disabled:opacity-50">

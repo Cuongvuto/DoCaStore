@@ -4,7 +4,7 @@ const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  role: { type: String, enum: ['customer', 'admin'], default: 'customer' },
+  role: { type: String, enum: ['customer', 'admin', 'superadmin', 'product_admin', 'order_admin', 'support_admin'], default: 'customer' },
   //xac thuc 
   isVerified: { type: Boolean, default: false },
   verifyOtp: { type: String }, 

@@ -27,6 +27,7 @@ import Notifications from './pages/NotificationsPage';
 import PaymentPage from './pages/PaymentPage';
 
 // --- PAGES: ADMIN ---
+import Dashboard from './pages/admin/Dashboard';
 import ProductManager from './pages/admin/ProductManager';
 import CategoryManager from './pages/admin/CategoryManager';
 import BannerManager from './pages/admin/BannerManager';
@@ -35,6 +36,7 @@ import CouponManager from './pages/admin/CouponManager';
 import OrderManager from './pages/admin/OrderManager';
 import UserManager from './pages/admin/UserManager';
 import NotificationManager from './pages/admin/NotificationManager';
+import MessageManager from './pages/admin/MessageManager';
 
 
 // --- CONTEXT PROVIDERS ---
@@ -86,7 +88,7 @@ const App = () => {
                 ========================================== */}
             <Route path="/admin" element={<AdminLayout />}>
               {/* Route index của Admin */}
-              <Route index element={<h2 className="p-4 text-2xl font-bold">Tổng quan Quản trị</h2>} />
+              <Route index element={<Dashboard />} />
               
               {/* Các trang quản lý con */}
               <Route path="products" element={<ProductManager />} />
@@ -97,6 +99,7 @@ const App = () => {
               <Route path="news" element={<NewsManager />} />
               <Route path="coupons" element={<CouponManager />} />
               <Route path="notifications" element={<NotificationManager />} />
+              <Route path="messages" element={<MessageManager />} />
             </Route>
 
             {/* ==========================================

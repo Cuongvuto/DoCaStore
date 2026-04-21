@@ -207,17 +207,17 @@ const CategoryManager = () => {
       return (
         <React.Fragment key={cat._id}>
           <div 
-            className={`bg-white rounded-xl shadow-sm border ${!cat.isActive ? 'border-dashed border-gray-300 opacity-70' : 'border-gray-200'} overflow-hidden transition-all duration-200 hover:shadow-md mb-3`}
+            className={`bg-[#202028] rounded-xl shadow-sm border ${!cat.isActive ? 'border-dashed border-gray-700 opacity-70' : 'border-gray-700'} overflow-hidden transition-all duration-200 hover:shadow-md mb-3`}
             style={{ marginLeft: `${level * 2}rem` }}
           >
-            <div className={`flex flex-col sm:flex-row sm:justify-between sm:items-center p-4 transition-colors ${isTreeExpanded || isProductExpanded ? 'bg-slate-50 border-b border-gray-200' : 'hover:bg-gray-50'}`}>
+            <div className={`flex flex-col sm:flex-row sm:justify-between sm:items-center p-4 transition-colors ${isTreeExpanded || isProductExpanded ? 'bg-slate-50 border-b border-gray-700' : 'hover:bg-[#151419]'}`}>
               
               <div 
                 className={`flex items-center gap-3 select-none flex-1 mb-3 sm:mb-0 ${hasChildren ? 'cursor-pointer' : ''}`}
                 onClick={() => hasChildren ? toggleTreeExpand(cat._id) : toggleExpandProducts(cat._id)}
               >
                 {/* 🟢 Nút mũi tên drop down (Chỉ hiện nếu có danh mục con) */}
-                <div className={`p-1.5 rounded-md transition-colors ${hasChildren ? (isTreeExpanded ? 'bg-[#5a8c76] text-white' : 'bg-gray-200 text-gray-600') : 'bg-transparent text-transparent'}`}>
+                <div className={`p-1.5 rounded-md transition-colors ${hasChildren ? (isTreeExpanded ? 'bg-[#5a8c76] text-white' : 'bg-gray-700 text-gray-300') : 'bg-transparent text-transparent'}`}>
                   {hasChildren ? (
                     isTreeExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />
                   ) : (
@@ -226,13 +226,13 @@ const CategoryManager = () => {
                 </div>
 
                 <div className="flex flex-col">
-                  <h3 className="text-lg font-bold text-gray-800 m-0 flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-white m-0 flex items-center gap-2">
                     {level > 0 && <span className="text-gray-400 font-normal">|_</span>} 
                     {cat.name}
-                    {!cat.isActive && <span className="text-[10px] bg-gray-200 text-gray-600 px-2 py-0.5 rounded uppercase font-semibold">Đang Ẩn</span>}
+                    {!cat.isActive && <span className="text-[10px] bg-gray-700 text-gray-300 px-2 py-0.5 rounded uppercase font-semibold">Đang Ẩn</span>}
                   </h3>
                   {cat.description && (
-                     <span className="text-xs text-gray-500 mt-1 line-clamp-1">{cat.description}</span>
+                     <span className="text-xs text-gray-400 mt-1 line-clamp-1">{cat.description}</span>
                   )}
                 </div>
                 
@@ -269,10 +269,10 @@ const CategoryManager = () => {
             {isProductExpanded && (
               <div className="p-4 bg-slate-50/50 animate-in fade-in slide-in-from-top-2 duration-200">
                 {categoryProducts.length > 0 ? (
-                  <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm">
+                  <div className="overflow-x-auto rounded-lg border border-gray-700 bg-[#202028] shadow-sm">
                     <table className="w-full text-left border-collapse text-sm">
                       <thead>
-                        <tr className="bg-gray-50 border-b border-gray-200 font-medium text-gray-500">
+                        <tr className="bg-[#151419] border-b border-gray-700 font-medium text-gray-400">
                           <th className="p-3 w-16">Ảnh</th>
                           <th className="p-3">Tên Sản Phẩm</th>
                           <th className="p-3 text-right">Giá bán</th>
@@ -282,7 +282,7 @@ const CategoryManager = () => {
                       </thead>
                       <tbody className="divide-y divide-gray-100">
                         {currentProducts.map(prod => (
-                          <tr key={prod._id} className="hover:bg-gray-50/80">
+                          <tr key={prod._id} className="hover:bg-[#151419]/80">
                             <td className="p-3">
                               <img 
                                 src={(Array.isArray(prod.images) && prod.images.length > 0) ? prod.images[0] : (prod.imageUrl || 'https://picsum.photos/40')}
@@ -291,10 +291,10 @@ const CategoryManager = () => {
                               />
                             </td>
                             <td className="p-3">
-                              <div className="font-medium text-gray-800 line-clamp-2">{prod?.name || 'Chưa có tên'}</div>
+                              <div className="font-medium text-white line-clamp-2">{prod?.name || 'Chưa có tên'}</div>
                               {/* 🟢 Bổ sung hiển thị tên danh mục thật của SP để phân biệt nếu ở mục Cha */}
                               {hasChildren && (
-                                <div className="text-[11px] text-gray-500 mt-1 flex items-center gap-1">
+                                <div className="text-[11px] text-gray-400 mt-1 flex items-center gap-1">
                                   <FolderTree className="w-3 h-3"/> {getCategoryName(prod.category_id)}
                                 </div>
                               )}
@@ -322,25 +322,25 @@ const CategoryManager = () => {
                     </table>
 
                     {totalPages > 1 && (
-                      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-gray-50">
-                        <span className="text-sm text-gray-600">
+                      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-700 bg-[#151419]">
+                        <span className="text-sm text-gray-300">
                           Đang xem <span className="font-semibold">{currentProducts.length}</span> sp / Tổng số <span className="font-semibold">{categoryProducts.length}</span>
                         </span>
                         <div className="flex items-center gap-2">
                           <button
                             disabled={currentPage === 1}
                             onClick={() => setCurrentPage(p => p - 1)}
-                            className="p-1.5 rounded border border-gray-300 bg-white text-gray-600 disabled:opacity-50 hover:bg-gray-100"
+                            className="p-1.5 rounded border border-gray-700 bg-[#202028] text-gray-300 disabled:opacity-50 hover:bg-gray-800"
                           >
                             <ChevronLeft className="w-4 h-4" />
                           </button>
-                          <span className="text-sm font-medium text-gray-700">
+                          <span className="text-sm font-medium text-gray-300">
                             Trang {currentPage} / {totalPages}
                           </span>
                           <button
                             disabled={currentPage === totalPages}
                             onClick={() => setCurrentPage(p => p + 1)}
-                            className="p-1.5 rounded border border-gray-300 bg-white text-gray-600 disabled:opacity-50 hover:bg-gray-100"
+                            className="p-1.5 rounded border border-gray-700 bg-[#202028] text-gray-300 disabled:opacity-50 hover:bg-gray-800"
                           >
                             <ChevronRightIcon className="w-4 h-4" />
                           </button>
@@ -349,7 +349,7 @@ const CategoryManager = () => {
                     )}
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center p-6 text-gray-500 bg-white rounded-lg border border-dashed border-gray-300">
+                  <div className="flex flex-col items-center justify-center p-6 text-gray-400 bg-[#202028] rounded-lg border border-dashed border-gray-700">
                     <Package className="w-8 h-8 text-gray-300 mb-2" />
                     <p className="text-sm">Chưa có sản phẩm nào thuộc khu vực này.</p>
                   </div>
@@ -372,7 +372,7 @@ const CategoryManager = () => {
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+        <h1 className="text-2xl font-bold text-white flex items-center gap-2">
           <FolderTree className="w-6 h-6 text-[#5a8c76]" />
           Quản lý Danh Mục
         </h1>
@@ -386,11 +386,11 @@ const CategoryManager = () => {
 
       <div className="">
         {isLoading ? (
-          <div className="p-8 text-center text-gray-500 bg-white rounded-xl shadow-sm border border-gray-200">
+          <div className="p-8 text-center text-gray-400 bg-[#202028] rounded-xl shadow-sm border border-gray-700">
             Đang tải dữ liệu...
           </div>
         ) : categoriesTree.length === 0 ? (
-          <div className="p-8 text-center text-gray-500 bg-white rounded-xl shadow-sm border border-gray-200">
+          <div className="p-8 text-center text-gray-400 bg-[#202028] rounded-xl shadow-sm border border-gray-700">
             Chưa có danh mục nào. Hãy thêm mới nhé!
           </div>
         ) : (
@@ -400,12 +400,12 @@ const CategoryManager = () => {
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col transform transition-all">
-            <div className="flex justify-between items-center p-5 border-b border-gray-100 bg-gray-50">
-              <h2 className="text-xl font-bold text-gray-800">
+          <div className="bg-[#202028] rounded-xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col transform transition-all">
+            <div className="flex justify-between items-center p-5 border-b border-gray-100 bg-[#151419]">
+              <h2 className="text-xl font-bold text-white">
                 {editingId ? 'Cập Nhật Danh Mục' : 'Thêm Danh Mục Mới'}
               </h2>
-              <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 transition-colors">
+              <button onClick={closeModal} className="text-gray-400 hover:text-gray-300 transition-colors">
                 <X className="w-6 h-6" />
               </button>
             </div>
@@ -414,26 +414,26 @@ const CategoryManager = () => {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div className="col-span-1 md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Tên danh mục <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Tên danh mục <span className="text-red-500">*</span></label>
                   <input 
                     type="text" 
                     name="name" 
                     value={formData.name} 
                     onChange={handleInputChange} 
                     required 
-                    className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5a8c76] outline-none transition-all" 
+                    className="w-full p-2.5 border border-gray-700 rounded-lg focus:ring-2 focus:ring-[#5a8c76] outline-none transition-all" 
                     placeholder="VD: Phụ Kiện Câu" 
                     autoFocus
                   />
                 </div>
 
                 <div className="col-span-1 md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Thuộc danh mục (Cha)</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Thuộc danh mục (Cha)</label>
                   <select
                     name="parentId"
                     value={formData.parentId}
                     onChange={handleInputChange}
-                    className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5a8c76] outline-none transition-all bg-white"
+                    className="w-full p-2.5 border border-gray-700 rounded-lg focus:ring-2 focus:ring-[#5a8c76] outline-none transition-all bg-[#202028]"
                   >
                     <option value="">-- Không có (Làm danh mục gốc) --</option>
                     {flatCategories
@@ -447,28 +447,28 @@ const CategoryManager = () => {
                 </div>
 
                 <div className="col-span-1 md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả ngắn</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Mô tả ngắn</label>
                   <textarea
                     name="description"
                     value={formData.description}
                     onChange={handleInputChange}
                     rows="2"
-                    className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5a8c76] outline-none transition-all resize-none"
+                    className="w-full p-2.5 border border-gray-700 rounded-lg focus:ring-2 focus:ring-[#5a8c76] outline-none transition-all resize-none"
                     placeholder="Mô tả công dụng hoặc thông tin phụ..."
                   ></textarea>
                 </div>
 
                 <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Thứ tự hiển thị (Sort Order)</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Thứ tự hiển thị (Sort Order)</label>
                   <input 
                     type="number" 
                     name="sortOrder" 
                     value={formData.sortOrder} 
                     onChange={handleInputChange} 
                     min="0"
-                    className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5a8c76] outline-none transition-all" 
+                    className="w-full p-2.5 border border-gray-700 rounded-lg focus:ring-2 focus:ring-[#5a8c76] outline-none transition-all" 
                   />
-                  <p className="text-[11px] text-gray-500 mt-1">Số nhỏ xếp trước (0, 1, 2...)</p>
+                  <p className="text-[11px] text-gray-400 mt-1">Số nhỏ xếp trước (0, 1, 2...)</p>
                 </div>
 
                 <div className="col-span-1 flex items-center pt-6">
@@ -478,9 +478,9 @@ const CategoryManager = () => {
                       name="isActive" 
                       checked={formData.isActive} 
                       onChange={handleInputChange} 
-                      className="w-5 h-5 text-[#5a8c76] border-gray-300 rounded focus:ring-[#5a8c76] cursor-pointer"
+                      className="w-5 h-5 text-[#5a8c76] border-gray-700 rounded focus:ring-[#5a8c76] cursor-pointer"
                     />
-                    <span className="text-sm font-medium text-gray-700 select-none">
+                    <span className="text-sm font-medium text-gray-300 select-none">
                       Hiển thị danh mục này
                     </span>
                   </label>
@@ -488,7 +488,7 @@ const CategoryManager = () => {
               </div>
 
               <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-100">
-                <button type="button" onClick={closeModal} className="px-4 py-2 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg transition-colors font-medium">
+                <button type="button" onClick={closeModal} className="px-4 py-2 text-gray-300 bg-[#202028] border border-gray-700 hover:bg-[#151419] rounded-lg transition-colors font-medium">
                   Hủy bỏ
                 </button>
                 <button type="submit" className="px-5 py-2 text-white bg-[#5a8c76] hover:bg-[#4a7562] rounded-lg transition-colors font-medium shadow-sm">

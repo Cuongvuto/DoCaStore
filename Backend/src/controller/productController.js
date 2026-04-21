@@ -27,7 +27,7 @@ export const createProduct = async (req, res) => {
         }
 
         // 3. Kiểm tra ký tự đặc biệt trong tên
-        const specialChars = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+/;
+        const specialChars = /[@#$^&*_+=\[\]{};'|<>?]+/;
         if (specialChars.test(name)) {
             return res.status(400).json({
                 success: false,

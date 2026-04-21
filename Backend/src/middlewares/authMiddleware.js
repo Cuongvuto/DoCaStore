@@ -37,8 +37,7 @@ export const verifyToken = (req, res, next) => {
 
 // 2. Middleware kiểm tra quyền Admin (Bắt buộc phải chạy sau verifyToken)
 export const isAdmin = (req, res, next) => {
-  
-  if (req.user && req.user.role === 'admin') {
+  if (req.user && req.user.role !== 'customer') {
     next(); 
   } else {
     return res.status(403).json({ 

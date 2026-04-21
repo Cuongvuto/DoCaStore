@@ -88,14 +88,14 @@ const CouponManager = () => {
   };
 
   return (
-    <div className="p-6 md:p-8 bg-gray-50 min-h-screen">
+    <div className="p-6 md:p-8 bg-[#151419] min-h-screen">
       <div className="max-w-7xl mx-auto">
         
         {/* Header Section */}
         <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-800 uppercase tracking-wide">Quản lý Coupon</h1>
-            <p className="text-gray-500 text-sm mt-1">Tổng số mã hiện có: {coupons.length}</p>
+            <h1 className="text-2xl font-bold text-white uppercase tracking-wide">Quản lý Coupon</h1>
+            <p className="text-gray-400 text-sm mt-1">Tổng số mã hiện có: {coupons.length}</p>
           </div>
           <button
             onClick={() => setIsModalOpen(true)}
@@ -106,10 +106,10 @@ const CouponManager = () => {
         </div>
 
         {/* Table Section */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-[#202028] rounded-xl shadow-sm border border-gray-700 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
-              <thead className="bg-gray-100 text-gray-600 uppercase text-xs font-bold tracking-wider">
+              <thead className="bg-gray-800 text-gray-300 uppercase text-xs font-bold tracking-wider">
                 <tr>
                   <th className="p-4 border-b">Mã Code</th>
                   <th className="p-4 border-b text-center">Giảm giá</th>
@@ -122,17 +122,17 @@ const CouponManager = () => {
               <tbody className="divide-y divide-gray-100 text-sm">
                 {loading ? (
                   <tr>
-                    <td colSpan="6" className="p-10 text-center text-gray-500 font-medium">Đang tải dữ liệu...</td>
+                    <td colSpan="6" className="p-10 text-center text-gray-400 font-medium">Đang tải dữ liệu...</td>
                   </tr>
                 ) : currentCoupons.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="p-10 text-center text-gray-500">Chưa có mã giảm giá nào.</td>
+                    <td colSpan="6" className="p-10 text-center text-gray-400">Chưa có mã giảm giá nào.</td>
                   </tr>
                 ) : (
                   currentCoupons.map((item) => {
                     const isExpired = new Date(item.expiryDate) < new Date();
                     return (
-                      <tr key={item._id} className="hover:bg-gray-50 transition-colors">
+                      <tr key={item._id} className="hover:bg-[#151419] transition-colors">
                         <td className="p-4">
                           <span className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded font-mono font-bold border border-blue-200 uppercase">
                             {item.code}
@@ -144,17 +144,17 @@ const CouponManager = () => {
                              <span className="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 mt-1 rounded font-bold uppercase whitespace-nowrap inline-block">Nhóm: {item.groupType}</span>
                           )}
                         </td>
-                        <td className="p-4 text-gray-700 font-medium">
+                        <td className="p-4 text-gray-300 font-medium">
                           {new Date(item.expiryDate).toLocaleDateString("vi-VN")}
                           {isExpired && <span className="ml-2 text-xs text-red-500 font-bold bg-red-100 px-2 py-0.5 rounded">(Hết hạn)</span>}
                         </td>
                         <td className="p-4 text-center">
-                          <span className="font-bold text-gray-800">{item.usedCount}</span>
+                          <span className="font-bold text-white">{item.usedCount}</span>
                           <span className="text-gray-400 mx-1">/</span>
-                          <span className="text-gray-500">{item.usageLimit}</span>
+                          <span className="text-gray-400">{item.usageLimit}</span>
                         </td>
                         <td className="p-4 text-center">
-                          <span className={`px-3 py-1 rounded-full text-xs font-bold ${item.isActive ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-600"}`}>
+                          <span className={`px-3 py-1 rounded-full text-xs font-bold ${item.isActive ? "bg-green-100 text-green-700" : "bg-gray-700 text-gray-300"}`}>
                             {item.isActive ? "Đang bật" : "Đã tắt"}
                           </span>
                         </td>
@@ -177,22 +177,22 @@ const CouponManager = () => {
 
           {/* Phân trang (Pagination) */}
           {totalPages > 1 && (
-            <div className="p-4 border-t flex items-center justify-between bg-gray-50">
-              <span className="text-sm text-gray-600">
+            <div className="p-4 border-t flex items-center justify-between bg-[#151419]">
+              <span className="text-sm text-gray-300">
                 Hiển thị <span className="font-bold">{indexOfFirstItem + 1}</span> đến <span className="font-bold">{Math.min(indexOfLastItem, coupons.length)}</span> trong số <span className="font-bold">{coupons.length}</span> mã
               </span>
               <div className="flex gap-2">
                 <button
                   onClick={handlePrevPage}
                   disabled={currentPage === 1}
-                  className="p-2 border bg-white rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  className="p-2 border bg-[#202028] rounded-md hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
                   <FiChevronLeft size={18} />
                 </button>
                 <button
                   onClick={handleNextPage}
                   disabled={currentPage === totalPages}
-                  className="p-2 border bg-white rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  className="p-2 border bg-[#202028] rounded-md hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
                   <FiChevronRight size={18} />
                 </button>
@@ -204,15 +204,15 @@ const CouponManager = () => {
         {/* Modal Thêm Mới */}
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-            <div className="bg-white rounded-xl w-full max-w-md shadow-2xl">
+            <div className="bg-[#202028] rounded-xl w-full max-w-md shadow-2xl">
               <div className="p-5 border-b border-gray-100 flex justify-between items-center">
-                <h2 className="text-lg font-bold uppercase text-gray-800">Thêm mã giảm giá mới</h2>
+                <h2 className="text-lg font-bold uppercase text-white">Thêm mã giảm giá mới</h2>
                 <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-red-500 text-2xl font-bold">&times;</button>
               </div>
 
               <form onSubmit={handleCreateSubmit} className="p-5 space-y-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Mã Coupon (Tự động in hoa)</label>
+                  <label className="block text-sm font-semibold text-gray-300 mb-1">Mã Coupon (Tự động in hoa)</label>
                   <input
                     required
                     type="text"
@@ -225,7 +225,7 @@ const CouponManager = () => {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">% Giảm giá</label>
+                    <label className="block text-sm font-semibold text-gray-300 mb-1">% Giảm giá</label>
                     <input
                       required
                       type="number"
@@ -238,7 +238,7 @@ const CouponManager = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Giới hạn số lượt</label>
+                    <label className="block text-sm font-semibold text-gray-300 mb-1">Giới hạn số lượt</label>
                     <input
                       required
                       type="number"
@@ -253,9 +253,9 @@ const CouponManager = () => {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Đối tượng nhận mã</label>
+                    <label className="block text-sm font-semibold text-gray-300 mb-1">Đối tượng nhận mã</label>
                     <select
-                      className="w-full border p-2.5 rounded-lg outline-none focus:border-blue-500 bg-white"
+                      className="w-full border p-2.5 rounded-lg outline-none focus:border-blue-500 bg-[#202028]"
                       value={formData.targetAudience}
                       onChange={(e) => setFormData({ ...formData, targetAudience: e.target.value })}
                     >
@@ -267,7 +267,7 @@ const CouponManager = () => {
                     <label className={`block text-sm font-semibold mb-1 ${formData.targetAudience === 'group' ? 'text-purple-700' : 'text-gray-400'}`}>Chọn Nhóm</label>
                     <select
                       disabled={formData.targetAudience !== 'group'}
-                      className={`w-full border p-2.5 rounded-lg outline-none focus:border-purple-500 font-semibold ${formData.targetAudience === 'group' ? 'bg-purple-50 text-purple-900 border-purple-200' : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'}`}
+                      className={`w-full border p-2.5 rounded-lg outline-none focus:border-purple-500 font-semibold ${formData.targetAudience === 'group' ? 'bg-purple-50 text-purple-900 border-purple-200' : 'bg-gray-800 text-gray-400 border-gray-700 cursor-not-allowed'}`}
                       value={formData.groupType}
                       onChange={(e) => setFormData({ ...formData, groupType: e.target.value })}
                     >
@@ -280,7 +280,7 @@ const CouponManager = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Ngày hết hạn</label>
+                  <label className="block text-sm font-semibold text-gray-300 mb-1">Ngày hết hạn</label>
                   <input
                     required
                     type="date"
@@ -294,7 +294,7 @@ const CouponManager = () => {
                   <button
                     type="button"
                     onClick={() => setIsModalOpen(false)}
-                    className="flex-1 px-4 py-2.5 border rounded-lg text-gray-600 font-semibold hover:bg-gray-50 transition"
+                    className="flex-1 px-4 py-2.5 border rounded-lg text-gray-300 font-semibold hover:bg-[#151419] transition"
                   >
                     Hủy bỏ
                   </button>

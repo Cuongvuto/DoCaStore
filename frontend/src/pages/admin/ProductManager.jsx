@@ -183,7 +183,7 @@ const ProductManager = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+        <h1 className="text-2xl font-bold text-white flex items-center gap-2">
           <Package className="w-6 h-6 text-[#5a8c76]" /> Quản lý Sản phẩm
         </h1>
         <button onClick={() => openModal()} className="flex items-center px-4 py-2 bg-[#5a8c76] text-white rounded-lg hover:bg-[#4a7562] shadow-sm transition-all">
@@ -192,10 +192,10 @@ const ProductManager = () => {
       </div>
 
       {/* Bảng danh sách */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+      <div className="bg-[#202028] rounded-xl shadow-sm border border-gray-700 overflow-hidden flex flex-col">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
-            <thead className="bg-gray-50 border-b border-gray-200 text-sm font-medium text-gray-500 uppercase">
+            <thead className="bg-[#151419] border-b border-gray-700 text-sm font-medium text-gray-400 uppercase">
               <tr>
                 <th className="p-4 w-24">Hình ảnh</th>
                 <th className="p-4">Thông tin</th>
@@ -204,11 +204,11 @@ const ProductManager = () => {
                 <th className="p-4 text-center">Thao tác</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-800">
               {isLoading ? (
                 <tr><td colSpan="5" className="p-8 text-center">Đang tải...</td></tr>
               ) : currentProducts.map(item => (
-                <tr key={item._id} className="hover:bg-gray-50">
+                <tr key={item._id} className="hover:bg-[#151419]">
                   <td className="p-4">
                     <img src={item.imageUrl || (item.images && item.images[0])} className="w-14 h-14 object-cover rounded border" alt="" />
                   </td>
@@ -239,11 +239,11 @@ const ProductManager = () => {
 
         {/* Phân trang */}
         {!isLoading && totalPages > 1 && (
-          <div className="flex items-center justify-between px-6 py-4 border-t bg-gray-50/50">
-            <span className="text-sm text-gray-600">Trang {currentPage} / {totalPages}</span>
+          <div className="flex items-center justify-between px-6 py-4 border-t bg-[#151419]/50">
+            <span className="text-sm text-gray-300">Trang {currentPage} / {totalPages}</span>
             <div className="flex gap-2">
-              <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="p-2 border rounded bg-white disabled:opacity-50"><ChevronLeft className="w-4 h-4" /></button>
-              <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="p-2 border rounded bg-white disabled:opacity-50"><ChevronRight className="w-4 h-4" /></button>
+              <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="p-2 border rounded bg-[#202028] disabled:opacity-50"><ChevronLeft className="w-4 h-4" /></button>
+              <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="p-2 border rounded bg-[#202028] disabled:opacity-50"><ChevronRight className="w-4 h-4" /></button>
             </div>
           </div>
         )}
@@ -252,8 +252,8 @@ const ProductManager = () => {
       {/* Modal chính */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="p-6 border-b flex justify-between items-center bg-white shrink-0">
+          <div className="bg-[#202028] rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-6 border-b flex justify-between items-center bg-[#202028] shrink-0">
               <h2 className="text-xl font-bold">{editingId ? 'Sửa Sản Phẩm' : 'Thêm Sản Phẩm'}</h2>
               <button onClick={() => setIsModalOpen(false)}><X className="w-6 h-6 text-gray-400" /></button>
             </div>
@@ -261,10 +261,10 @@ const ProductManager = () => {
             <div className="p-6 overflow-y-auto flex-1 space-y-6 custom-scrollbar">
               {/* Khu vực Up nhiều ảnh */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">Ảnh sản phẩm (Tối đa 5 ảnh)</label>
+                <label className="block text-sm font-medium text-gray-300 mb-3">Ảnh sản phẩm (Tối đa 5 ảnh)</label>
                 <div className="grid grid-cols-5 gap-3">
                   {imagePreviews.map((src, index) => (
-                    <div key={index} className="relative group aspect-square border rounded-lg overflow-hidden bg-gray-50 border-[#5a8c76]/30">
+                    <div key={index} className="relative group aspect-square border rounded-lg overflow-hidden bg-[#151419] border-[#5a8c76]/30">
                       <img src={src} className="w-full h-full object-cover" alt="" />
                       <button 
                         type="button"
@@ -277,9 +277,9 @@ const ProductManager = () => {
                     </div>
                   ))}
                   {imagePreviews.length < 5 && (
-                    <label className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 hover:border-[#5a8c76] transition-all">
+                    <label className="aspect-square border-2 border-dashed border-gray-700 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-[#151419] hover:border-[#5a8c76] transition-all">
                       <UploadCloud className="w-7 h-7 text-gray-400" />
-                      <span className="text-[10px] text-gray-500 mt-1">Thêm ảnh</span>
+                      <span className="text-[10px] text-gray-400 mt-1">Thêm ảnh</span>
                       <input type="file" multiple accept="image/*" onChange={handleFileChange} className="hidden" />
                     </label>
                   )}
@@ -304,7 +304,7 @@ const ProductManager = () => {
                 <div className="col-span-2 grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-1">Danh mục gốc</label>
-                    <select name="parentCategoryId" value={formData.parentCategoryId} onChange={handleInputChange} className="w-full border p-2.5 rounded-lg bg-white">
+                    <select name="parentCategoryId" value={formData.parentCategoryId} onChange={handleInputChange} className="w-full border p-2.5 rounded-lg bg-[#202028]">
                       <option value="">Chọn danh mục</option>
                       {categoriesTree.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
                     </select>
@@ -312,7 +312,7 @@ const ProductManager = () => {
                   {selectedParent?.children?.length > 0 && (
                     <div>
                       <label className="block text-sm font-medium mb-1">Danh mục con</label>
-                      <select name="childCategoryId" value={formData.childCategoryId} onChange={handleInputChange} className="w-full border p-2.5 rounded-lg bg-white border-l-4 border-l-[#5a8c76]">
+                      <select name="childCategoryId" value={formData.childCategoryId} onChange={handleInputChange} className="w-full border p-2.5 rounded-lg bg-[#202028] border-l-4 border-l-[#5a8c76]">
                         <option value="">Tất cả</option>
                         {selectedParent.children.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
                       </select>
@@ -345,8 +345,8 @@ const ProductManager = () => {
               </div>
             </div>
 
-            <div className="p-6 border-t bg-gray-50 flex justify-end gap-3 shrink-0">
-              <button onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 border rounded-lg bg-white hover:bg-gray-100 font-medium">Hủy</button>
+            <div className="p-6 border-t bg-[#151419] flex justify-end gap-3 shrink-0">
+              <button onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 border rounded-lg bg-[#202028] hover:bg-gray-800 font-medium">Hủy</button>
               <button onClick={handleSubmit} className="px-6 py-2.5 bg-[#5a8c76] text-white rounded-lg hover:bg-[#4a7562] font-bold shadow-md transition-all">LƯU SẢN PHẨM</button>
             </div>
           </div>

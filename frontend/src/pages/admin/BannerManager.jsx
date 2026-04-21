@@ -158,18 +158,18 @@ const BannerManager = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Quản lý Banner</h1>
+        <h1 className="text-2xl font-bold text-white">Quản lý Banner</h1>
         <button onClick={() => openModal()} className="flex items-center px-4 py-2 bg-[#5a8c76] text-white rounded-lg hover:bg-[#4a7562] transition-colors shadow-sm">
           <Plus className="w-5 h-5 mr-2" /> Thêm Banner
         </button>
       </div>
 
       {/* ... (Phần bảng table giữ nguyên y hệt code cũ) ... */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div className="bg-[#202028] rounded-xl shadow-sm border border-gray-700 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-200 text-sm font-medium text-gray-500 uppercase tracking-wider">
+              <tr className="bg-[#151419] border-b border-gray-700 text-sm font-medium text-gray-400 uppercase tracking-wider">
                 <th className="p-4">Hình ảnh</th>
                 <th className="p-4">Tiêu đề / Link</th>
                 <th className="p-4">Vị trí</th>
@@ -178,16 +178,16 @@ const BannerManager = () => {
                 <th className="p-4 text-center">Thao tác</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-800">
               {isLoading ? (
-                <tr><td colSpan="6" className="p-8 text-center text-gray-500">Đang tải dữ liệu...</td></tr>
+                <tr><td colSpan="6" className="p-8 text-center text-gray-400">Đang tải dữ liệu...</td></tr>
               ) : banners.length === 0 ? (
-                <tr><td colSpan="6" className="p-8 text-center text-gray-500">Chưa có banner nào. Cùng thêm mới nhé!</td></tr>
+                <tr><td colSpan="6" className="p-8 text-center text-gray-400">Chưa có banner nào. Cùng thêm mới nhé!</td></tr>
               ) : (
                 banners.map((banner) => (
-                  <tr key={banner._id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={banner._id} className="hover:bg-[#151419] transition-colors">
                     <td className="p-4">
-                      <div className="w-32 h-16 bg-gray-100 rounded overflow-hidden flex items-center justify-center border border-gray-200">
+                      <div className="w-32 h-16 bg-gray-800 rounded overflow-hidden flex items-center justify-center border border-gray-700">
                         {banner.imageUrl ? (
                           <img src={banner.imageUrl} alt={banner.title} className="w-full h-full object-cover" />
                         ) : (
@@ -196,15 +196,15 @@ const BannerManager = () => {
                       </div>
                     </td>
                     <td className="p-4">
-                      <div className="font-medium text-gray-900">{banner.title || 'Không có tiêu đề'}</div>
-                      <div className="text-sm text-gray-500 max-w-[200px] truncate" title={banner.linkUrl}>
+                      <div className="font-medium text-white">{banner.title || 'Không có tiêu đề'}</div>
+                      <div className="text-sm text-gray-400 max-w-[200px] truncate" title={banner.linkUrl}>
                         {banner.linkUrl || 'Không có link'}
                       </div>
                     </td>
                     <td className="p-4">
                       <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-md font-medium">{banner.position}</span>
                     </td>
-                    <td className="p-4 text-center font-medium text-gray-700">{banner.sortOrder}</td>
+                    <td className="p-4 text-center font-medium text-gray-300">{banner.sortOrder}</td>
                     <td className="p-4 text-center">
                       <button 
                         onClick={() => toggleActiveStatus(banner)}
@@ -232,18 +232,18 @@ const BannerManager = () => {
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-xl shadow-lg w-full max-w-lg overflow-hidden">
+          <div className="bg-[#202028] rounded-xl shadow-lg w-full max-w-lg overflow-hidden">
             <div className="flex justify-between items-center p-6 border-b border-gray-100">
-              <h2 className="text-xl font-bold text-gray-800">{editingId ? 'Cập nhật Banner' : 'Thêm Banner Mới'}</h2>
-              <button onClick={closeModal} className="text-gray-400 hover:text-gray-600"><X className="w-6 h-6" /></button>
+              <h2 className="text-xl font-bold text-white">{editingId ? 'Cập nhật Banner' : 'Thêm Banner Mới'}</h2>
+              <button onClick={closeModal} className="text-gray-400 hover:text-gray-300"><X className="w-6 h-6" /></button>
             </div>
             
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               {/* 🟢 INPUT CHỌN FILE Ở ĐÂY */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Hình ảnh Banner *</label>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Hình ảnh Banner *</label>
                 <div className="flex items-center justify-center w-full">
-                  <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 relative overflow-hidden">
+                  <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-gray-700 border-dashed rounded-lg cursor-pointer bg-[#151419] hover:bg-gray-800 relative overflow-hidden">
                     {imagePreview ? (
                       // Hiện ảnh xem trước
                       <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
@@ -251,8 +251,8 @@ const BannerManager = () => {
                       // Chưa có ảnh thì hiện icon Upload
                       <div className="flex flex-col items-center justify-center pt-5 pb-6">
                         <UploadCloud className="w-10 h-10 text-gray-400 mb-3" />
-                        <p className="mb-2 text-sm text-gray-500"><span className="font-semibold">Bấm vào đây</span> để chọn ảnh</p>
-                        <p className="text-xs text-gray-500">PNG, JPG, WEBP (MAX. 5MB)</p>
+                        <p className="mb-2 text-sm text-gray-400"><span className="font-semibold">Bấm vào đây</span> để chọn ảnh</p>
+                        <p className="text-xs text-gray-400">PNG, JPG, WEBP (MAX. 5MB)</p>
                       </div>
                     )}
                     <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
@@ -261,37 +261,37 @@ const BannerManager = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tên chiến dịch (Title)</label>
-                <input type="text" name="title" value={formData.title} onChange={handleInputChange} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5a8c76] outline-none" placeholder="VD: Siêu Sale Giữa Tháng" />
+                <label className="block text-sm font-medium text-gray-300 mb-1">Tên chiến dịch (Title)</label>
+                <input type="text" name="title" value={formData.title} onChange={handleInputChange} className="w-full p-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-[#5a8c76] outline-none" placeholder="VD: Siêu Sale Giữa Tháng" />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Đường dẫn khi click (Link URL)</label>
-                <input type="text" name="linkUrl" value={formData.linkUrl} onChange={handleInputChange} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5a8c76] outline-none" placeholder="/category/ao-thun" />
+                <label className="block text-sm font-medium text-gray-300 mb-1">Đường dẫn khi click (Link URL)</label>
+                <input type="text" name="linkUrl" value={formData.linkUrl} onChange={handleInputChange} className="w-full p-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-[#5a8c76] outline-none" placeholder="/category/ao-thun" />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Vị trí</label>
-                  <select name="position" value={formData.position} onChange={handleInputChange} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5a8c76] outline-none">
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Vị trí</label>
+                  <select name="position" value={formData.position} onChange={handleInputChange} className="w-full p-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-[#5a8c76] outline-none">
                     <option value="home_main">Banner chính (home_main)</option>
                     <option value="home_sidebar">Banner cột bên (home_sidebar)</option>
                     <option value="category_top">Banner danh mục (category_top)</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Thứ tự ưu tiên</label>
-                  <input type="number" name="sortOrder" value={formData.sortOrder} onChange={handleInputChange} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5a8c76] outline-none" />
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Thứ tự ưu tiên</label>
+                  <input type="number" name="sortOrder" value={formData.sortOrder} onChange={handleInputChange} className="w-full p-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-[#5a8c76] outline-none" />
                 </div>
               </div>
 
               <div className="flex items-center mt-2">
-                <input type="checkbox" name="isActive" id="isActive" checked={formData.isActive} onChange={handleInputChange} className="w-4 h-4 text-[#5a8c76] border-gray-300 rounded focus:ring-[#5a8c76]" />
-                <label htmlFor="isActive" className="ml-2 text-sm text-gray-700 font-medium">Bật / Hiển thị banner này</label>
+                <input type="checkbox" name="isActive" id="isActive" checked={formData.isActive} onChange={handleInputChange} className="w-4 h-4 text-[#5a8c76] border-gray-700 rounded focus:ring-[#5a8c76]" />
+                <label htmlFor="isActive" className="ml-2 text-sm text-gray-300 font-medium">Bật / Hiển thị banner này</label>
               </div>
 
               <div className="pt-4 border-t border-gray-100 flex justify-end space-x-3 mt-6">
-                <button type="button" onClick={closeModal} className="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors font-medium">Hủy</button>
+                <button type="button" onClick={closeModal} className="px-4 py-2 text-gray-300 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors font-medium">Hủy</button>
                 <button type="submit" className="px-4 py-2 text-white bg-[#5a8c76] hover:bg-[#4a7562] rounded-lg transition-colors font-medium shadow-sm">{editingId ? 'Lưu thay đổi' : 'Thêm mới'}</button>
               </div>
             </form>

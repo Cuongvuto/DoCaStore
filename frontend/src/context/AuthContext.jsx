@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import axiosClient from '../api/axiosClient'; // BẮT BUỘC IMPORT CÁI NÀY
 
 const AuthContext = createContext();
 
@@ -14,7 +15,6 @@ export const AuthProvider = ({ children }) => {
     
     if (storedUser && storedToken) {
       try {
-        // Thêm try catch để đề phòng localStorage bị lỗi định dạng
         setUser(JSON.parse(storedUser));
         setToken(storedToken);
       } catch (error) {
@@ -41,8 +41,27 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('role');
   };
 
+  // ĐÃ DI CHUYỂN VÀO TRONG AuthProvider
+  const refreshUser = async () => {
+    try {
+      if (!token) return;
+
+      
+      const res = await axiosClient.get('/user/me'); 
+
+      if (res.data && res.data.success) {
+        const updatedUser = res.data.data;
+        setUser(updatedUser); // Bây giờ đã gọi được setUser
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+      }
+    } catch (error) {
+      console.error("Lỗi cập nhật user:", error);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, login, logout }}>
+    // ĐÃ THÊM refreshUser VÀO value Ở ĐÂY
+    <AuthContext.Provider value={{ user, token, login, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

@@ -132,6 +132,33 @@ export const getAllUsers = async (req, res) => {
   }
 };
 
+//Lay thông tin cá nhân
+export const getMe = async (req, res) => {
+  try {
+    // req.user.id này có được sau khi đi qua middleware verifyToken
+    const user = await User.findById(req.user.id).select('-password');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy người dùng"
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: user
+    });
+  } catch (error) {
+    console.error("❌ Lỗi khi lấy thông tin cá nhân:", error);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi server',
+      error: error.message
+    });
+  }
+};
+
 // hàm đăng nhập
 export const logIn = async(req,res)=>{
   try {
@@ -237,7 +264,7 @@ export const getUserById = async (req,res)=>{
     }
 
     //Tìm user trong DB và loại bỏ trường password
-    const user = await User.findById(userid).select('-password');
+    const user = await User.findById(userId).select('-password');
     ///Nếu không tìm thấy
     if(!user){
       return res.status(404).json({
@@ -418,6 +445,65 @@ export const resetPassword = async (req, res) => {
 
   } catch (error) {
     res.status(500).json({ success: false, message: 'Lỗi server', error: error.message });
+  }
+};
+
+// Thay đổi quyền người dùng (chỉ admin hoặc superadmin)
+export const changeUserRole = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const { role } = req.body;
+
+    // Kiểm tra quyền của người gửi request
+    const currentUserRole = req.user.role;
+    if (currentUserRole !== 'admin' && currentUserRole !== 'superadmin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Bạn không có quyền thay đổi vai trò người dùng!'
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({
+        success: false,
+        message: "ID không hợp lệ!"
+      });
+    }
+
+    const validRoles = ['customer', 'admin', 'superadmin', 'product_admin', 'order_admin', 'support_admin'];
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: "Vai trò không hợp lệ!"
+      });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { role },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!updatedUser) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy người dùng!"
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Cập nhật vai trò thành công!',
+      data: updatedUser
+    });
+
+  } catch (error) {
+    console.error("❌ Lỗi khi đổi role người dùng:", error);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi server khi đổi vai trò',
+      error: error.message
+    });
   }
 };
 

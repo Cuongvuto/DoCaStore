@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useNotification } from '../../context/NotificationContext';
 import { 
   LayoutDashboard, 
   Package, 
@@ -8,75 +9,103 @@ import {
   ShoppingCart, 
   Users, 
   Image as ImageIcon, 
-  ArrowLeft,
-  Settings,
+  LogOut,
   Newspaper,
   Ticket,
-  Bell // 1. Import thêm icon Bell cho Thông báo
+  Bell,
+  Search,
+  Mail,
+  Settings,
+  Menu
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const AdminLayout = () => {
   const navigate = useNavigate();
   const location = useLocation(); 
-  const { user } = useAuth();
-  const role = user?.role; // 🚀 BẢO MẬT: Lấy role trực tiếp từ AuthContext (dữ liệu token Decoding) thay vì LocalStorage dễ bị sửa
+  const { user, logout } = useAuth();
+  const role = user?.role;
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { socket } = useNotification();
+  const [unreadMessages, setUnreadMessages] = useState(0);
 
   useEffect(() => {
-    if (!role || role !== 'admin') {
+    if (!socket) return;
+    
+    const handleNewMessage = () => {
+      if (location.pathname !== '/admin/messages') {
+        setUnreadMessages(prev => prev + 1);
+      }
+    };
+
+    socket.on('new_message_notification', handleNewMessage);
+    return () => socket.off('new_message_notification', handleNewMessage);
+  }, [socket, location.pathname]);
+
+  useEffect(() => {
+    if (location.pathname === '/admin/messages') {
+      setUnreadMessages(0);
+    }
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!role || role === 'customer') {
       toast.error('Bạn không có quyền truy cập khu vực này!');
       navigate('/');
     }
   }, [role, navigate]);
 
-  if (role !== 'admin') return null; 
+  if (!role || role === 'customer') return null;
 
-  // 2. Thêm Quản lý Thông báo vào danh sách menu
   const menuItems = [
-    { path: '/admin', name: 'Thống kê chung', icon: LayoutDashboard },
-    { path: '/admin/products', name: 'Quản lý Sản phẩm', icon: Package },
-    { path: '/admin/categories', name: 'Quản lý Danh mục', icon: FolderTree },
-    { path: '/admin/orders', name: 'Quản lý Đơn hàng', icon: ShoppingCart },
-    { path: '/admin/users', name: 'Quản lý User', icon: Users },
-    { path: '/admin/banners', name: 'Quản lý Banner', icon: ImageIcon },
-    { path: '/admin/news', name: 'Quản lý Tin Tức', icon: Newspaper }, 
-    { path: '/admin/coupons', name: 'Quản lý Coupon', icon: Ticket }, 
-    { path: '/admin/notifications', name: 'Quản lý Thông báo', icon: Bell }, // Thêm mục Thông báo ở đây
+    { path: '/admin', name: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'superadmin', 'product_admin', 'order_admin', 'support_admin'] },
+    { path: '/admin/products', name: 'Sản phẩm', icon: Package, roles: ['admin', 'superadmin', 'product_admin'] },
+    { path: '/admin/categories', name: 'Danh mục', icon: FolderTree, roles: ['admin', 'superadmin', 'product_admin'] },
+    { path: '/admin/orders', name: 'Đơn hàng', icon: ShoppingCart, roles: ['admin', 'superadmin', 'order_admin'] },
+    { path: '/admin/users', name: 'Người dùng', icon: Users, roles: ['admin', 'superadmin'] },
+    { path: '/admin/banners', name: 'Banner', icon: ImageIcon, roles: ['admin', 'superadmin', 'product_admin'] },
+    { path: '/admin/news', name: 'Tin Tức', icon: Newspaper, roles: ['admin', 'superadmin', 'product_admin'] }, 
+    { path: '/admin/coupons', name: 'Coupon', icon: Ticket, roles: ['admin', 'superadmin', 'order_admin'] }, 
+    { path: '/admin/notifications', name: 'Thông báo', icon: Bell, roles: ['admin', 'superadmin', 'support_admin'] },
   ];
 
+  const allowedMenuItems = menuItems.filter(item => item.roles.includes(role));
+
   return (
-    <div className="flex h-screen bg-gray-50 font-sans overflow-hidden">
+    <div className="admin-theme flex h-screen bg-[#151419] text-gray-200 font-sans overflow-hidden">
       
       {/* --- CỘT SIDEBAR BÊN TRÁI --- */}
-      <aside className="w-64 bg-slate-900 flex flex-col shadow-2xl z-10 transition-all duration-300">
+      <aside className={`${isSidebarOpen ? 'w-64' : 'w-20'} bg-[#202028] flex flex-col transition-all duration-300 z-20 border-r border-gray-800`}>
         
         {/* Logo / Header Sidebar */}
-        <div className="h-16 flex items-center justify-center border-b border-slate-800 bg-slate-950/50">
-          <h2 className="text-xl font-bold text-white flex items-center gap-2 tracking-wide">
-            <Settings className="w-6 h-6 text-[#5a8c76] animate-[spin_4s_linear_infinite]" /> 
-            Admin Panel
-          </h2>
+        <div className="h-20 flex items-center justify-center border-b border-gray-800 shrink-0">
+          <Link to="/admin" className="flex items-center justify-center w-full px-4 text-[#7294ff]">
+            <LayoutDashboard className="w-8 h-8 shrink-0" />
+            {isSidebarOpen && <span className="ml-3 font-bold text-xl text-white tracking-wide truncate">DoCa Admin</span>}
+          </Link>
         </div>
         
         {/* Navigation Links */}
         <nav className="flex-1 overflow-y-auto py-6 custom-scrollbar">
-          <ul className="space-y-2 px-4">
-            {menuItems.map((item) => {
+          <ul className="space-y-4 px-3">
+            {allowedMenuItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path || (item.path !== '/admin' && location.pathname.startsWith(item.path));
 
               return (
-                <li key={item.path}>
+                <li key={item.path} className="relative group">
                   <Link 
                     to={item.path} 
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                    className={`flex items-center p-3 rounded-xl transition-all duration-200 ${
                       isActive 
-                        ? 'bg-[#5a8c76] text-white shadow-md shadow-[#5a8c76]/30 font-semibold' 
-                        : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100 font-medium'
-                    }`}
+                        ? 'text-[#7294ff] relative' 
+                        : 'text-gray-400 hover:text-gray-200'
+                    } ${!isSidebarOpen && 'justify-center'}`}
+                    title={!isSidebarOpen ? item.name : ""}
                   >
-                    <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                    {item.name}
+                    {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-[#7294ff] rounded-r-md"></div>}
+                    <Icon className={`w-6 h-6 shrink-0 ${isActive ? 'text-[#7294ff]' : ''}`} />
+                    {isSidebarOpen && <span className="ml-4 font-medium truncate">{item.name}</span>}
                   </Link>
                 </li>
               );
@@ -84,32 +113,69 @@ const AdminLayout = () => {
           </ul>
         </nav>
         
-        {/* Nút Về trang chủ (Dưới cùng) */}
-        <div className="p-4 border-t border-slate-800 bg-slate-900">
-          <Link 
-            to="/" 
-            className="flex items-center justify-center gap-2 px-4 py-3 bg-slate-800 text-red-400 hover:bg-red-500/10 hover:text-red-300 rounded-xl transition-all font-semibold border border-transparent hover:border-red-500/20"
+        {/* Nút Về trang chủ / Logout */}
+        <div className="p-4 border-t border-gray-800">
+          <button 
+            onClick={() => { logout(); navigate('/'); }}
+            className={`flex items-center w-full p-3 text-gray-400 hover:text-red-400 transition-all ${!isSidebarOpen && 'justify-center'}`}
+            title={!isSidebarOpen ? "Đăng xuất" : ""}
           >
-            <ArrowLeft className="w-5 h-5" />
-            Về trang Cửa hàng
-          </Link>
+            <LogOut className="w-6 h-6 shrink-0" />
+            {isSidebarOpen && <span className="ml-4 font-medium truncate">Đăng xuất</span>}
+          </button>
         </div>
       </aside>
 
       {/* --- PHẦN NỘI DUNG BÊN PHẢI --- */}
-      <main className="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50">
-        {/* Header giả */}
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center px-8 shadow-sm shrink-0">
-          <h1 className="text-xl font-bold text-gray-800">
-            {menuItems.find(item => location.pathname === item.path || (item.path !== '/admin' && location.pathname.startsWith(item.path)))?.name || 'Bảng điều khiển'}
-          </h1>
+      <main className="flex-1 flex flex-col h-screen overflow-hidden bg-[#151419]">
+        
+        {/* Header */}
+        <header className="h-20 bg-[#202028] border-b border-gray-800 flex items-center justify-between px-6 shrink-0 z-10">
+          
+          {/* Left: Toggle & Search */}
+          <div className="flex items-center gap-6">
+            <button 
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="p-2 text-gray-400 hover:text-white transition-colors lg:hidden"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+
+            <div className="relative hidden md:block">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input 
+                type="text" 
+                placeholder="Search" 
+                className="bg-[#2a2a35] text-white pl-10 pr-4 py-2 rounded-lg border border-transparent focus:outline-none focus:border-[#7294ff] w-64 lg:w-80 transition-colors placeholder-gray-500"
+              />
+            </div>
+          </div>
+
+          {/* Right: Actions */}
+          <div className="flex items-center gap-4">
+            <Link to="/admin/messages" className="w-10 h-10 rounded-full bg-[#2a2a35] flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 transition-colors relative">
+              <Mail className="w-5 h-5" />
+              {unreadMessages > 0 && (
+                <span className="absolute top-1 right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-[#202028]"></span>
+              )}
+            </Link>
+            <button className="w-10 h-10 rounded-full bg-[#2a2a35] flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 transition-colors">
+              <Settings className="w-5 h-5" />
+            </button>
+            <button className="w-10 h-10 rounded-full bg-[#2a2a35] flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 transition-colors relative">
+              <Bell className="w-5 h-5" />
+              <span className="absolute top-2 right-2 w-2 h-2 bg-[#7294ff] rounded-full"></span>
+            </button>
+            <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-gray-700 ml-2 cursor-pointer">
+              <img src={user?.avatar || "https://ui-avatars.com/api/?name=Admin&background=random"} alt="Admin Avatar" className="w-full h-full object-cover" />
+            </div>
+          </div>
+
         </header>
 
         {/* Nội dung thực tế (Outlet) */}
-        <div className="flex-1 overflow-y-auto p-8">
-          <div className="max-w-7xl mx-auto">
-            <Outlet /> 
-          </div>
+        <div className="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar relative">
+           <Outlet /> 
         </div>
       </main>
 

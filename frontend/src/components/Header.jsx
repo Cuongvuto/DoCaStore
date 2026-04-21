@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Star, ShoppingCart, User, LogOut, ChevronDown, ChevronRight, Fish, Bell, Menu, X } from 'lucide-react';
+// Đã thêm LayoutDashboard vào danh sách import
+import { Star, ShoppingCart, User, LogOut, ChevronDown, ChevronRight, Fish, Bell, Menu, X, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { useNotification } from '../context/NotificationContext'; 
 import axiosClient from '../api/axiosClient';
+import CustomerChatWidget from './CustomerChatWidget';
 
 const Header = () => {
   const navigate = useNavigate();
@@ -123,6 +125,8 @@ const Header = () => {
           {/* --- KHU VỰC PHẢI: ICONS & USER --- */}
           <div className="flex items-center gap-1 sm:gap-3">
             
+            <CustomerChatWidget />
+
             {/* THÔNG BÁO */}
             <Link to="/notifications" className="p-1.5 sm:p-2.5 hover:bg-white/10 rounded-full transition-all relative group">
               <Bell size={20} className={`text-white group-hover:scale-110 transition-transform ${unreadCount > 0 ? 'animate-ring text-yellow-300' : ''}`} />
@@ -133,7 +137,7 @@ const Header = () => {
               )}
             </Link>
 
-            {/* WISHLIST (Ẩn bớt trên mobile cho đỡ chật, hoặc giữ tùy bạn, mình đang thu nhỏ) */}
+            {/* WISHLIST */}
             <Link to="/wishlist" className="hidden sm:block p-1.5 sm:p-2.5 hover:bg-white/10 rounded-full transition-all relative group">
               <Star size={20} className="text-white group-hover:scale-110 transition-transform" />
               {wishlist?.length > 0 && (
@@ -159,7 +163,9 @@ const Header = () => {
             {user ? (
               <div className="flex items-center gap-2 sm:gap-3 ml-1">
                 <div className="hidden md:flex flex-col items-end leading-tight">
-                  <span className="text-[10px] text-green-200 font-bold uppercase tracking-tighter">Thành viên</span>
+                  <span className="text-[10px] text-green-200 font-bold uppercase tracking-tighter">
+                    {user.role === 'customer' ? 'Thành viên' : 'Quản trị viên'}
+                  </span>
                   <span className="text-sm font-bold text-white uppercase">{user.name}</span>
                 </div>
                 <div className="relative group">
@@ -171,9 +177,18 @@ const Header = () => {
                         <p className="text-[10px] text-gray-400 font-bold uppercase">Tài khoản</p>
                         <p className="text-sm font-bold text-[#5a8c76] truncate">{user.name}</p>
                       </div>
+                      
                       <Link to="/profile" className="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-[#5a8c76]/5 hover:text-[#5a8c76] transition-colors font-semibold">
                         <User size={16} /> Hồ sơ cá nhân
                       </Link>
+
+                      {/* --- NÚT TỚI TRANG QUẢN TRỊ (CHỈ HIỆN KHI LÀ ADMIN) --- */}
+                      {user.role && user.role !== 'customer' && (
+                        <Link to="/admin" className="flex items-center gap-3 px-4 py-3 text-sm text-[#5a8c76] hover:bg-[#5a8c76]/10 transition-colors font-bold border-t border-gray-50">
+                          <LayoutDashboard size={16} /> Trang quản trị
+                        </Link>
+                      )}
+
                       <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 font-bold border-t border-gray-50 transition-colors">
                         <LogOut size={16} /> Đăng xuất
                       </button>

@@ -25,10 +25,10 @@ const productSchema = new mongoose.Schema({
   brand: { type: String },
   
   // Thông số kỹ thuật chuyên sâu cho đồ câu
-  specs: {
-    length: String,   // Chiều dài cần (vd: 2m4, 3m)
-    material: String  // Chất liệu (vd: Carbon)
-  },
+  // specs: {
+  //   length: String,   // Chiều dài cần (vd: 2m4, 3m)
+  //   material: String  // Chất liệu (vd: Carbon)
+  // },
 
   isTrending: { type: Boolean, default: false },
 

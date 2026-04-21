@@ -8,11 +8,10 @@ import {
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext'; 
 import axiosClient from '../api/axiosClient';
-// IMPORT TIER BADGE TẠI ĐÂY (Sửa lại đường dẫn nếu cần)
 import TierBadge from '../components/TierBadge'; 
 
 const Profile = () => {
-  const { user, token } = useAuth();
+  const { user, token,refreshUser } = useAuth();
   const [activeTab, setActiveTab] = useState('info'); 
 
   // ================= STATE ĐỊA CHỈ =================
@@ -42,11 +41,12 @@ const Profile = () => {
   // 1. Khởi tạo dữ liệu
   useEffect(() => {
     if (user && token) {
+      refreshUser();
       fetchAddresses();
       fetchOrders();
       axios.get("https://provinces.open-api.vn/api/p/").then((res) => setProvinces(res.data));
     }
-  }, [user, token]);
+  }, [user, token,refreshUser]);
 
   const fetchAddresses = async () => {
     try {
@@ -192,7 +192,7 @@ const Profile = () => {
             <p className="text-xs text-gray-500 mb-4">{user.email}</p>
             
             {/* TÍCH HỢP TIER BADGE TẠI ĐÂY */}
-            <TierBadge points={user?.points || 0} tier={user?.tier || 'Bronze'} />
+            <TierBadge points={user?.points || 0} tier={user?.tier || 'normal'} />
 
           </div>
 
