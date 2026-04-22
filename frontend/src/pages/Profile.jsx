@@ -3,7 +3,8 @@ import axios from 'axios';
 import { 
   User, MapPin, ShoppingBag, 
   ChevronDown, ChevronUp, Package, 
-  Trash2, Edit, Plus, X, CheckCircle 
+  Trash2, Edit, Plus, X, CheckCircle,
+  MessageSquare, LifeBuoy
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext'; 
@@ -11,7 +12,7 @@ import axiosClient from '../api/axiosClient';
 import TierBadge from '../components/TierBadge'; 
 
 const Profile = () => {
-  const { user, token,refreshUser } = useAuth();
+  const { user, token, refreshUser } = useAuth();
   const [activeTab, setActiveTab] = useState('info'); 
 
   // ================= STATE ĐỊA CHỈ =================
@@ -34,9 +35,16 @@ const Profile = () => {
   const [expandedOrderId, setExpandedOrderId] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  // ================= STATE LỊCH SỬ CHAT (MỚI TỐI ƯU) =================
+  const [supportTickets, setSupportTickets] = useState([]);
+  const [expandedTicketId, setExpandedTicketId] = useState(null);
+  const [ticketMessages, setTicketMessages] = useState({}); // Lưu cache tin nhắn theo từng vé
+  const [loadingTickets, setLoadingTickets] = useState(false);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+
   // === STATE PHÂN TRANG ĐƠN HÀNG ===
   const [currentPage, setCurrentPage] = useState(1);
-  const ordersPerPage = 6; // Hiện tối đa 6 đơn mỗi trang
+  const ordersPerPage = 6; 
 
   // 1. Khởi tạo dữ liệu
   useEffect(() => {
@@ -46,7 +54,14 @@ const Profile = () => {
       fetchOrders();
       axios.get("https://provinces.open-api.vn/api/p/").then((res) => setProvinces(res.data));
     }
-  }, [user, token,refreshUser]);
+  }, [user?._id, token]);
+
+  // Fetch Lịch sử danh sách Vé hỗ trợ khi vào tab 'chat'
+  useEffect(() => {
+    if (activeTab === 'chat' && user) {
+      fetchSupportTickets();
+    }
+  }, [activeTab, user]);
 
   const fetchAddresses = async () => {
     try {
@@ -73,13 +88,56 @@ const Profile = () => {
     }
   };
 
+  // --- HÀM CHO TAB LỊCH SỬ HỖ TRỢ ---
+  const fetchSupportTickets = async () => {
+    try {
+      setLoadingTickets(true);
+      const res = await axiosClient.get(`/messages/customer-tickets/${user._id}`);
+      if (res.data.success) {
+        setSupportTickets(res.data.conversations || []);
+      }
+    } catch (error) {
+      console.error("Lỗi tải danh sách hỗ trợ:", error);
+      toast.error("Không thể tải danh sách hỗ trợ!");
+    } finally {
+      setLoadingTickets(false);
+    }
+  };
+
+  const handleToggleTicket = async (ticketId) => {
+    // Nếu bấm đóng
+    if (expandedTicketId === ticketId) {
+      setExpandedTicketId(null);
+      return;
+    }
+    
+    // Nếu bấm mở
+    setExpandedTicketId(ticketId);
+    
+    // Chỉ gọi API nếu chưa cache tin nhắn của vé này
+    if (!ticketMessages[ticketId]) {
+      try {
+        setLoadingMessages(true);
+        const res = await axiosClient.get(`/messages/${ticketId}`);
+        if (res.data.success) {
+          setTicketMessages(prev => ({ ...prev, [ticketId]: res.data.messages }));
+        }
+      } catch (error) {
+        console.error("Lỗi tải tin nhắn:", error);
+        toast.error("Lỗi khi tải chi tiết tin nhắn");
+      } finally {
+        setLoadingMessages(false);
+      }
+    }
+  };
+
+
   // ================= LOGIC PHÂN TRANG =================
   const indexOfLastOrder = currentPage * ordersPerPage;
   const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
   const currentOrders = orders.slice(indexOfFirstOrder, indexOfLastOrder);
   const totalPages = Math.ceil(orders.length / ordersPerPage);
 
-  // Đảm bảo không bị lỗi trang trống nếu đang ở trang cuối mà hủy hết đơn
   useEffect(() => {
     if (totalPages > 0 && currentPage > totalPages) {
       setCurrentPage(totalPages);
@@ -87,7 +145,6 @@ const Profile = () => {
   }, [orders.length, totalPages, currentPage]);
 
 
-  // ================= LOGIC HỦY ĐƠN HÀNG =================
   const handleCancelOrder = (orderId) => {
     toast.warning("Xác nhận hủy đơn hàng", {
       description: "Bạn có chắc chắn muốn hủy đơn hàng này không? Thao tác này không thể hoàn tác.",
@@ -105,13 +162,10 @@ const Profile = () => {
           }
         }
       },
-      cancel: {
-        label: "Đóng",
-      }
+      cancel: { label: "Đóng" }
     });
   };
 
-  // 2. Logic chọn Tỉnh/Huyện/Xã
   const handleProvinceChange = (e) => {
     const code = e.target.value;
     const name = e.target.options[e.target.selectedIndex].text;
@@ -128,7 +182,6 @@ const Profile = () => {
     else setWards([]);
   };
 
-  // 3. Xử lý Thêm/Sửa địa chỉ
   const saveAddress = async (e) => {
     e.preventDefault();
     const payload = {
@@ -164,7 +217,6 @@ const Profile = () => {
     } catch (err) { toast.error("Không thể xóa!"); }
   };
 
-  // 4. HÀM RENDER TRẠNG THÁI
   const renderStatus = (status) => {
     switch (status) {
       case 'pending': return <span className="text-yellow-600 bg-yellow-50 border border-yellow-200 px-2 py-1 rounded-md text-[10px] font-bold uppercase">Chờ xử lý</span>;
@@ -173,6 +225,15 @@ const Profile = () => {
       case 'completed': return <span className="text-green-600 bg-green-50 border border-green-200 px-2 py-1 rounded-md text-[10px] font-bold uppercase">Hoàn thành</span>;
       case 'cancelled': return <span className="text-red-600 bg-red-50 border border-red-200 px-2 py-1 rounded-md text-[10px] font-bold uppercase">Đã hủy</span>;
       default: return <span className="text-gray-600 bg-gray-50 border px-2 py-1 rounded-md text-[10px] font-bold uppercase">{status}</span>;
+    }
+  };
+
+  const renderTicketStatus = (status) => {
+    switch(status) {
+        case 'pending': return <span className="bg-yellow-50 text-yellow-600 border border-yellow-200 px-2 py-1 rounded-md text-[10px] font-bold uppercase">Đang chờ</span>;
+        case 'active': return <span className="bg-blue-50 text-blue-600 border border-blue-200 px-2 py-1 rounded-md text-[10px] font-bold uppercase">Đang xử lý</span>;
+        case 'resolved': return <span className="bg-gray-100 text-gray-500 border border-gray-200 px-2 py-1 rounded-md text-[10px] font-bold uppercase">Đã đóng</span>;
+        default: return null;
     }
   };
 
@@ -191,7 +252,6 @@ const Profile = () => {
             <h2 className="font-bold text-gray-800">{user.name}</h2>
             <p className="text-xs text-gray-500 mb-4">{user.email}</p>
             
-            {/* TÍCH HỢP TIER BADGE TẠI ĐÂY */}
             <TierBadge points={user?.points || 0} tier={user?.tier || 'normal'} />
 
           </div>
@@ -204,19 +264,27 @@ const Profile = () => {
               <User size={18} /> <span className="font-medium">Hồ sơ cá nhân</span>
             </button>
             <button 
-              onClick={() => { setActiveTab('orders'); setCurrentPage(1); }} // Reset về trang 1 khi chuyển tab
+              onClick={() => { setActiveTab('orders'); setCurrentPage(1); }}
               className={`w-full flex items-center gap-3 p-4 transition-colors ${activeTab === 'orders' ? 'bg-red-50 text-red-600 border-l-4 border-red-600' : 'text-gray-600 hover:bg-gray-50 border-l-4 border-transparent'}`}
             >
               <ShoppingBag size={18} /> <span className="font-medium">Đơn hàng đã đặt</span>
+            </button>
+            {/* TAB LỊCH SỬ CHAT */}
+            <button 
+              onClick={() => setActiveTab('chat')}
+              className={`w-full flex items-center gap-3 p-4 transition-colors ${activeTab === 'chat' ? 'bg-red-50 text-red-600 border-l-4 border-red-600' : 'text-gray-600 hover:bg-gray-50 border-l-4 border-transparent'}`}
+            >
+              <LifeBuoy size={18} /> <span className="font-medium">Lịch sử hỗ trợ</span>
             </button>
           </nav>
         </div>
 
         {/* CONTENT */}
         <div className="md:col-span-3">
-          {activeTab === 'info' ? (
-            <div className="space-y-6">
-              {/* THÔNG TIN CƠ BẢN */}
+          
+          {/* TAB 1: THÔNG TIN CÁ NHÂN */}
+          {activeTab === 'info' && (
+            <div className="space-y-6 animate-in fade-in zoom-in-95 duration-200">
               <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                 <h3 className="text-lg font-bold mb-4 flex items-center gap-2 italic">
                     <CheckCircle className="text-green-500" size={20}/> Thông tin tài khoản
@@ -233,7 +301,6 @@ const Profile = () => {
                 </div>
               </div>
 
-              {/* QUẢN LÝ ĐỊA CHỈ */}
               <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                 <div className="flex justify-between items-center mb-6">
                   <h3 className="text-lg font-bold flex items-center gap-2 italic">
@@ -263,9 +330,11 @@ const Profile = () => {
                 </div>
               </div>
             </div>
-          ) : (
-            /* LỊCH SỬ ĐƠN HÀNG */
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+          )}
+
+          {/* TAB 2: ĐƠN HÀNG ĐÃ ĐẶT */}
+          {activeTab === 'orders' && (
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
               <h3 className="text-lg font-bold mb-6 flex items-center gap-2 italic">
                 <Package className="text-orange-500" size={20}/> Lịch sử mua hàng
               </h3>
@@ -275,7 +344,6 @@ const Profile = () => {
               ) : (
                 <>
                   <div className="space-y-3">
-                    {/* ĐÃ SỬA THÀNH currentOrders THAY VÌ orders */}
                     {currentOrders.map((order) => (
                       <div key={order._id} className="border border-gray-100 rounded-xl overflow-hidden">
                         <div 
@@ -299,7 +367,6 @@ const Profile = () => {
                           <div className="p-4 border-t border-gray-100 bg-white space-y-3">
                             {order.products.map((item, idx) => {
                               const productInfo = item.productId || item.product_id || {};
-                              
                               return (
                                 <div key={idx} className="flex gap-3 items-center">
                                   <img src={productInfo.imageUrl || 'https://via.placeholder.com/50'} className="w-12 h-12 object-cover rounded border" alt="product" />
@@ -328,7 +395,6 @@ const Profile = () => {
                                 </button>
                               </div>
                             )}
-
                           </div>
                         )}
                       </div>
@@ -336,7 +402,6 @@ const Profile = () => {
                     {orders.length === 0 && <p className="text-center text-gray-400 py-10 italic">Chưa có đơn hàng nào được đặt.</p>}
                   </div>
 
-                  {/* ===== HIỂN THỊ DÃY NÚT PHÂN TRANG ===== */}
                   {totalPages > 1 && (
                     <div className="flex justify-center items-center gap-2 mt-8">
                       <button
@@ -374,6 +439,90 @@ const Profile = () => {
               )}
             </div>
           )}
+
+          {/* TAB 3: LỊCH SỬ CHAT VỚI DROPDOWN THEO TICKET (MỚI) */}
+          {activeTab === 'chat' && (
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
+              <h3 className="text-lg font-bold mb-6 flex items-center gap-2 italic">
+                <LifeBuoy className="text-blue-500" size={20}/> Các phiên yêu cầu hỗ trợ
+              </h3>
+              
+              {loadingTickets ? (
+                <div className="text-center py-10 text-gray-500">Đang tải danh sách...</div>
+              ) : supportTickets.length === 0 ? (
+                <div className="text-center py-10 flex flex-col items-center">
+                  <MessageSquare className="w-12 h-12 text-gray-300 mb-3" />
+                  <p className="text-gray-400 italic">Bạn chưa tạo yêu cầu hỗ trợ nào.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {supportTickets.map((ticket) => (
+                    <div key={ticket._id} className="border border-gray-100 rounded-xl overflow-hidden">
+                      
+                      {/* Tiêu đề Ticket - Click để mở/đóng */}
+                      <div 
+                        onClick={() => handleToggleTicket(ticket._id)}
+                        className="p-4 bg-gray-50 flex justify-between items-center cursor-pointer hover:bg-gray-100 transition"
+                      >
+                        <div>
+                          <p className="font-bold text-sm text-blue-600">Vé hỗ trợ: {ticket.ticketId}</p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Mở lúc: {new Date(ticket.createdAt).toLocaleTimeString('vi-VN')} - {new Date(ticket.createdAt).toLocaleDateString('vi-VN')}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="text-right">
+                            {renderTicketStatus(ticket.status)}
+                          </div>
+                          {expandedTicketId === ticket._id ? <ChevronUp size={18} className="text-gray-400"/> : <ChevronDown size={18} className="text-gray-400"/>}
+                        </div>
+                      </div>
+
+                      {/* Nội dung Ticket (Dropdown) */}
+                      {expandedTicketId === ticket._id && (
+                        <div className="bg-white border-t border-gray-100 flex flex-col max-h-[400px]">
+                          {loadingMessages ? (
+                            <div className="p-8 text-center text-sm text-gray-400">Đang tải nội dung...</div>
+                          ) : ticketMessages[ticket._id]?.length > 0 ? (
+                            <div className="p-4 space-y-4 overflow-y-auto custom-scrollbar">
+                              {ticketMessages[ticket._id].map((msg, idx) => {
+                                // TIN NHẮN HỆ THỐNG
+                                if (msg.sender === 'system') {
+                                  return (
+                                    <div key={msg._id || idx} className="flex justify-center my-3">
+                                      <span className={`text-[11px] px-3 py-1.5 rounded-full font-medium text-center ${msg.action === 'join_support' ? 'bg-[#5a8c76]/10 text-[#5a8c76] border border-[#5a8c76]/20' : msg.action === 'end_support' ? 'bg-red-50 text-red-500 border border-red-100' : 'bg-gray-100 text-gray-500 border border-gray-200'}`}>
+                                        {msg.action === 'join_support' ? '👩‍💼' : msg.action === 'end_support' ? '🔒' : '🤖'} {msg.text}
+                                      </span>
+                                    </div>
+                                  );
+                                }
+
+                                // TIN NHẮN KHÁCH HÀNG & ADMIN
+                                const isCustomer = msg.sender === 'customer';
+                                return (
+                                  <div key={msg._id || idx} className={`flex ${isCustomer ? 'justify-end' : 'justify-start'}`}>
+                                    <div className={`max-w-[80%] p-3 shadow-sm ${isCustomer ? 'bg-[#5a8c76] text-white rounded-2xl rounded-tr-sm' : 'bg-gray-100 text-gray-800 rounded-2xl rounded-tl-sm border border-gray-200'}`}>
+                                      <p className="text-sm leading-relaxed">{msg.text}</p>
+                                      <span className={`text-[10px] mt-1.5 block ${isCustomer ? 'text-gray-200' : 'text-gray-500'}`}>
+                                        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                      </span>
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          ) : (
+                            <div className="p-8 text-center text-sm text-gray-400">Chưa có nội dung trò chuyện.</div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
         </div>
       </div>
 
