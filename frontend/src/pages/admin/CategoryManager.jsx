@@ -208,7 +208,7 @@ const CategoryManager = () => {
         <React.Fragment key={cat._id}>
           <div 
             className={`bg-[#202028] rounded-xl shadow-sm border ${!cat.isActive ? 'border-dashed border-gray-700 opacity-70' : 'border-gray-700'} overflow-hidden transition-all duration-200 hover:shadow-md mb-3`}
-            style={{ marginLeft: `${level * 2}rem` }}
+            style={{ marginLeft: `${Math.min(level, 3) * 1.5}rem` }}
           >
             <div className={`flex flex-col sm:flex-row sm:justify-between sm:items-center p-4 transition-colors ${isTreeExpanded || isProductExpanded ? 'bg-slate-50 border-b border-gray-700' : 'hover:bg-[#151419]'}`}>
               
@@ -243,24 +243,24 @@ const CategoryManager = () => {
                 </span>
               </div>
 
-              <div className="flex items-center space-x-2 shrink-0">
+              <div className="flex items-center flex-wrap gap-2 shrink-0">
                 <button 
                   onClick={() => toggleExpandProducts(cat._id)} 
-                  className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors border ${isProductExpanded ? 'bg-slate-200 text-slate-800 border-slate-300' : 'text-slate-600 bg-slate-100 hover:bg-slate-200 border-transparent'}`}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors border ${isProductExpanded ? 'bg-[#2a2a35] text-white border-gray-600' : 'text-gray-400 bg-[#2a2a35]/50 hover:bg-[#2a2a35] border-transparent'}`}
                 >
-                  {isProductExpanded ? 'Đóng DS Sản phẩm' : 'Xem Sản phẩm'}
+                  {isProductExpanded ? 'Đóng DS' : 'Xem SP'}
                 </button>
                 <button 
                   onClick={() => openModal(cat)} 
-                  className="flex items-center px-3 py-1.5 text-sm font-medium text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors border border-amber-200/50"
+                  className="flex items-center px-3 py-1.5 text-xs font-bold text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 rounded-lg transition-colors border border-amber-500/20"
                 >
-                  <Edit className="w-4 h-4 mr-1" /> Sửa
+                  <Edit className="w-3.5 h-3.5 mr-1" /> Sửa
                 </button>
                 <button 
                   onClick={() => handleDeleteCategory(cat._id)} 
-                  className="flex items-center px-3 py-1.5 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors border border-red-200/50"
+                  className="flex items-center px-3 py-1.5 text-xs font-bold text-red-400 bg-red-500/10 hover:bg-red-500/20 rounded-lg transition-colors border border-red-500/20"
                 >
-                  <Trash2 className="w-4 h-4 mr-1" /> Xóa
+                  <Trash2 className="w-3.5 h-3.5 mr-1" /> Xóa
                 </button>
               </div>
             </div>
@@ -370,27 +370,27 @@ const CategoryManager = () => {
   };
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+    <div className="p-4 md:p-6 max-w-5xl mx-auto">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+        <h1 className="text-xl md:text-2xl font-bold text-white flex items-center gap-2">
           <FolderTree className="w-6 h-6 text-[#5a8c76]" />
           Quản lý Danh Mục
         </h1>
         <button 
           onClick={() => openModal()}
-          className="flex items-center px-4 py-2 bg-[#5a8c76] text-white rounded-lg hover:bg-[#4a7562] transition-colors shadow-sm"
+          className="w-full sm:w-auto flex items-center justify-center px-4 py-2.5 bg-[#5a8c76] text-white rounded-xl hover:bg-[#4a7562] transition-all shadow-lg shadow-[#5a8c76]/20 font-bold text-sm"
         >
           <Plus className="w-5 h-5 mr-2" /> Thêm Danh Mục
         </button>
       </div>
 
-      <div className="">
+      <div className="space-y-4">
         {isLoading ? (
-          <div className="p-8 text-center text-gray-400 bg-[#202028] rounded-xl shadow-sm border border-gray-700">
+          <div className="p-12 text-center text-gray-500 bg-[#202028] rounded-2xl shadow-sm border border-gray-700 font-medium">
             Đang tải dữ liệu...
           </div>
         ) : categoriesTree.length === 0 ? (
-          <div className="p-8 text-center text-gray-400 bg-[#202028] rounded-xl shadow-sm border border-gray-700">
+          <div className="p-12 text-center text-gray-500 bg-[#202028] rounded-2xl shadow-sm border border-dashed border-gray-700 font-medium">
             Chưa có danh mục nào. Hãy thêm mới nhé!
           </div>
         ) : (
@@ -399,41 +399,41 @@ const CategoryManager = () => {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-[#202028] rounded-xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col transform transition-all">
-            <div className="flex justify-between items-center p-5 border-b border-gray-100 bg-[#151419]">
-              <h2 className="text-xl font-bold text-white">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-[#202028] rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col border border-gray-700 transform transition-all">
+            <div className="flex justify-between items-center p-5 border-b border-gray-700 bg-[#202028]">
+              <h2 className="text-lg md:text-xl font-bold text-white tracking-wide">
                 {editingId ? 'Cập Nhật Danh Mục' : 'Thêm Danh Mục Mới'}
               </h2>
-              <button onClick={closeModal} className="text-gray-400 hover:text-gray-300 transition-colors">
+              <button onClick={closeModal} className="p-2 hover:bg-gray-700 rounded-full transition-colors text-gray-400">
                 <X className="w-6 h-6" />
               </button>
             </div>
             
-            <form onSubmit={handleSubmit} className="p-5 max-h-[80vh] overflow-y-auto">
+            <form onSubmit={handleSubmit} className="p-5 md:p-6 max-h-[80vh] overflow-y-auto custom-scrollbar space-y-5">
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div className="col-span-1 md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Tên danh mục <span className="text-red-500">*</span></label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5">
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold text-gray-400 mb-1.5 uppercase tracking-tight">Tên danh mục <span className="text-red-500">*</span></label>
                   <input 
                     type="text" 
                     name="name" 
                     value={formData.name} 
                     onChange={handleInputChange} 
                     required 
-                    className="w-full p-2.5 border border-gray-700 rounded-lg focus:ring-2 focus:ring-[#5a8c76] outline-none transition-all" 
+                    className="w-full p-2.5 bg-[#151419] border border-gray-700 rounded-xl focus:ring-2 focus:ring-[#5a8c76] outline-none text-white text-sm transition-all" 
                     placeholder="VD: Phụ Kiện Câu" 
                     autoFocus
                   />
                 </div>
 
-                <div className="col-span-1 md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Thuộc danh mục (Cha)</label>
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold text-gray-400 mb-1.5 uppercase tracking-tight">Thuộc danh mục (Cha)</label>
                   <select
                     name="parentId"
                     value={formData.parentId}
                     onChange={handleInputChange}
-                    className="w-full p-2.5 border border-gray-700 rounded-lg focus:ring-2 focus:ring-[#5a8c76] outline-none transition-all bg-[#202028]"
+                    className="w-full p-2.5 bg-[#151419] border border-gray-700 rounded-xl focus:ring-2 focus:ring-[#5a8c76] outline-none text-white text-sm transition-all"
                   >
                     <option value="">-- Không có (Làm danh mục gốc) --</option>
                     {flatCategories
@@ -446,52 +446,52 @@ const CategoryManager = () => {
                   </select>
                 </div>
 
-                <div className="col-span-1 md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Mô tả ngắn</label>
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold text-gray-400 mb-1.5 uppercase tracking-tight">Mô tả ngắn</label>
                   <textarea
                     name="description"
                     value={formData.description}
                     onChange={handleInputChange}
                     rows="2"
-                    className="w-full p-2.5 border border-gray-700 rounded-lg focus:ring-2 focus:ring-[#5a8c76] outline-none transition-all resize-none"
+                    className="w-full p-2.5 bg-[#151419] border border-gray-700 rounded-xl focus:ring-2 focus:ring-[#5a8c76] outline-none text-white text-sm transition-all resize-none"
                     placeholder="Mô tả công dụng hoặc thông tin phụ..."
                   ></textarea>
                 </div>
 
-                <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Thứ tự hiển thị (Sort Order)</label>
+                <div className="sm:col-span-1">
+                  <label className="block text-xs font-bold text-gray-400 mb-1.5 uppercase tracking-tight">Thứ tự hiển thị</label>
                   <input 
                     type="number" 
                     name="sortOrder" 
                     value={formData.sortOrder} 
                     onChange={handleInputChange} 
                     min="0"
-                    className="w-full p-2.5 border border-gray-700 rounded-lg focus:ring-2 focus:ring-[#5a8c76] outline-none transition-all" 
+                    className="w-full p-2.5 bg-[#151419] border border-gray-700 rounded-xl focus:ring-2 focus:ring-[#5a8c76] outline-none text-white text-sm transition-all" 
                   />
-                  <p className="text-[11px] text-gray-400 mt-1">Số nhỏ xếp trước (0, 1, 2...)</p>
+                  <p className="text-[10px] text-gray-500 mt-1 italic">Số nhỏ xếp trước (0, 1, 2...)</p>
                 </div>
 
-                <div className="col-span-1 flex items-center pt-6">
-                  <label className="flex items-center cursor-pointer gap-2">
+                <div className="sm:col-span-1 flex items-center sm:pt-6">
+                  <label className="flex items-center cursor-pointer gap-3 group">
                     <input 
                       type="checkbox" 
                       name="isActive" 
                       checked={formData.isActive} 
                       onChange={handleInputChange} 
-                      className="w-5 h-5 text-[#5a8c76] border-gray-700 rounded focus:ring-[#5a8c76] cursor-pointer"
+                      className="w-5 h-5 accent-[#5a8c76] border-gray-700 rounded cursor-pointer"
                     />
-                    <span className="text-sm font-medium text-gray-300 select-none">
-                      Hiển thị danh mục này
+                    <span className="text-sm font-bold text-gray-300 group-hover:text-[#5a8c76] transition-colors select-none uppercase tracking-tighter">
+                      Hiển thị danh mục
                     </span>
                   </label>
                 </div>
               </div>
 
-              <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-100">
-                <button type="button" onClick={closeModal} className="px-4 py-2 text-gray-300 bg-[#202028] border border-gray-700 hover:bg-[#151419] rounded-lg transition-colors font-medium">
+              <div className="flex flex-col sm:flex-row justify-end gap-3 pt-6 border-t border-gray-700">
+                <button type="button" onClick={closeModal} className="w-full sm:w-auto px-6 py-2.5 text-gray-300 bg-[#151419] border border-gray-700 hover:bg-gray-800 rounded-xl transition-all font-bold text-sm">
                   Hủy bỏ
                 </button>
-                <button type="submit" className="px-5 py-2 text-white bg-[#5a8c76] hover:bg-[#4a7562] rounded-lg transition-colors font-medium shadow-sm">
+                <button type="submit" className="w-full sm:w-auto px-8 py-2.5 text-white bg-[#5a8c76] hover:bg-[#4a7562] rounded-xl transition-all font-bold shadow-lg shadow-[#5a8c76]/20 text-sm">
                   {editingId ? 'Lưu thay đổi' : 'Thêm mới'}
                 </button>
               </div>
@@ -499,6 +499,7 @@ const CategoryManager = () => {
           </div>
         </div>
       )}
+
     </div>
   );
 };

@@ -149,76 +149,76 @@ const UserManager = () => {
   };
 
   return (
-    <div className="p-6 md:p-8 bg-[#151419] min-h-screen">
+    <div className="p-4 md:p-8 bg-[#151419] min-h-screen">
       <div className="max-w-7xl mx-auto">
         
         {/* Header & Công cụ */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-6">
           <div>
-            <h1 className="text-2xl font-bold text-white uppercase tracking-wide">Quản lý Tài Khoản</h1>
-            <p className="text-gray-400 text-sm mt-1">Tổng số người dùng: {users.length}</p>
+            <h1 className="text-xl md:text-2xl font-bold text-white uppercase tracking-wider">Quản lý Tài Khoản</h1>
+            <p className="text-gray-400 text-xs md:text-sm mt-1">Tổng số người dùng: <span className="text-[#7294ff] font-bold">{users.length}</span></p>
           </div>
 
-          <div className="flex items-center gap-3 w-full md:w-auto">
-            <form onSubmit={handleSearch} className="relative flex-1 md:w-64">
+          <div className="flex flex-col sm:flex-row items-center gap-4 w-full lg:w-auto">
+            <form onSubmit={handleSearch} className="relative w-full sm:w-64 lg:w-80">
               <input
                 type="text"
                 placeholder="Tìm tên người dùng..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                className="w-full pl-10 pr-4 py-2.5 bg-[#202028] text-white rounded-xl border border-gray-700 focus:ring-2 focus:ring-[#7294ff] focus:border-transparent outline-none transition-all text-sm"
               />
-              <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
-              <button type="submit" className="hidden"></button>
+              <Search className="absolute left-3 top-3 text-gray-500" size={18} />
             </form>
 
             <button
               onClick={() => setIsAddModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition shadow-sm"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-[#7294ff] text-white rounded-xl font-bold hover:bg-[#5a7dee] transition-all shadow-lg shadow-[#7294ff]/20 text-sm"
             >
-              <Plus size={18} /> <span className="hidden md:inline">Thêm User</span>
+              <Plus size={18} /> <span>Thêm User</span>
             </button>
           </div>
         </div>
 
         {/* Bảng danh sách */}
-        <div className="bg-[#202028] rounded-xl shadow-sm border border-gray-700 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead className="bg-gray-800 text-gray-300 uppercase text-xs font-bold tracking-wider">
+        <div className="bg-[#202028] rounded-2xl shadow-xl border border-gray-700 overflow-hidden">
+          <div className="overflow-x-auto custom-scrollbar">
+            <table className="w-full text-left border-collapse min-w-[900px]">
+              <thead className="bg-[#151419] text-gray-400 uppercase text-[10px] md:text-xs font-bold tracking-widest border-b border-gray-700">
                 <tr>
-                  <th className="p-4 border-b">ID</th>
-                  <th className="p-4 border-b">Họ và Tên</th>
-                  <th className="p-4 border-b">Email</th>
-                  <th className="p-4 border-b">Hạng</th> {/* CỘT MỚI */}
-                  <th className="p-4 border-b">Đã chi tiêu</th> {/* CỘT MỚI */}
-                  <th className="p-4 border-b">Phân quyền</th>
-                  <th className="p-4 border-b text-center">Thao tác</th>
+                  <th className="p-4">ID</th>
+                  <th className="p-4">Họ và Tên</th>
+                  <th className="p-4">Email</th>
+                  <th className="p-4">Hạng</th>
+                  <th className="p-4">Đã chi tiêu</th>
+                  <th className="p-4">Phân quyền</th>
+                  <th className="p-4 text-center">Thao tác</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 text-sm">
+              <tbody className="divide-y divide-gray-800 text-sm">
                 {loading ? (
-                  <tr><td colSpan="7" className="p-10 text-center text-gray-400 font-medium">Đang tải dữ liệu...</td></tr>
+                  <tr><td colSpan="7" className="p-12 text-center text-gray-500 font-medium">Đang tải dữ liệu...</td></tr>
                 ) : currentUsers.length === 0 ? (
-                  <tr><td colSpan="7" className="p-10 text-center text-gray-400">Không tìm thấy người dùng nào.</td></tr>
+                  <tr><td colSpan="7" className="p-12 text-center text-gray-500 font-medium">Không tìm thấy người dùng nào.</td></tr>
                 ) : (
                   currentUsers.map((user) => (
-                    <tr key={user._id} className="hover:bg-[#151419] transition-colors">
-                      <td className="p-4 font-mono text-xs text-gray-400">{user._id.slice(-6).toUpperCase()}</td>
-                      <td className="p-4 font-bold text-white">{user.name}</td>
-                      <td className="p-4 text-gray-300">{user.email}</td>
+                    <tr key={user._id} className="hover:bg-[#151419]/50 transition-colors">
+                      <td className="p-4 font-mono text-[10px] text-gray-500">{user._id.slice(-6).toUpperCase()}</td>
+                      <td className="p-4">
+                        <div className="font-bold text-white text-sm md:text-base">{user.name}</div>
+                      </td>
+                      <td className="p-4 text-gray-400 text-xs md:text-sm">{user.email}</td>
                       
-                      {/* DỮ LIỆU CỘT MỚI */}
                       <td className="p-4">{getTierBadge(user.tier)}</td>
-                      <td className="p-4 font-medium text-green-600">{formatCurrency(user.totalSpent)}</td>
+                      <td className="p-4 font-bold text-[#00c9a7] text-xs md:text-sm">{formatCurrency(user.totalSpent)}</td>
                       
                       <td className="p-4">
                         {canChangeRole ? (
                           <select
                             value={user.role}
                             onChange={(e) => handleRoleChange(user._id, e.target.value)}
-                            className="bg-[#151419] text-gray-300 border border-gray-600 rounded py-1 px-2 outline-none focus:ring-1 focus:ring-blue-500 text-xs font-bold uppercase transition"
-                            disabled={user._id === currentUser?._id && user.role === 'superadmin'} // Không cho tự đổi role superadmin của mình
+                            className="bg-[#151419] text-gray-300 border border-gray-700 rounded-lg py-1.5 px-3 outline-none focus:ring-2 focus:ring-[#7294ff] text-[10px] md:text-xs font-bold uppercase transition-all"
+                            disabled={user._id === currentUser?._id && user.role === 'superadmin'}
                           >
                             <option value="customer">Customer</option>
                             <option value="admin">Admin</option>
@@ -234,7 +234,7 @@ const UserManager = () => {
                       <td className="p-4 text-center">
                         <button
                           onClick={() => handleDelete(user._id, user.name)}
-                          className="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition-colors shadow-sm inline-flex items-center justify-center"
+                          className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl transition-all shadow-sm inline-flex items-center justify-center border border-transparent hover:border-red-500/20"
                           title="Xóa tài khoản"
                         >
                           <Trash2 size={18} />
@@ -249,13 +249,13 @@ const UserManager = () => {
 
           {/* Phân trang */}
           {totalPages > 1 && (
-            <div className="p-4 border-t flex items-center justify-between bg-[#151419]">
-              <span className="text-sm text-gray-300">
-                Hiển thị <span className="font-bold">{indexOfFirstItem + 1}</span> - <span className="font-bold">{Math.min(indexOfLastItem, users.length)}</span> / <span className="font-bold">{users.length}</span>
+            <div className="p-4 border-t border-gray-800 flex flex-col sm:flex-row items-center justify-between bg-[#151419]/50 gap-4">
+              <span className="text-xs md:text-sm text-gray-400">
+                Hiển thị <span className="text-white font-bold">{indexOfFirstItem + 1}</span> - <span className="text-white font-bold">{Math.min(indexOfLastItem, users.length)}</span> / <span className="text-white font-bold">{users.length}</span>
               </span>
               <div className="flex gap-2">
-                <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="p-2 border bg-[#202028] rounded-md hover:bg-gray-800 disabled:opacity-50 transition"><ChevronLeft size={18} /></button>
-                <button onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages} className="p-2 border bg-[#202028] rounded-md hover:bg-gray-800 disabled:opacity-50 transition"><ChevronRight size={18} /></button>
+                <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="p-2 border border-gray-700 bg-[#202028] rounded-xl hover:bg-gray-800 disabled:opacity-30 transition-all"><ChevronLeft size={18} /></button>
+                <button onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages} className="p-2 border border-gray-700 bg-[#202028] rounded-xl hover:bg-gray-800 disabled:opacity-30 transition-all"><ChevronRight size={18} /></button>
               </div>
             </div>
           )}
@@ -263,29 +263,29 @@ const UserManager = () => {
 
         {/* Modal Thêm Người Dùng */}
         {isAddModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-            <div className="bg-[#202028] rounded-xl w-full max-w-md shadow-2xl overflow-hidden">
-              <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-[#151419]">
-                <h2 className="text-lg font-bold uppercase text-white">Thêm Người Dùng Mới</h2>
-                <button onClick={() => setIsAddModalOpen(false)} className="text-gray-400 hover:text-red-500"><X size={24} /></button>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div className="bg-[#202028] rounded-2xl w-full max-w-md shadow-2xl overflow-hidden border border-gray-700">
+              <div className="p-5 border-b border-gray-700 flex justify-between items-center bg-[#202028]">
+                <h2 className="text-lg font-bold uppercase text-white tracking-wide">Thêm Người Dùng Mới</h2>
+                <button onClick={() => setIsAddModalOpen(false)} className="p-2 hover:bg-gray-700 rounded-full transition-colors text-gray-400 hover:text-red-500"><X size={24} /></button>
               </div>
 
-              <form onSubmit={handleAddUser} className="p-6 space-y-4">
+              <form onSubmit={handleAddUser} className="p-6 space-y-5">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-300 mb-1">Họ và Tên</label>
-                  <input required type="text" value={newUser.name} onChange={(e) => setNewUser({...newUser, name: e.target.value})} className="w-full p-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500" placeholder="Nguyễn Văn A" />
+                  <label className="block text-xs font-bold text-gray-400 mb-1.5 uppercase tracking-tight">Họ và Tên</label>
+                  <input required type="text" value={newUser.name} onChange={(e) => setNewUser({...newUser, name: e.target.value})} className="w-full p-2.5 bg-[#151419] border border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-[#7294ff] text-white text-sm transition-all" placeholder="Nguyễn Văn A" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-300 mb-1">Email</label>
-                  <input required type="email" value={newUser.email} onChange={(e) => setNewUser({...newUser, email: e.target.value})} className="w-full p-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500" placeholder="email@example.com" />
+                  <label className="block text-xs font-bold text-gray-400 mb-1.5 uppercase tracking-tight">Email</label>
+                  <input required type="email" value={newUser.email} onChange={(e) => setNewUser({...newUser, email: e.target.value})} className="w-full p-2.5 bg-[#151419] border border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-[#7294ff] text-white text-sm transition-all" placeholder="email@example.com" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-300 mb-1">Mật khẩu</label>
-                  <input required type="password" value={newUser.password} onChange={(e) => setNewUser({...newUser, password: e.target.value})} className="w-full p-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500" placeholder="••••••••" />
+                  <label className="block text-xs font-bold text-gray-400 mb-1.5 uppercase tracking-tight">Mật khẩu</label>
+                  <input required type="password" value={newUser.password} onChange={(e) => setNewUser({...newUser, password: e.target.value})} className="w-full p-2.5 bg-[#151419] border border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-[#7294ff] text-white text-sm transition-all" placeholder="••••••••" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-300 mb-1">Phân quyền</label>
-                  <select value={newUser.role} onChange={(e) => setNewUser({...newUser, role: e.target.value})} className="w-full p-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-[#202028]">
+                  <label className="block text-xs font-bold text-gray-400 mb-1.5 uppercase tracking-tight">Phân quyền</label>
+                  <select value={newUser.role} onChange={(e) => setNewUser({...newUser, role: e.target.value})} className="w-full p-2.5 bg-[#151419] border border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-[#7294ff] text-white text-sm transition-all">
                     <option value="customer">Customer (Khách hàng)</option>
                     <option value="admin">Admin (Quản trị viên chung)</option>
                     <option value="superadmin">Super Admin (Quản trị cấp cao)</option>
@@ -296,13 +296,14 @@ const UserManager = () => {
                 </div>
                 
                 <div className="pt-4 flex gap-3">
-                  <button type="button" onClick={() => setIsAddModalOpen(false)} className="flex-1 py-2 bg-gray-700 text-white font-semibold rounded-lg hover:bg-gray-300 transition">Hủy</button>
-                  <button type="submit" className="flex-1 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition">Tạo mới</button>
+                  <button type="button" onClick={() => setIsAddModalOpen(false)} className="flex-1 py-2.5 bg-[#151419] text-gray-400 font-bold rounded-xl hover:bg-gray-800 transition-all border border-gray-700">Hủy</button>
+                  <button type="submit" className="flex-1 py-2.5 bg-[#7294ff] text-white font-bold rounded-xl hover:bg-[#5a7dee] transition-all shadow-lg shadow-[#7294ff]/20">Tạo mới</button>
                 </div>
               </form>
             </div>
           </div>
         )}
+
 
       </div>
     </div>

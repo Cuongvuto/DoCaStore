@@ -18,7 +18,7 @@ import notificationRoutes from './routes/notificationRoutes.js';
 import newsRoutes from './routes/newsRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js'; 
 import messageRoutes from './routes/messageRoutes.js'; // Added message routes
-import { askBot } from './controller/chatController.js';
+import { askBot } from './controller/chatController.js'; // AI chat handler
 import cors from 'cors';
 import { startCronJobs } from './utils/cronjob.js'; 
 
@@ -258,7 +258,7 @@ app.use('/api/banners', bannerRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/news', newsRoutes);
-app.use('/api/chat', askBot);
+app.post('/api/chat', askBot); // AI chat endpoint (Gemini)
 app.use('/api/dashboard', dashboardRoutes); 
 app.use('/api/messages', messageRoutes); // Registered message routes
 

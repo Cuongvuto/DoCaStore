@@ -165,75 +165,94 @@ const NewsManager = () => {
   };
 
   return (
-    <div className="p-6 bg-[#151419] min-h-screen">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-black text-[#5a8c76] uppercase">Quản lý Tin Tức</h1>
+    <div className="p-4 md:p-6 bg-[#151419] min-h-screen">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+        <h1 className="text-xl md:text-3xl font-black text-[#5a8c76] uppercase tracking-tighter">Quản lý Tin Tức</h1>
         <button 
           onClick={() => { closeModal(); setIsModalOpen(true); }}
-          className="bg-[#5a8c76] text-white px-5 py-2.5 rounded-xl font-bold hover:bg-[#4a7562] transition-colors flex items-center gap-2 shadow-md"
+          className="w-full sm:w-auto bg-[#5a8c76] text-white px-5 py-3 rounded-2xl font-bold hover:bg-[#4a7562] transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#5a8c76]/20 active:scale-95"
         >
           <Plus size={20} /> Viết bài mới
         </button>
       </div>
 
       {/* DANH SÁCH BÀI VIẾT */}
-      <div className="bg-[#202028] rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <table className="w-full text-left">
-          <thead className="bg-[#151419] text-gray-300 font-bold text-sm uppercase">
-            <tr>
-              <th className="p-4 w-24">Ảnh bìa</th>
-              <th className="p-4">Tiêu đề bài viết</th>
-              <th className="p-4 w-32">Lượt xem</th>
-              <th className="p-4 w-32 text-center">Thao tác</th>
-            </tr>
-          </thead>
-          <tbody>
-            {newsList.length === 0 ? (
-              <tr><td colSpan="4" className="text-center py-10 text-gray-400">Chưa có bài viết nào!</td></tr>
-            ) : (
-              newsList.map((item) => (
-                <tr key={item._id} className="border-t border-gray-100 hover:bg-[#151419] transition-colors">
-                  <td className="p-4">
-                    <img src={item.thumbnail} alt={item.title} className="w-20 h-14 object-cover rounded-lg border border-gray-700" />
-                  </td>
-                  <td className="p-4">
-                    <p className="font-bold text-white text-base">{item.title}</p>
-                    <p className="text-xs text-gray-400 mt-1">/{item.slug}</p>
-                  </td>
-                  <td className="p-4">
-                    <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold">👁️ {item.views || 0}</span>
-                  </td>
-                  <td className="p-4 flex justify-center items-center gap-3 mt-3">
-                    {/* Nút SỬA */}
-                    <button 
-                      onClick={() => handleEditClick(item)} 
-                      className="text-blue-500 hover:bg-blue-50 p-2 rounded-lg transition-colors"
-                      title="Sửa bài viết"
-                    >
-                      <Edit size={18} />
-                    </button>
-                    {/* Nút XÓA */}
-                    <button 
-                      onClick={() => handleDelete(item._id)} 
-                      className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors"
-                      title="Xóa bài viết"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+      <div className="bg-[#202028] rounded-3xl shadow-xl border border-gray-700 overflow-hidden">
+        <div className="overflow-x-auto custom-scrollbar">
+          <table className="w-full text-left min-w-[700px]">
+            <thead className="bg-[#151419] text-gray-500 font-bold text-xs uppercase tracking-widest border-b border-gray-700">
+              <tr>
+                <th className="p-5 w-24">Ảnh bìa</th>
+                <th className="p-5">Tiêu đề bài viết</th>
+                <th className="p-5 w-32">Lượt xem</th>
+                <th className="p-5 w-32 text-center">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-800">
+              {newsList.length === 0 ? (
+                <tr><td colSpan="4" className="text-center py-16 text-gray-500 font-medium italic">Chưa có bài viết nào!</td></tr>
+              ) : (
+                newsList.map((item) => (
+                  <tr key={item._id} className="hover:bg-white/5 transition-colors">
+                    <td className="p-5">
+                      <img src={item.thumbnail} alt={item.title} className="w-20 h-14 object-cover rounded-xl border border-gray-700 shadow-sm" />
+                    </td>
+                    <td className="p-5">
+                      <p className="font-bold text-white text-sm md:text-base leading-snug line-clamp-2">{item.title}</p>
+                      <p className="text-[10px] text-gray-500 mt-1.5 font-mono">/{item.slug}</p>
+                    </td>
+                    <td className="p-5">
+                      <span className="bg-[#5a8c76]/10 text-[#5a8c76] px-3 py-1 rounded-lg text-xs font-bold border border-[#5a8c76]/20">
+                        👁️ {item.views || 0}
+                      </span>
+                    </td>
+                    <td className="p-5">
+                      <div className="flex justify-center items-center gap-2">
+                        <button 
+                          onClick={() => handleEditClick(item)} 
+                          className="text-blue-400 hover:bg-blue-400/10 p-2.5 rounded-xl transition-all border border-transparent hover:border-blue-400/20"
+                          title="Sửa bài viết"
+                        >
+                          <Edit size={18} />
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(item._id)} 
+                          className="text-red-400 hover:bg-red-400/10 p-2.5 rounded-xl transition-all border border-transparent hover:border-red-400/20"
+                          title="Xóa bài viết"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
 
         {/* PHÂN TRANG */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-6 py-4 border-t bg-[#151419]/50">
-            <span className="text-sm text-gray-300">Trang <span className="font-bold">{currentPage}</span> / <span className="font-bold">{totalPages}</span> (Tổng: {totalCount} bài)</span>
+          <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-5 border-t border-gray-700 bg-[#151419]/50 gap-4">
+            <span className="text-xs md:text-sm text-gray-500">
+              Trang <span className="text-white font-bold">{currentPage}</span> / <span className="text-white font-bold">{totalPages}</span> 
+              <span className="hidden sm:inline"> (Tổng: {totalCount} bài)</span>
+            </span>
             <div className="flex gap-2">
-              <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="p-2 border rounded bg-[#202028] disabled:opacity-50 hover:bg-gray-800 transition"><ChevronLeft size={16}/></button>
-              <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="p-2 border rounded bg-[#202028] disabled:opacity-50 hover:bg-gray-800 transition"><ChevronRight size={16}/></button>
+              <button 
+                disabled={currentPage === 1} 
+                onClick={() => setCurrentPage(p => p - 1)} 
+                className="p-2.5 border border-gray-700 rounded-xl bg-[#202028] text-gray-400 disabled:opacity-30 hover:bg-gray-800 transition-all"
+              >
+                <ChevronLeft size={18}/>
+              </button>
+              <button 
+                disabled={currentPage === totalPages} 
+                onClick={() => setCurrentPage(p => p + 1)} 
+                className="p-2.5 border border-gray-700 rounded-xl bg-[#202028] text-gray-400 disabled:opacity-30 hover:bg-gray-800 transition-all"
+              >
+                <ChevronRight size={18}/>
+              </button>
             </div>
           </div>
         )}
@@ -241,89 +260,89 @@ const NewsManager = () => {
 
       {/* MODAL THÊM/SỬA BÀI VIẾT (POPUP) */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-[#202028] w-full max-w-5xl rounded-2xl shadow-2xl mt-20 mb-10 overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto custom-scrollbar">
+          <div className="bg-[#202028] w-full max-w-5xl rounded-3xl shadow-2xl my-auto overflow-hidden border border-gray-700 transform transition-all">
             
-            <div className="flex justify-between items-center p-5 border-b border-gray-100 bg-[#151419]">
-              <h2 className="text-xl font-black text-[#5a8c76] uppercase">
+            <div className="flex justify-between items-center p-5 md:p-6 border-b border-gray-700 bg-[#202028]">
+              <h2 className="text-lg md:text-xl font-black text-[#5a8c76] uppercase tracking-tight">
                 {editingId ? "Cập nhật bài viết" : "Soạn bài viết mới"}
               </h2>
-              <button onClick={closeModal} className="text-gray-400 hover:text-red-500 transition-colors">
+              <button onClick={closeModal} className="p-2 hover:bg-gray-700 rounded-full transition-colors text-gray-400 hover:text-red-500">
                 <X size={24} />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <form onSubmit={handleSubmit} className="p-5 md:p-8 space-y-6 md:space-y-8">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10">
                 {/* Cột Trái */}
-                <div className="space-y-5">
+                <div className="space-y-6">
                   <div>
-                    <label className="block text-sm font-bold text-gray-300 mb-1">Tiêu đề bài viết <span className="text-red-500">*</span></label>
+                    <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">Tiêu đề bài viết <span className="text-red-500">*</span></label>
                     <input type="text" required value={formData.title} onChange={handleTitleChange} 
-                      className="w-full px-4 py-2.5 rounded-xl border border-gray-700 focus:border-[#5a8c76] focus:ring-2 focus:ring-[#5a8c76]/20 outline-none transition-all font-medium"
+                      className="w-full bg-[#151419] px-4 py-3 rounded-2xl border border-gray-700 focus:ring-2 focus:ring-[#5a8c76] outline-none text-white transition-all font-bold text-sm md:text-base"
                       placeholder="VD: Kinh nghiệm chọn máy câu..." />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-gray-300 mb-1">Đường dẫn SEO (Slug tự động)</label>
+                    <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">Đường dẫn SEO (Tự động)</label>
                     <input type="text" required value={formData.slug} readOnly
-                      className="w-full px-4 py-2.5 rounded-xl border border-gray-700 bg-gray-800 text-gray-400 outline-none font-mono text-sm cursor-not-allowed" />
+                      className="w-full bg-[#151419]/50 px-4 py-3 rounded-2xl border border-gray-800 text-gray-500 outline-none font-mono text-[10px] md:text-xs cursor-not-allowed" />
                   </div>
                   
                   {/* UPLOAD FILE SECTION */}
                   <div>
-                    <label className="block text-sm font-bold text-gray-300 mb-1">
+                    <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">
                       Ảnh bìa (Thumbnail) {!editingId && <span className="text-red-500">*</span>}
                     </label>
-                    <div className="flex items-center gap-4">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                       {imagePreview ? (
-                        <div className="relative">
-                           <img src={imagePreview} alt="Preview" className="w-32 h-24 object-cover rounded-xl border border-gray-700 shadow-sm" />
-                           <button type="button" onClick={() => {setImageFile(null); setImagePreview('');}} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600">
+                        <div className="relative group">
+                           <img src={imagePreview} alt="Preview" className="w-40 h-28 object-cover rounded-2xl border border-gray-700 shadow-md transition-all group-hover:brightness-75" />
+                           <button type="button" onClick={() => {setImageFile(null); setImagePreview('');}} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
                              <X size={14} />
                            </button>
                         </div>
                       ) : (
-                        <label className="w-32 h-24 flex flex-col items-center justify-center border-2 border-dashed border-gray-700 rounded-xl cursor-pointer hover:bg-[#151419] hover:border-[#5a8c76] transition-colors">
-                          <ImagePlus className="text-gray-400 mb-1" size={24} />
-                          <span className="text-xs text-gray-400 font-medium">Chọn ảnh</span>
+                        <label className="w-full sm:w-40 h-28 flex flex-col items-center justify-center border-2 border-dashed border-gray-700 rounded-2xl cursor-pointer hover:bg-[#151419] hover:border-[#5a8c76] transition-all group">
+                          <ImagePlus className="text-gray-500 group-hover:text-[#5a8c76] mb-1.5 transition-colors" size={28} />
+                          <span className="text-[10px] text-gray-500 font-bold uppercase tracking-tighter group-hover:text-[#5a8c76]">Chọn ảnh bìa</span>
                           <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
                         </label>
                       )}
-                      <div className="flex-1">
-                        <p className="text-xs text-gray-400">Ảnh sẽ được lưu tự động lên hệ thống Cloudinary với chất lượng cao nhất.</p>
-                        {editingId && !imageFile && <p className="text-xs text-blue-500 mt-1 italic">*Bỏ qua nếu sếp muốn giữ nguyên ảnh cũ.</p>}
+                      <div className="flex-1 space-y-2">
+                        <p className="text-[10px] md:text-xs text-gray-500 leading-relaxed font-medium italic">Kích thước khuyến nghị: 800x600px. Ảnh sẽ được tối ưu tự động.</p>
+                        {editingId && !imageFile && <p className="text-[10px] text-[#5a8c76] font-bold uppercase tracking-tighter">* Đang sử dụng ảnh cũ</p>}
                       </div>
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold text-gray-300 mb-1">Mô tả ngắn <span className="text-red-500">*</span></label>
+                    <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">Mô tả ngắn <span className="text-red-500">*</span></label>
                     <textarea required value={formData.shortDescription} onChange={(e) => setFormData({...formData, shortDescription: e.target.value})}
-                      className="w-full px-4 py-2.5 rounded-xl border border-gray-700 focus:border-[#5a8c76] focus:ring-2 focus:ring-[#5a8c76]/20 outline-none transition-all min-h-[100px]"
+                      className="w-full bg-[#151419] px-4 py-3 rounded-2xl border border-gray-700 focus:ring-2 focus:ring-[#5a8c76] outline-none text-white transition-all min-h-[120px] text-sm md:text-base leading-relaxed"
                       placeholder="Viết 1-2 câu tóm tắt để thu hút người đọc..." />
                   </div>
                 </div>
 
                 {/* Cột Phải - ReactQuill */}
-                <div className="flex flex-col">
-                  <label className="block text-sm font-bold text-gray-300 mb-1">Nội dung bài viết <span className="text-red-500">*</span></label>
-                  <div className="flex-1 border border-gray-700 rounded-xl overflow-hidden bg-[#202028]">
+                <div className="flex flex-col min-h-[400px] md:min-h-[500px]">
+                  <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">Nội dung bài viết <span className="text-red-500">*</span></label>
+                  <div className="flex-1 border border-gray-700 rounded-2xl overflow-hidden bg-[#151419] transition-all focus-within:ring-2 focus-within:ring-[#5a8c76]">
                     <ReactQuill 
                       theme="snow" 
                       value={formData.content} 
                       onChange={(content) => setFormData({...formData, content})}
-                      className="h-[430px] bg-[#202028] border-none pb-[42px]"
+                      className="h-full bg-transparent border-none flex flex-col"
                     />
                   </div>
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 pt-5 border-t border-gray-100 mt-10">
-                <button type="button" onClick={closeModal} className="px-6 py-2.5 rounded-xl font-bold text-gray-400 hover:bg-gray-800 transition-colors">
+              <div className="flex flex-col sm:flex-row justify-end gap-3 pt-8 border-t border-gray-700">
+                <button type="button" onClick={closeModal} className="w-full sm:w-auto px-8 py-3 rounded-2xl font-bold text-gray-500 hover:bg-gray-800 transition-all text-sm uppercase tracking-wider">
                   Hủy bỏ
                 </button>
-                <button type="submit" disabled={isLoading} className="bg-[#5a8c76] text-white px-8 py-2.5 rounded-xl font-bold hover:bg-[#4a7562] transition-colors shadow-md disabled:opacity-50">
-                  {isLoading ? 'Đang xử lý...' : (editingId ? 'Cập nhật bài viết' : 'Xuất bản bài viết')}
+                <button type="submit" disabled={isLoading} className="w-full sm:w-auto bg-[#5a8c76] text-white px-10 py-3 rounded-2xl font-bold hover:bg-[#4a7562] transition-all shadow-lg shadow-[#5a8c76]/20 disabled:opacity-50 active:scale-95 text-sm uppercase tracking-widest">
+                  {isLoading ? 'Đang xử lý...' : (editingId ? 'Lưu thay đổi' : 'Xuất bản ngay')}
                 </button>
               </div>
             </form>
