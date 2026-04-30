@@ -37,26 +37,37 @@ const io = socketUtil.init(server);
 const activeSessions = new Map();
 
 // Hàm tự động kết thúc phiên dự phòng (nếu 10 phút không ai nói gì/quên bấm nút)
-const endSession = async (customerIdStr, io) => {
+const endSession = async (customerIdStr, io, conversationIdStr) => {
   try {
     const Message = (await import('./models/messageModel.js')).default;
+    const Conversation = (await import('./models/conversationModel.js')).default;
     
+    let conv;
+    if (conversationIdStr) {
+        conv = await Conversation.findByIdAndUpdate(
+            conversationIdStr, 
+            { status: 'resolved' }, 
+            { new: true }
+        ).populate('customerId', 'name email avatar')
+         .populate('assignedAdminId', 'name');
+    }
+
     // Gửi tin báo kết thúc
     const sysMsg = await Message.create({
+      conversationId: conversationIdStr,
       customerId: customerIdStr,
       sender: 'system',
-      text: "Phiên hỗ trợ đã tự động kết thúc.",
+      text: "Phiên hỗ trợ đã tự động kết thúc do khách hàng không phản hồi quá 10 phút.",
       action: 'end_support'
     });
 
     io.to('admin_room').emit('receive_message', sysMsg);
     io.to(`room_user_${customerIdStr}`).emit('receive_message', sysMsg);
     
-    // Ẩn tin nhắn với khách hàng
-    await Message.updateMany(
-      { customerId: customerIdStr, hiddenFromCustomer: { $ne: true } },
-      { $set: { hiddenFromCustomer: true } }
-    );
+    if (conv) {
+        io.to('admin_room').emit('ticket_updated', conv); 
+        io.to(`room_user_${customerIdStr}`).emit('ticket_updated', conv);
+    }
     
     activeSessions.delete(customerIdStr);
     console.log(`⏰ Đã tự động kết thúc phiên chat của khách hàng ${customerIdStr}`);
@@ -143,6 +154,23 @@ io.on('connection', (socket) => {
         isRead: false
       });
 
+      // LÓT TIMEOUT 10 PHÚT NẾU ADMIN TRẢ LỜI
+      if (data.sender === 'admin' || data.sender === 'system') {
+        if (activeSessions.has(data.customerId)) {
+            clearTimeout(activeSessions.get(data.customerId));
+        }
+        const timerId = setTimeout(() => {
+            endSession(data.customerId, io, conversationId);
+        }, 10 * 60 * 1000); // 10 minutes
+        activeSessions.set(data.customerId, timerId);
+      } else if (data.sender === 'customer') {
+        // KHÁCH HÀNG NHẮN TIN THÌ HỦY BỎ TIMEOUT KẾT THÚC
+        if (activeSessions.has(data.customerId)) {
+            clearTimeout(activeSessions.get(data.customerId));
+            activeSessions.delete(data.customerId);
+        }
+      }
+
       io.to('admin_room').emit('receive_message', newMessage);
       io.to(`room_user_${data.customerId}`).emit('receive_message', newMessage);
 
@@ -222,6 +250,12 @@ io.on('connection', (socket) => {
       // SỬA Ở ĐÂY: Báo cho Khách hàng biết là phiên đã bị kết thúc
       io.to('admin_room').emit('ticket_updated', conv); 
       io.to(`room_user_${data.customerId}`).emit('ticket_updated', conv); 
+
+      // Hủy bỏ timeout kết thúc tự động nếu Admin chủ động kết thúc
+      if (activeSessions.has(data.customerId)) {
+          clearTimeout(activeSessions.get(data.customerId));
+          activeSessions.delete(data.customerId);
+      }
 
     } catch (err) {
       console.error("Lỗi end_session:", err);
