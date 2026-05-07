@@ -15,7 +15,7 @@ export const sendEmail = async (options) => {
   const transporter = nodemailer.createTransport({
     host: smtpHost,
     port: smtpPort,
-    secure: smtpPort === 465, // True nếu là 465, False nếu là 587
+    secure: smtpPort === 465 || smtpPort === 2465,
     auth: {
       user: smtpUser,
       pass: smtpPass,
