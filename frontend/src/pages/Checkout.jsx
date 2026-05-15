@@ -496,7 +496,7 @@ const Checkout = () => {
                       </div>
                     )}
                     <img
-                      src="https://cdn.haitrieu.com/wp-content/uploads/2022/10/Logo-VietQR.png"
+                      src="/VietQRlogo.png"
                       alt="VietQR"
                       className="h-8 object-contain"
                     />
@@ -526,7 +526,7 @@ const Checkout = () => {
                       </div>
                     )}
                     <img
-                      src="https://upload.wikimedia.org/wikipedia/vi/f/fe/MoMo_Logo.png"
+                      src="https://developers.momo.vn/v3/assets/images/icon-52bd5808cecdb1970e1aeec3c31a3ee1.png"
                       alt="MoMo"
                       className="h-8 object-contain"
                     />

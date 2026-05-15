@@ -44,7 +44,8 @@ const NetProfit = ({ goal }) => {
               stroke="currentColor"
               strokeWidth="10"
               fill="transparent"
-              strokeDasharray={`${progress * 2.51} 251`} 
+              pathLength="100"
+              strokeDasharray={`${progress} 100`} 
               strokeLinecap="round"
               className="text-[#7294ff]"
             />

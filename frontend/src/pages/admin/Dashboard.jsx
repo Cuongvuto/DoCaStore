@@ -54,7 +54,7 @@ const Dashboard = () => {
       {/* Middle Grid: Activity and Quick Links */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
         <div className="xl:col-span-2">
-          <ActivityChart data={dashboardData.activityData} />
+          <ActivityChart />
         </div>
         <div className="xl:col-span-1 h-[350px]">
           <QuickLinks bestSellingProducts={dashboardData.bestSellingProducts} />
