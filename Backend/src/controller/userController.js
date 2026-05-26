@@ -14,7 +14,40 @@ export const createUser = async (req, res) => {
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ success: false, message: 'Email đã tồn tại!' });
+      if (existingUser.isVerified) {
+        return res.status(400).json({ success: false, message: 'Email đã tồn tại!' });
+      }
+
+      // Cập nhật thông tin cho tài khoản chưa xác thực và gửi lại OTP
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+      existingUser.name = name;
+      existingUser.password = hashedPassword;
+      existingUser.role = role || 'customer';
+      existingUser.verifyOtp = otp;
+      existingUser.otpExpires = Date.now() + 10 * 60 * 1000;
+
+      const savedUser = await existingUser.save();
+      console.log("✅ Đã cập nhật User chưa xác thực. Đang chuẩn bị gửi mail...");
+
+      try {
+        await sendVerificationOTP(savedUser.email, savedUser.name, otp);
+        console.log("🚀 Mail đã gửi thành công tới:", savedUser.email);
+
+        return res.status(200).json({
+          success: true,
+          message: 'Đăng ký thành công! Vui lòng check mail lấy mã OTP mới.',
+          data: { id: savedUser._id, email: savedUser.email }
+        });
+      } catch (mailError) {
+        console.error("❌ LỖI GỬI MAIL CHI TIẾT:", mailError);
+        return res.status(500).json({ 
+          success: false, 
+          message: 'Không thể gửi email lúc này: ' + mailError.message 
+        });
+      }
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -102,7 +135,6 @@ export const verifyEmail = async (req, res) => {
       success: true, 
       message: 'Xác thực Email thành công! Tài khoản của bạn đã được kích hoạt.' 
     });
-
   } catch (error) {
     console.error("❌ Lỗi khi xác thực OTP:", error);
     res.status(500).json({ 
@@ -110,6 +142,47 @@ export const verifyEmail = async (req, res) => {
       message: 'Lỗi server', 
       error: error.message 
     });
+  }
+};
+
+// GỬI LẠI MÃ OTP XÁC THỰC
+// ==========================================
+export const resendOTP = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Vui lòng cung cấp email!' });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Người dùng không tồn tại!' });
+    }
+
+    if (user.isVerified) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Tài khoản này đã được xác thực trước đó!' 
+      });
+    }
+
+    // Tạo mã OTP mới
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    user.verifyOtp = otp;
+    user.otpExpires = Date.now() + 10 * 60 * 1000; // 10 phút
+
+    await user.save();
+
+    await sendVerificationOTP(user.email, user.name, otp);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Mã OTP mới đã được gửi đến email của bạn.'
+    });
+  } catch (error) {
+    console.error("❌ Lỗi gửi lại OTP:", error);
+    res.status(500).json({ success: false, message: 'Lỗi server', error: error.message });
   }
 };
 // 2. Hàm lấy danh sách người dùng (Hàm kiểm tra dữ liệu đã lưu)

@@ -22,12 +22,54 @@ const Auth = () => {
     otp: "", // 1. Thêm trường chứa mã OTP
   });
 
+  const [timer, setTimer] = useState(0);
+  const [pendingEmail, setPendingEmail] = useState(null);
+
+  useEffect(() => {
+    const email = localStorage.getItem('pendingEmail');
+    if (email) {
+      setPendingEmail(email);
+    }
+  }, []);
+
+  useEffect(() => {
+    let interval = null;
+    if (view === 'verify' && timer > 0) {
+      interval = setInterval(() => {
+        setTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [view, timer]);
+
   useEffect(() => {
     if (token) setView('reset');
   }, [token]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleResendOTP = async () => {
+    if (timer > 0 || isLoading) return;
+    setIsLoading(true);
+    try {
+      await axiosClient.post("/user/resend-otp", { email: formData.email });
+      toast.success("Mã OTP mới đã được gửi. Hãy check email!");
+      setTimer(60);
+    } catch (error) {
+      console.error("Lỗi gửi lại OTP:", error);
+      const errorMsg = error.response?.data?.message || error.message || "Không thể gửi lại mã OTP, vui lòng thử lại!";
+      toast.error(errorMsg);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResumeVerification = (email) => {
+    setFormData((prev) => ({ ...prev, email: email }));
+    setView('verify');
+    setTimer(60);
   };
 
   const handleSubmit = async (e) => {
@@ -63,7 +105,10 @@ const Auth = () => {
           password: formData.password
         });
         toast.success("Đăng ký thành công! Hãy kiểm tra Email để lấy mã OTP.");
+        localStorage.setItem('pendingEmail', formData.email);
+        setPendingEmail(formData.email);
         setView('verify'); // Chuyển sang màn hình xác thực OTP
+        setTimer(60);
       } 
 
       // 3. XỬ LÝ XÁC THỰC OTP (MỚI)
@@ -73,6 +118,8 @@ const Auth = () => {
           otp: formData.otp
         });
         toast.success("Xác thực thành công! Bạn có thể đăng nhập ngay.");
+        localStorage.removeItem('pendingEmail');
+        setPendingEmail(null);
         setView('login');
         setFormData({ ...formData, password: "", otp: "" });
       }
@@ -186,20 +233,37 @@ const Auth = () => {
 
             {/* Input OTP */}
             {view === 'verify' && (
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <ShieldCheck className="h-5 w-5 text-gray-400 group-focus-within:text-emerald-400 transition-colors duration-300" />
+              <div className="space-y-4">
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <ShieldCheck className="h-5 w-5 text-gray-400 group-focus-within:text-emerald-400 transition-colors duration-300" />
+                  </div>
+                  <input
+                    type="text"
+                    name="otp"
+                    value={formData.otp}
+                    onChange={handleChange}
+                    required
+                    maxLength="6"
+                    className="block w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:bg-white/10 focus:border-emerald-400/50 focus:ring-2 focus:ring-emerald-400/50 transition-all duration-300 text-center tracking-[0.75em] font-bold text-xl"
+                    placeholder="------"
+                  />
                 </div>
-                <input
-                  type="text"
-                  name="otp"
-                  value={formData.otp}
-                  onChange={handleChange}
-                  required
-                  maxLength="6"
-                  className="block w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:bg-white/10 focus:border-emerald-400/50 focus:ring-2 focus:ring-emerald-400/50 transition-all duration-300 text-center tracking-[0.75em] font-bold text-xl"
-                  placeholder="------"
-                />
+                <div className="flex justify-end text-sm px-1">
+                  {timer > 0 ? (
+                    <span className="text-gray-400">
+                      Gửi lại mã sau <span className="text-emerald-400 font-bold">{timer}s</span>
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleResendOTP}
+                      className="text-emerald-400 hover:text-emerald-300 font-medium transition-colors duration-200"
+                    >
+                      Gửi lại mã OTP
+                    </button>
+                  )}
+                </div>
               </div>
             )}
 
@@ -269,6 +333,20 @@ const Auth = () => {
             </button>
           </div>
         </form>
+        {pendingEmail && (view === 'login' || view === 'register') && (
+          <div className="mt-6 p-4 bg-emerald-500/10 border border-emerald-500/25 rounded-2xl flex items-center justify-between text-xs text-gray-300 backdrop-blur-md">
+            <div className="flex flex-col gap-0.5">
+              <span className="font-semibold text-emerald-400">Tài khoản chưa xác thực</span>
+              <span className="text-gray-400 truncate max-w-[180px]">{pendingEmail}</span>
+            </div>
+            <button
+              onClick={() => handleResumeVerification(pendingEmail)}
+              className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl transition-all duration-200"
+            >
+              Xác thực ngay
+            </button>
+          </div>
+        )}
 
         <div className="mt-8 pt-6 border-t border-white/10">
           {(view === 'login' || view === 'register') ? (
