@@ -68,7 +68,10 @@ export const updateAddress = async (req, res) => {
   try {
     const userId = req.user.id || req.user._id;
     const { id } = req.params;
-    const updateData = req.body;
+    const allowedFields = ['receiverName', 'phone', 'street', 'ward', 'district', 'city', 'isDefault'];
+    const updateData = Object.fromEntries(
+      Object.entries(req.body).filter(([key]) => allowedFields.includes(key))
+    );
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ success: false, message: 'ID địa chỉ không hợp lệ!' });

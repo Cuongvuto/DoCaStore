@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { toast } from 'sonner';
 
 // Khởi tạo một đối tượng axios với cấu hình mặc định (Lấy từ biến môi trường của Vite)
 const axiosClient = axios.create({
@@ -24,22 +23,17 @@ axiosClient.interceptors.request.use(
   }
 );
 
-// axiosClient.interceptors.response.use(
-//   (response) => {
-//     // Nếu có dữ liệu trả về, mình lấy luôn phần data bên trong
-//     return response.data;
-//   },
-//   (error) => {
-   
-//     if (error.response && error.response.status === 401) {
-//       localStorage.removeItem('token');
-//       toast.error("Phiên đăng nhập đã hết hạn hoặc không hợp lệ. Vui lòng đăng nhập lại!");
-//       setTimeout(() => {
-//         window.location.href = '/auth';
-//       }, 1500); // Đợi 1.5 giây
-//     }
-//     return Promise.reject(error);
-//   }
-// );
+axiosClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('role');
+      window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+    }
+    return Promise.reject(error);
+  }
+);
 
 export default axiosClient;

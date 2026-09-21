@@ -30,7 +30,7 @@ const UserManager = () => {
       if (res.data?.success) {
         setUsers(res.data.data);
       }
-    } catch (error) {
+    } catch {
       toast.error("Lỗi khi tải danh sách người dùng!");
     } finally {
       setLoading(false);
@@ -97,7 +97,7 @@ const UserManager = () => {
   const handleAddUser = async (e) => {
     e.preventDefault();
     try {
-      const res = await axiosClient.post("/user/register", newUser);
+      const res = await axiosClient.post("/user/admin/staff", newUser);
       if (res.data?.success) {
         toast.success("Thêm người dùng mới thành công!");
         setIsAddModalOpen(false);
@@ -218,11 +218,14 @@ const UserManager = () => {
                             value={user.role}
                             onChange={(e) => handleRoleChange(user._id, e.target.value)}
                             className="bg-[#151419] text-gray-300 border border-gray-700 rounded-lg py-1.5 px-3 outline-none focus:ring-2 focus:ring-[#7294ff] text-[10px] md:text-xs font-bold uppercase transition-all"
-                            disabled={user._id === currentUser?._id && user.role === 'superadmin'}
+                            disabled={
+                              user._id === currentUser?._id
+                              || (user.role === 'superadmin' && currentUser?.role !== 'superadmin')
+                            }
                           >
                             <option value="customer">Customer</option>
                             <option value="admin">Admin</option>
-                            <option value="superadmin">Super Admin</option>
+                            {currentUser?.role === 'superadmin' && <option value="superadmin">Super Admin</option>}
                             <option value="product_admin">Product Admin</option>
                             <option value="order_admin">Order Admin</option>
                             <option value="support_admin">Support Admin</option>
@@ -234,7 +237,12 @@ const UserManager = () => {
                       <td className="p-4 text-center">
                         <button
                           onClick={() => handleDelete(user._id, user.name)}
-                          className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl transition-all shadow-sm inline-flex items-center justify-center border border-transparent hover:border-red-500/20"
+                          disabled={
+                            user._id === currentUser?._id
+                            || (user.role === 'superadmin' && currentUser?.role !== 'superadmin')
+                          }
+                          aria-label={`Xóa tài khoản ${user.name}`}
+                          className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl transition-all shadow-sm inline-flex items-center justify-center border border-transparent hover:border-red-500/20 disabled:cursor-not-allowed disabled:opacity-30"
                           title="Xóa tài khoản"
                         >
                           <Trash2 size={18} />
@@ -288,7 +296,7 @@ const UserManager = () => {
                   <select value={newUser.role} onChange={(e) => setNewUser({...newUser, role: e.target.value})} className="w-full p-2.5 bg-[#151419] border border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-[#7294ff] text-white text-sm transition-all">
                     <option value="customer">Customer (Khách hàng)</option>
                     <option value="admin">Admin (Quản trị viên chung)</option>
-                    <option value="superadmin">Super Admin (Quản trị cấp cao)</option>
+                    {currentUser?.role === 'superadmin' && <option value="superadmin">Super Admin (Quản trị cấp cao)</option>}
                     <option value="product_admin">Product Admin (Quản lý Sản phẩm)</option>
                     <option value="order_admin">Order Admin (Quản lý Đơn hàng)</option>
                     <option value="support_admin">Support Admin (CSKH)</option>

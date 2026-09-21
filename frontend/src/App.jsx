@@ -1,124 +1,114 @@
-import React from 'react';
-import { Routes, Route } from 'react-router-dom';
-
-// --- LAYOUTS ---
+import React, { lazy, Suspense } from 'react';
+import { Route, Routes } from 'react-router-dom';
 import MainLayout from './layouts/MainLayout';
-import AdminLayout from './pages/admin/AdminLayout';
-
-// --- PAGES: Main ---
-import Home from './pages/Home/Home';
-import Auth from './pages/Auth';
 import ScrollToTop from './components/ScrollToTop';
+import ProtectedRoute from './components/ProtectedRoute';
 
-// --- PAGES: CLIENT ---
-import ProductDetail from './pages/client/ProductDetail';
-import CartPage from './pages/client/CartPage';
-import ProductPage from './pages/ProductPage';
-import CategoryPage from './pages/CategoryPage';
-import NewsPage from './pages/NewsPage';
-import NewsDetail from './pages/NewsDetail';
-import WishlistPage from './pages/WishlistPage'; 
-import ContactPage from './pages/ContactPage';
-import AboutPage from './pages/AboutPage';
-import Checkout from './pages/Checkout';
-import OrderSuccess from './pages/OrderSuccess';
-import Profile from './pages/Profile';
-import Notifications from './pages/NotificationsPage';
-import PaymentPage from './pages/PaymentPage';
+const Home = lazy(() => import('./pages/Home/Home'));
+const Auth = lazy(() => import('./pages/Auth'));
+const ProductDetail = lazy(() => import('./pages/client/ProductDetail'));
+const CartPage = lazy(() => import('./pages/client/CartPage'));
+const ProductPage = lazy(() => import('./pages/ProductPage'));
+const CategoryPage = lazy(() => import('./pages/CategoryPage'));
+const NewsPage = lazy(() => import('./pages/NewsPage'));
+const NewsDetail = lazy(() => import('./pages/NewsDetail'));
+const WishlistPage = lazy(() => import('./pages/WishlistPage'));
+const ContactPage = lazy(() => import('./pages/ContactPage'));
+const AboutPage = lazy(() => import('./pages/AboutPage'));
+const Checkout = lazy(() => import('./pages/Checkout'));
+const OrderSuccess = lazy(() => import('./pages/OrderSuccess'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Notifications = lazy(() => import('./pages/NotificationsPage'));
+const PaymentPage = lazy(() => import('./pages/PaymentPage'));
 
-// --- PAGES: ADMIN ---
-import Dashboard from './pages/admin/Dashboard';
-import ProductManager from './pages/admin/ProductManager';
-import CategoryManager from './pages/admin/CategoryManager';
-import BannerManager from './pages/admin/BannerManager';
-import NewsManager from './pages/admin/NewsManager';
-import CouponManager from './pages/admin/CouponManager';
-import OrderManager from './pages/admin/OrderManager';
-import UserManager from './pages/admin/UserManager';
-import NotificationManager from './pages/admin/NotificationManager';
-import MessageManager from './pages/admin/MessageManager';
+const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'));
+const Dashboard = lazy(() => import('./pages/admin/Dashboard'));
+const ProductManager = lazy(() => import('./pages/admin/ProductManager'));
+const CategoryManager = lazy(() => import('./pages/admin/CategoryManager'));
+const BannerManager = lazy(() => import('./pages/admin/BannerManager'));
+const NewsManager = lazy(() => import('./pages/admin/NewsManager'));
+const CouponManager = lazy(() => import('./pages/admin/CouponManager'));
+const OrderManager = lazy(() => import('./pages/admin/OrderManager'));
+const UserManager = lazy(() => import('./pages/admin/UserManager'));
+const NotificationManager = lazy(() => import('./pages/admin/NotificationManager'));
+const MessageManager = lazy(() => import('./pages/admin/MessageManager'));
 
+const STAFF_ROLES = ['superadmin', 'admin', 'product_admin', 'order_admin', 'support_admin'];
+const PRODUCT_ROLES = ['superadmin', 'admin', 'product_admin'];
+const ORDER_ROLES = ['superadmin', 'admin', 'order_admin'];
+const SUPPORT_ROLES = ['superadmin', 'admin', 'support_admin'];
+const USER_ROLES = ['superadmin', 'admin'];
 
-// --- CONTEXT PROVIDERS ---
-import { AuthProvider } from './context/AuthContext.jsx';
-import { CartProvider } from './context/CartContext.jsx';
-import { WishlistProvider } from './context/WishlistContext.jsx';
+const LoadingScreen = () => (
+  <div className="min-h-[50vh] flex items-center justify-center bg-slate-50" role="status">
+    <div className="flex items-center gap-3 text-sm font-semibold text-slate-600">
+      <span className="h-5 w-5 animate-spin rounded-full border-2 border-emerald-700 border-t-transparent" />
+      Đang tải nội dung...
+    </div>
+  </div>
+);
 
-const App = () => {
-  return (
-    // 🟢 BỌC TRẠM PHÁT SÓNG Ở NGOÀI CÙNG APP LÀ CHUẨN XÁC!
-    <AuthProvider>
-      <CartProvider>
-        {/* 🔥 BỌC THÊM WISHLIST PROVIDER VÀO ĐÂY NỮA LÀ ĐẸP */}
-        <WishlistProvider>
-          <ScrollToTop />
-          <Routes>
-            {/* ==========================================
-                1. KHU VỰC KHÁCH HÀNG (Có Header & Footer) 
-                ========================================== */}
-            <Route path="/" element={<MainLayout />}>
-              {/* Route index: Mặc định hiển thị trang Home */}
-              <Route index element={<Home />} />
-              <Route path="/products" element={<ProductPage />} />
-              <Route path="/cart" element={<CartPage />} />
-              <Route path="product/:id" element={<ProductDetail />} />
-              <Route path="/category/:slug" element={<CategoryPage />} />
-              <Route path="/news" element={<NewsPage />} />
-              <Route path="/news/:slug" element={<NewsDetail />} />
-              <Route path="/wishlist" element={<WishlistPage />} />
-              <Route path="/contact" element={<ContactPage />} />
-              <Route path="/about" element={<AboutPage />} />
-              <Route path="/checkout" element={<Checkout />} />
-              <Route path="/order-success/:orderId" element={<OrderSuccess />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/notifications" element={<Notifications />} />
-              <Route path="/payment/:orderId" element={<PaymentPage />} />
+const guarded = (element, allowedRoles) => (
+  <ProtectedRoute allowedRoles={allowedRoles}>{element}</ProtectedRoute>
+);
 
-            </Route>
+const App = () => (
+  <>
+    <ScrollToTop />
+    <Suspense fallback={<LoadingScreen />}>
+      <Routes>
+        <Route path="/" element={<MainLayout />}>
+          <Route index element={<Home />} />
+          <Route path="products" element={<ProductPage />} />
+          <Route path="product/:id" element={<ProductDetail />} />
+          <Route path="category/:slug" element={<CategoryPage />} />
+          <Route path="news" element={<NewsPage />} />
+          <Route path="news/:slug" element={<NewsDetail />} />
+          <Route path="contact" element={<ContactPage />} />
+          <Route path="about" element={<AboutPage />} />
 
-            {/* ==========================================
-                2. TRANG XÁC THỰC (Đứng độc lập) 
-                ========================================== */}
-            <Route path="/login" element={<Auth />} />
-            <Route path="/auth/:token?" element={<Auth />} />
-            <Route path="/reset-password/:token" element={<Auth />} />
+          <Route path="cart" element={guarded(<CartPage />)} />
+          <Route path="wishlist" element={guarded(<WishlistPage />)} />
+          <Route path="checkout" element={guarded(<Checkout />)} />
+          <Route path="order-success/:orderId" element={guarded(<OrderSuccess />)} />
+          <Route path="profile" element={guarded(<Profile />)} />
+          <Route path="notifications" element={guarded(<Notifications />)} />
+          <Route path="payment/:orderId" element={guarded(<PaymentPage />)} />
+        </Route>
 
-            {/* ==========================================
-                3. KHU VỰC ADMIN (Có Layout riêng cho Quản trị) 
-                ========================================== */}
-            <Route path="/admin" element={<AdminLayout />}>
-              {/* Route index của Admin */}
-              <Route index element={<Dashboard />} />
-              
-              {/* Các trang quản lý con */}
-              <Route path="products" element={<ProductManager />} />
-              <Route path="categories" element={<CategoryManager />} />
-              <Route path="orders" element={<OrderManager />} />
-              <Route path="users" element={<UserManager />} />
-              <Route path='banners' element={<BannerManager />} />
-              <Route path="news" element={<NewsManager />} />
-              <Route path="coupons" element={<CouponManager />} />
-              <Route path="notifications" element={<NotificationManager />} />
-              <Route path="messages" element={<MessageManager />} />
-            </Route>
+        <Route path="/login" element={<Auth />} />
+        <Route path="/auth/:token?" element={<Auth />} />
+        <Route path="/reset-password/:token" element={<Auth />} />
 
-            {/* ==========================================
-                4. TRANG 404 (Bắt các lỗi gõ sai link) 
-                ========================================== */}
-            <Route 
-              path="*" 
-              element={
-                <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
-                  <h1 className="text-6xl font-bold text-[#5a8c76] mb-4">404</h1>
-                  <p className="text-xl text-gray-600">Trang bạn tìm kiếm không tồn tại!</p>
-                </div>
-              } 
-            />
-          </Routes>
-        </WishlistProvider>
-      </CartProvider>
-    </AuthProvider>
-  );
-};
+        <Route path="/admin" element={guarded(<AdminLayout />, STAFF_ROLES)}>
+          <Route index element={<Dashboard />} />
+          <Route path="products" element={guarded(<ProductManager />, PRODUCT_ROLES)} />
+          <Route path="categories" element={guarded(<CategoryManager />, PRODUCT_ROLES)} />
+          <Route path="banners" element={guarded(<BannerManager />, PRODUCT_ROLES)} />
+          <Route path="news" element={guarded(<NewsManager />, PRODUCT_ROLES)} />
+          <Route path="orders" element={guarded(<OrderManager />, ORDER_ROLES)} />
+          <Route path="coupons" element={guarded(<CouponManager />, ORDER_ROLES)} />
+          <Route path="users" element={guarded(<UserManager />, USER_ROLES)} />
+          <Route path="notifications" element={guarded(<NotificationManager />, SUPPORT_ROLES)} />
+          <Route path="messages" element={guarded(<MessageManager />, SUPPORT_ROLES)} />
+        </Route>
+
+        <Route
+          path="*"
+          element={
+            <main className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-4 text-center">
+              <p className="text-7xl font-black text-emerald-800">404</p>
+              <h1 className="mt-4 text-2xl font-bold text-slate-900">Không tìm thấy trang</h1>
+              <p className="mt-2 text-slate-600">Đường dẫn bạn truy cập không tồn tại hoặc đã được thay đổi.</p>
+              <a href="/" className="mt-6 rounded-xl bg-emerald-800 px-5 py-3 font-bold text-white">
+                Về trang chủ
+              </a>
+            </main>
+          }
+        />
+      </Routes>
+    </Suspense>
+  </>
+);
 
 export default App;

@@ -1,46 +1,48 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useAuth } from './AuthContext';
-import axiosClient from '../api/axiosClient'; 
+import axiosClient from '../api/axiosClient';
 
-const CartContext = createContext();
+const CartContext = createContext(null);
 
 export const CartProvider = ({ children }) => {
-  const { user } = useAuth(); // Theo dõi xem có ông user nào đang đăng nhập không
+  const { user } = useAuth();
   const [cartCount, setCartCount] = useState(0);
 
-  // Hàm gọi API lấy số lượng giỏ hàng
-  const fetchCartCount = async () => {
-    // Nếu chưa đăng nhập thì giỏ hàng mặc định = 0
-    if (!user) {
-      setCartCount(0);
-      return;
-    }
-    
+  const fetchCartCount = useCallback(async () => {
+    if (!user) return;
     try {
-      // 1. Gọi API lấy giỏ hàng 
-      const res = await axiosClient.get('/cart');
-      const items = res.data?.data?.items || [];
-      setCartCount(items.length);
+      const response = await axiosClient.get('/cart');
+      setCartCount(response.data?.data?.items?.length || 0);
     } catch (error) {
-      console.error("Lỗi lấy giỏ hàng:", error);
+      if (error.response?.status !== 401) {
+        console.error('Không thể tải giỏ hàng:', error);
+      }
     }
-  };
-
-  // Mỗi khi biến 'user' thay đổi (khách vừa đăng nhập xong), tự động đi lấy số lượng giỏ hàng
-  useEffect(() => {
-    fetchCartCount();
   }, [user]);
 
-  // Hàm này để trang Chi tiết sản phẩm gọi khi bấm "Thêm vào giỏ"
-  const updateCartCount = () => {
-    fetchCartCount();
-  };
+  useEffect(() => {
+    if (!user) return undefined;
+    let active = true;
+    axiosClient.get('/cart').then((response) => {
+      if (active) setCartCount(response.data?.data?.items?.length || 0);
+    }).catch((error) => {
+      if (error.response?.status !== 401) console.error('Không thể tải giỏ hàng:', error);
+    });
+    return () => {
+      active = false;
+    };
+  }, [user]);
 
-  return (
-    <CartContext.Provider value={{ cartCount, fetchCartCount, updateCartCount }}>
-      {children}
-    </CartContext.Provider>
+  const value = useMemo(
+    () => ({ cartCount, fetchCartCount, updateCartCount: fetchCartCount }),
+    [cartCount, fetchCartCount]
   );
+
+  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 };
 
-export const useCart = () => useContext(CartContext);
+export const useCart = () => {
+  const context = useContext(CartContext);
+  if (!context) throw new Error('useCart phải được dùng bên trong CartProvider.');
+  return context;
+};

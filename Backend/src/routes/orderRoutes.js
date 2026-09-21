@@ -9,10 +9,11 @@ import {
     payosWebhook,
     cancelOrder
 } from '../controller/orderController.js';
-import { verifyToken,isAdmin } from '../middlewares/authMiddleware.js';
+import { verifyToken, authorize } from '../middlewares/authMiddleware.js';
 
 
 const router = express.Router();
+const manageOrders = authorize('superadmin', 'admin', 'order_admin');
 
 router.post('/', verifyToken, createOrder);
 
@@ -21,11 +22,11 @@ router.post('/payos-webhook', payosWebhook); // Hứng tín hiệu từ PayOS
 
 router.get('/my-orders',verifyToken,getUserOrders);
 
-router.get('/',verifyToken,isAdmin,getAllOrders);
+router.get('/', verifyToken, manageOrders, getAllOrders);
 
 router.get('/:id', verifyToken, getOrderById);
 
-router.put('/:id/status',verifyToken,isAdmin,updateOrderStatus);
+router.put('/:id/status', verifyToken, manageOrders, updateOrderStatus);
 
 router.put('/:id/cancel', verifyToken, cancelOrder);
 

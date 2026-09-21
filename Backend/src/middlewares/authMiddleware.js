@@ -1,10 +1,9 @@
 import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv';
+import User from '../models/userModel.js';
+import { STAFF_ROLES } from '../config/roles.js';
 
-// 1. Middleware kiểm tra xem người dùng đã đăng nhập chưa (Có Token hợp lệ không)
-export const verifyToken = (req, res, next) => {
+export const verifyToken = async (req, res, next) => {
   try {
-    // Lấy Token từ phần Header của Request 
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -14,35 +13,42 @@ export const verifyToken = (req, res, next) => {
       });
     }
 
-    // Tách lấy phần Token nằm sau chữ "Bearer "
     const token = authHeader.split(' ')[1];
-
-    // Giải mã Token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    // Gắn thông tin user vừa giải mã được vào request
-    req.user = decoded;
-
-    // Cho phép đi tiếp vào Controller
-    next(); 
-
+    const user = await User.findById(decoded.id).select('_id role isVerified');
+    if (!user || !user.isVerified) {
+      return res.status(401).json({
+        success: false,
+        message: 'Tài khoản không còn hợp lệ hoặc chưa được xác thực.'
+      });
+    }
+    req.user = { ...decoded, id: user._id.toString(), role: user.role };
+    next();
   } catch (error) {
-    console.error("❌ Lỗi xác thực Token:", error.message);
-    return res.status(403).json({ 
+    return res.status(401).json({
       success: false, 
       message: 'Token không hợp lệ hoặc đã hết hạn! Vui lòng đăng nhập lại.' 
     });
   }
 };
 
-// 2. Middleware kiểm tra quyền Admin (Bắt buộc phải chạy sau verifyToken)
-export const isAdmin = (req, res, next) => {
-  if (req.user && req.user.role !== 'customer') {
-    next(); 
-  } else {
-    return res.status(403).json({ 
-      success: false, 
-      message: 'Từ chối truy cập! Yêu cầu quyền Quản trị viên (Admin).' 
+export const authorize = (...allowedRoles) => (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: 'Bạn cần đăng nhập để tiếp tục.'
     });
   }
+
+  if (!allowedRoles.includes(req.user.role)) {
+    return res.status(403).json({
+      success: false,
+      message: 'Bạn không có quyền thực hiện thao tác này.'
+    });
+  }
+
+  next();
 };
+
+// Giữ alias này cho các route tổng quan trong lúc chuyển đổi contract.
+export const isAdmin = authorize(...STAFF_ROLES);

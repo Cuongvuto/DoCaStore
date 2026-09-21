@@ -105,6 +105,12 @@ export const deleteReview = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Không tìm thấy đánh giá!' });
     }
 
+    const requesterId = req.user.id || req.user._id;
+    const canModerate = ['superadmin', 'admin', 'product_admin'].includes(req.user.role);
+    if (!canModerate && review.userId.toString() !== requesterId.toString()) {
+      return res.status(403).json({ success: false, message: 'Bạn không có quyền xóa đánh giá này.' });
+    }
+
     const productId = review.productId;
     await Review.findByIdAndDelete(id);
 
@@ -218,6 +224,12 @@ export const deleteNewsReview = async (req, res) => {
 
     if (!review) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy đánh giá!' });
+    }
+
+    const requesterId = req.user.id || req.user._id;
+    const canModerate = ['superadmin', 'admin', 'product_admin'].includes(req.user.role);
+    if (!canModerate && review.userId.toString() !== requesterId.toString()) {
+      return res.status(403).json({ success: false, message: 'Bạn không có quyền xóa đánh giá này.' });
     }
 
     const newsId = review.newsId;

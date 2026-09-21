@@ -10,7 +10,7 @@ router.get('/product/:productId', getProductReviews);
 // Bắt buộc đăng nhập mới được viết đánh giá
 router.post('/add', verifyToken, addReview);
 
-router.delete('/:productId', verifyToken,deleteReview);
+router.delete('/:id', verifyToken, deleteReview);
 
 
 // router newsReview

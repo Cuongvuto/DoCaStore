@@ -1,48 +1,54 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import axiosClient from '../api/axiosClient';
+import { useAuth } from './AuthContext';
 
-const WishlistContext = createContext();
+const WishlistContext = createContext(null);
 
 export const WishlistProvider = ({ children }) => {
-  // Biến  chứa một MẢNG CÁC ID SẢN PHẨM đã được yêu thích
-  const [wishlist, setWishlist] = useState([]); 
+  const { user } = useAuth();
+  const [wishlist, setWishlist] = useState([]);
 
-  // Hàm gọi API lấy danh sách Wishlist khi vừa mở web
-  const fetchWishlist = async () => {
-    //  Kiểm tra xem user có token không (đã đăng nhập chưa)
-    const token = localStorage.getItem('token');
+  const normalizeWishlist = useCallback((data) => (
+    Array.isArray(data)
+      ? data.map((item) => (typeof item === 'object' ? item._id : item))
+      : []
+  ), []);
 
-    if (!token) {
-      setWishlist([]); // Khách chưa đăng nhập thì mặc định danh sách tim trống trơn
-      return; 
-    }
-
+  const fetchWishlist = useCallback(async () => {
+    if (!user) return;
     try {
-      // Gọi API GET lấy wishlist
-      const res = await axiosClient.get('/wishlist'); 
-      
-      // Lấy đúng đường dẫn data từ backend 
-      const wishlistData = res.data?.data || res.data || []; 
-
-      if (Array.isArray(wishlistData)) {
-        const productIds = wishlistData.map(item => typeof item === 'object' ? item._id : item);
-        setWishlist(productIds);
-      }
-
+      const response = await axiosClient.get('/wishlist');
+      setWishlist(normalizeWishlist(response.data?.data || response.data));
     } catch (error) {
-      console.log("Không thể lấy wishlist (Có thể token đã hết hạn).");
+      if (error.response?.status !== 401) {
+        console.error('Không thể tải danh sách yêu thích:', error);
+      }
     }
-  };
+  }, [normalizeWishlist, user]);
 
   useEffect(() => {
-    fetchWishlist();
-  }, []);
+    if (!user) return undefined;
+    let active = true;
+    axiosClient.get('/wishlist').then((response) => {
+      if (active) setWishlist(normalizeWishlist(response.data?.data || response.data));
+    }).catch((error) => {
+      if (error.response?.status !== 401) console.error('Không thể tải danh sách yêu thích:', error);
+    });
+    return () => {
+      active = false;
+    };
+  }, [normalizeWishlist, user]);
 
-  return (
-    <WishlistContext.Provider value={{ wishlist, setWishlist }}>
-      {children}
-    </WishlistContext.Provider>
+  const value = useMemo(
+    () => ({ wishlist, setWishlist, fetchWishlist }),
+    [wishlist, fetchWishlist]
   );
+
+  return <WishlistContext.Provider value={value}>{children}</WishlistContext.Provider>;
 };
 
-export const useWishlist = () => useContext(WishlistContext);
+export const useWishlist = () => {
+  const context = useContext(WishlistContext);
+  if (!context) throw new Error('useWishlist phải được dùng bên trong WishlistProvider.');
+  return context;
+};

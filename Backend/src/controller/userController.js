@@ -3,16 +3,25 @@ import User from '../models/userModel.js';
 import bcrypt from 'bcryptjs'; 
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv';
 import crypto from 'crypto'; 
 import { sendEmail } from '../utils/sendEmail.js';
 import { sendVerificationOTP } from '../utils/sendEmail.js';
+import { ALL_ROLES, canGrantRole, canManageAccount } from '../config/roles.js';
 
 export const createUser = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password } = req.body;
+    const normalizedEmail = email?.trim().toLowerCase();
 
-    const existingUser = await User.findOne({ email });
+    if (!name?.trim() || !normalizedEmail || !password) {
+      return res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ thông tin!' });
+    }
+
+    if (password.length < 8) {
+      return res.status(400).json({ success: false, message: 'Mật khẩu phải có ít nhất 8 ký tự.' });
+    }
+
+    const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
       if (existingUser.isVerified) {
         return res.status(400).json({ success: false, message: 'Email đã tồn tại!' });
@@ -23,9 +32,10 @@ export const createUser = async (req, res) => {
       const hashedPassword = await bcrypt.hash(password, salt);
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-      existingUser.name = name;
+      existingUser.name = name.trim();
       existingUser.password = hashedPassword;
-      existingUser.role = role || 'customer';
+      // Endpoint đăng ký công khai không bao giờ được phép cấp quyền nhân viên.
+      existingUser.role = 'customer';
       existingUser.verifyOtp = otp;
       existingUser.otpExpires = Date.now() + 10 * 60 * 1000;
 
@@ -56,10 +66,10 @@ export const createUser = async (req, res) => {
 
     // TẠO USER VỚI isVerified: false (BẮT BUỘC)
     const newUser = new User({
-      name,
-      email,
+      name: name.trim(),
+      email: normalizedEmail,
       password: hashedPassword,
-      role: role || 'customer',
+      role: 'customer',
       isVerified: false, 
       verifyOtp: otp,
       otpExpires: Date.now() + 10 * 60 * 1000 
@@ -246,12 +256,20 @@ export const logIn = async(req,res)=>{
     }
 
     //Tìm user trong Database theo email
-    const user = await User.findOne({email});
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = await User.findOne({ email: normalizedEmail });
     //Nếu không tìm thấy user
     if(!user){
       return res.status(400).json({
         success: false,
         message: "Email hoặc mật khẩu không chính xác! "
+      });
+    }
+
+    if (!user.isVerified) {
+      return res.status(403).json({
+        success: false,
+        message: 'Tài khoản chưa xác thực email. Vui lòng nhập mã OTP để tiếp tục.'
       });
     }
 
@@ -297,10 +315,9 @@ export const logIn = async(req,res)=>{
 export const deleteUser = async (req,res) =>{
   try {
     const userId = req.params.id;
+    const targetUser = await User.findById(userId);
 
-    const deletedUser = await User.findByIdAndDelete(userId);
-
-    if(!deletedUser){
+    if(!targetUser){
       return res.status(404).json(
         {
           success: false,
@@ -308,7 +325,17 @@ export const deleteUser = async (req,res) =>{
         }
       );
     }
-   console.log("Da xoa nguoi dung: ", deletedUser.email);
+
+    if (targetUser._id.toString() === req.user.id) {
+      return res.status(400).json({ success: false, message: 'Bạn không thể tự xóa tài khoản đang đăng nhập.' });
+    }
+
+    if (!canManageAccount(req.user.role, targetUser.role)) {
+      return res.status(403).json({ success: false, message: 'Chỉ Super Admin mới có thể xóa Super Admin.' });
+    }
+
+    await targetUser.deleteOne();
+
    return res.status(200).json({
       success: true,
       message: 'Thao tác thành công!'
@@ -543,26 +570,39 @@ export const changeUserRole = async (req, res) => {
       });
     }
 
-    const validRoles = ['customer', 'admin', 'superadmin', 'product_admin', 'order_admin', 'support_admin'];
-    if (!validRoles.includes(role)) {
+    if (!ALL_ROLES.includes(role)) {
       return res.status(400).json({
         success: false,
         message: "Vai trò không hợp lệ!"
       });
     }
 
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      { role },
-      { new: true, runValidators: true }
-    ).select('-password');
+    const targetUser = await User.findById(userId);
+    if (!targetUser) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy người dùng!" });
+    }
 
-    if (!updatedUser) {
-      return res.status(404).json({
+    if (
+      !canGrantRole(currentUserRole, role)
+      || !canManageAccount(currentUserRole, targetUser.role)
+    ) {
+      return res.status(403).json({
         success: false,
-        message: "Không tìm thấy người dùng!"
+        message: 'Chỉ Super Admin mới có thể cấp hoặc thay đổi quyền Super Admin.'
       });
     }
+
+    if (targetUser._id.toString() === req.user.id && role !== targetUser.role) {
+      return res.status(400).json({
+        success: false,
+        message: 'Bạn không thể tự thay đổi vai trò của chính mình.'
+      });
+    }
+
+    targetUser.role = role;
+    await targetUser.save();
+    const updatedUser = targetUser.toObject();
+    delete updatedUser.password;
 
     return res.status(200).json({
       success: true,
@@ -577,6 +617,130 @@ export const changeUserRole = async (req, res) => {
       message: 'Lỗi server khi đổi vai trò',
       error: error.message
     });
+  }
+};
+
+export const createStaffUser = async (req, res) => {
+  try {
+    const { name, email, password, role = 'customer' } = req.body;
+    const normalizedEmail = email?.trim().toLowerCase();
+    if (!name?.trim() || !normalizedEmail || !password) {
+      return res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ thông tin.' });
+    }
+    if (password.length < 8) {
+      return res.status(400).json({ success: false, message: 'Mật khẩu phải có ít nhất 8 ký tự.' });
+    }
+    if (!canGrantRole(req.user.role, role)) {
+      return res.status(403).json({ success: false, message: 'Bạn không được phép cấp vai trò này.' });
+    }
+
+    const existingUser = await User.findOne({ email: normalizedEmail });
+    if (existingUser) {
+      return res.status(409).json({ success: false, message: 'Email đã tồn tại.' });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const user = await User.create({
+      name: name.trim(),
+      email: normalizedEmail,
+      password: passwordHash,
+      role,
+      isVerified: true
+    });
+
+    const result = user.toObject();
+    delete result.password;
+    return res.status(201).json({
+      success: true,
+      message: 'Tạo tài khoản thành công.',
+      data: result
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Không thể tạo tài khoản lúc này.' });
+  }
+};
+
+// ĐĂNG NHẬP BẰNG GOOGLE
+// ==========================================
+export const googleLogin = async (req, res) => {
+  try {
+    const { accessToken } = req.body;
+
+    if (!accessToken) {
+      return res.status(400).json({ success: false, message: 'Thiếu accessToken Google!' });
+    }
+
+    // Gọi API của Google để lấy thông tin user
+    const response = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+      headers: {
+        Authorization: `Bearer ${accessToken}`
+      }
+    });
+
+    if (!response.ok) {
+      return res.status(400).json({ success: false, message: 'Google AccessToken không hợp lệ!' });
+    }
+
+    const googleUser = await response.json();
+    const { email, email_verified: emailVerified, name, picture } = googleUser;
+
+    if (!email || !emailVerified) {
+      return res.status(400).json({ success: false, message: 'Không thể lấy email từ tài khoản Google này!' });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // Tìm user theo email
+    let user = await User.findOne({ email: normalizedEmail });
+
+    if (!user) {
+      // Nếu user chưa tồn tại, tạo mới tài khoản
+      const salt = await bcrypt.genSalt(10);
+      const randomPassword = crypto.randomBytes(16).toString('hex');
+      const hashedPassword = await bcrypt.hash(randomPassword, salt);
+
+      user = new User({
+        name: name || 'Google User',
+        email: normalizedEmail,
+        password: hashedPassword,
+        isVerified: true, // Tài khoản Google mặc định là đã xác thực
+        role: 'customer'
+      });
+
+      await user.save();
+      console.log(`✅ Đã tạo tài khoản mới bằng Google cho: ${normalizedEmail}`);
+    } else {
+      // Nếu user đã tồn tại nhưng chưa verified
+      if (!user.isVerified) {
+        user.isVerified = true;
+        user.verifyOtp = undefined;
+        user.otpExpires = undefined;
+        await user.save();
+        console.log(`✅ Đã xác thực tài khoản qua Google cho: ${normalizedEmail}`);
+      }
+    }
+
+    // Tạo JWT Token
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: 'Đăng nhập thành công',
+      token,
+      data: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    console.error("❌ Lỗi đăng nhập Google:", error);
+    return res.status(500).json({ success: false, message: 'Lỗi server', error: error.message });
   }
 };
 
