@@ -2,6 +2,15 @@ import Product from '../models/productsModel.js';
 import Category from '../models/categoryModel.js';
 import mongoose from 'mongoose';
 
+const escapeRegex = (value = '') => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const buildProductSort = (sort) => {
+    if (sort === 'price_asc') return { price: 1, createdAt: -1 };
+    if (sort === 'price_desc') return { price: -1, createdAt: -1 };
+    if (sort === 'name_asc') return { name: 1 };
+    return { createdAt: -1 };
+};
+
 // 🟢 HÀM THÊM SẢN PHẨM MỚI
 export const createProduct = async (req, res) => {
     try {
@@ -160,7 +169,7 @@ export const updateProduct = async (req, res) => {
 
 export const getAllProduct = async (req, res) => {
     try {
-        const { category, page, limit } = req.query; // Thêm nhận page và limit
+        const { category, page, limit, search, sort } = req.query;
         let filter = {};
 
         if (category) {
@@ -179,9 +188,13 @@ export const getAllProduct = async (req, res) => {
             filter.category_id = foundCategory._id;
         }
 
+        if (search?.trim()) {
+            filter.name = { $regex: escapeRegex(search.trim()), $options: 'i' };
+        }
+
         let query = Product.find(filter)
             .populate('category_id', 'name slug')
-            .sort({ createdAt: -1 });
+            .sort(buildProductSort(sort));
 
         let totalPages = 1;
         let currentPage = 1;
@@ -189,8 +202,8 @@ export const getAllProduct = async (req, res) => {
         // Nếu Frontend truyền lên số 'page', ta mới phân trang (Giữ an toàn lùi cho các trang Cũ)
         let totalItems = 0;
         if (page) {
-            currentPage = parseInt(page) || 1;
-            const parsedLimit = parseInt(limit) || 10;
+            currentPage = Math.max(parseInt(page) || 1, 1);
+            const parsedLimit = Math.min(Math.max(parseInt(limit) || 10, 1), 50);
             const skip = (currentPage - 1) * parsedLimit;
             
             totalItems = await Product.countDocuments(filter);
@@ -278,9 +291,8 @@ export const getTrendingProducts = async (req, res) => {
 export const getProductsByCategory = async (req, res) => {
     try {
         const { identifier } = req.params; 
-        
-        // 👉 1. Bắt lấy query limit từ URL (nếu có)
-        const limit = parseInt(req.query.limit) || 0;
+        const { page, search, sort } = req.query;
+        const limit = Math.min(Math.max(parseInt(req.query.limit) || 0, 0), 50);
 
         let targetCategory;
 
@@ -308,23 +320,43 @@ export const getProductsByCategory = async (req, res) => {
             ...childCategories.map(child => child._id)
         ];
 
-        // 5. Khởi tạo Query tìm sản phẩm
-        let productQuery = Product.find({ category_id: { $in: categoryIds } })
-            .populate('category_id', 'name slug')
-            .sort({ createdAt: -1 });
-
-        // 👉 6. Nếu có limit truyền vào (lớn hơn 0), thì áp dụng giới hạn
-        if (limit > 0) {
-            productQuery = productQuery.limit(limit);
+        const productFilter = { category_id: { $in: categoryIds } };
+        if (search?.trim()) {
+            productFilter.name = { $regex: escapeRegex(search.trim()), $options: 'i' };
         }
 
-        // Thực thi Query
+        let productQuery = Product.find(productFilter)
+            .populate('category_id', 'name slug')
+            .sort(buildProductSort(sort));
+
+        let currentPage = 1;
+        let totalCount;
+        let totalPages = 1;
+        if (page) {
+            currentPage = Math.max(parseInt(page) || 1, 1);
+            const pageSize = Math.min(Math.max(parseInt(limit) || 15, 1), 50);
+            totalCount = await Product.countDocuments(productFilter);
+            totalPages = Math.ceil(totalCount / pageSize) || 1;
+            productQuery = productQuery.skip((currentPage - 1) * pageSize).limit(pageSize);
+        } else if (parseInt(limit) > 0) {
+            productQuery = productQuery.limit(Math.min(parseInt(limit), 50));
+        }
+
         const products = await productQuery;
+        if (totalCount === undefined) totalCount = products.length;
 
         return res.status(200).json({
             success: true,
             message: 'Lấy sản phẩm thành công!',
             count: products.length,
+            totalCount,
+            totalPages,
+            currentPage,
+            category: {
+                _id: targetCategory._id,
+                name: targetCategory.name,
+                slug: targetCategory.slug
+            },
             data: products
         });
 

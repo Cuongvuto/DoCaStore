@@ -3,78 +3,61 @@ import { useParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Loader2, Search, Filter } from 'lucide-react';
 import axiosClient from '../api/axiosClient';
 import ProductCard from '../components/ProductCard';
+import useDebouncedValue from '../hooks/useDebouncedValue';
 
 const CategoryPage = () => {
   const { slug } = useParams(); // Nhận slug (hoặc ID) từ URL
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [categoryName, setCategoryName] = useState('Danh Mục Sản Phẩm');
   const productsPerPage = 15;
 
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOrder, setSortOrder] = useState('default');
+  const debouncedSearch = useDebouncedValue(searchTerm, 350);
 
   // --- GỌI API THEO HÀM MỚI ---
   useEffect(() => {
+    const controller = new AbortController();
     const fetchCategoryProducts = async () => {
       try {
         setLoading(true);
-        // Gọi thẳng vào API dành riêng cho Category vừa tạo ở Backend
-        const response = await axiosClient.get(`/product/category/${slug}`);
-        
-        // Trích xuất dữ liệu từ response (response.data.data)
-        const fetchedProducts = response.data?.data || [];
-        setProducts(fetchedProducts);
-        
+        const response = await axiosClient.get(`/product/category/${slug}`, {
+          params: {
+            page: currentPage,
+            limit: productsPerPage,
+            search: debouncedSearch || undefined,
+            sort: sortOrder === 'default' ? undefined : sortOrder
+          },
+          signal: controller.signal
+        });
+        setProducts(response.data?.data || []);
+        setTotalPages(response.data?.totalPages || 1);
+        setTotalCount(response.data?.totalCount || 0);
+        setCategoryName(response.data?.category?.name || 'Danh Mục Sản Phẩm');
       } catch (error) {
-        console.error("Lỗi tải sản phẩm theo danh mục:", error);
-        setProducts([]);
+        if (error.code !== 'ERR_CANCELED') {
+          console.error("Lỗi tải sản phẩm theo danh mục:", error);
+          setProducts([]);
+        }
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     };
     
     if (slug) {
-      fetchCategoryProducts();
+      void fetchCategoryProducts();
     }
-    
-    // Reset lại state khi chuyển sang danh mục khác
-    setCurrentPage(1);
-    setSearchTerm('');
-    setSortOrder('default');
-  }, [slug]);
-
-  // Đưa về trang 1 mỗi khi gõ tìm kiếm hoặc đổi kiểu sắp xếp
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, sortOrder]);
-
-  // --- LOGIC LỌC (TÌM KIẾM) & SẮP XẾP ---
-  let processedProducts = products.filter(product => 
-    product.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  if (sortOrder === 'asc') {
-    processedProducts.sort((a, b) => (a.price || 0) - (b.price || 0));
-  } else if (sortOrder === 'desc') {
-    processedProducts.sort((a, b) => (b.price || 0) - (a.price || 0));
-  }
-
-  // --- LOGIC PHÂN TRANG ---
-  const indexOfLastProduct = currentPage * productsPerPage;
-  const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
-  const currentProducts = processedProducts.slice(indexOfFirstProduct, indexOfLastProduct);
-  const totalPages = Math.ceil(processedProducts.length / productsPerPage);
+    return () => controller.abort();
+  }, [slug, currentPage, debouncedSearch, sortOrder]);
 
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-
-  // --- LẤY TÊN DANH MỤC ĐỂ HIỂN THỊ BANNER ---
-  const displayCategoryName = products.length > 0 && products[0].category_id?.name 
-    ? products[0].category_id.name 
-    : 'Danh Mục Sản Phẩm';
 
   if (loading) {
     return (
@@ -96,7 +79,7 @@ const CategoryPage = () => {
         <div className="absolute inset-0 bg-black/50"></div> 
         <div className="relative max-w-7xl mx-auto px-4 text-center z-10">
           <h1 className="text-4xl font-black text-white uppercase tracking-[0.2em] drop-shadow-lg">
-            {displayCategoryName}
+            {categoryName}
           </h1>
           <div className="h-1.5 w-24 bg-yellow-400 mx-auto mt-5 rounded-full shadow-md"></div>
         </div>
@@ -111,7 +94,10 @@ const CategoryPage = () => {
               type="text" 
               placeholder="Tìm kiếm sản phẩm..." 
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
               className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5a8c76]/40 focus:border-[#5a8c76] transition-all text-sm font-medium"
             />
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
@@ -121,26 +107,29 @@ const CategoryPage = () => {
             <Filter size={20} className="text-gray-400 hidden md:block" />
             <select 
               value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value)}
+              onChange={(e) => {
+                setSortOrder(e.target.value);
+                setCurrentPage(1);
+              }}
               className="w-full md:w-auto px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5a8c76]/40 focus:border-[#5a8c76] text-gray-700 cursor-pointer text-sm font-medium transition-all"
             >
               <option value="default">Mới nhất / Mặc định</option>
-              <option value="asc">Giá: Thấp đến Cao</option>
-              <option value="desc">Giá: Cao đến Thấp</option>
+              <option value="price_asc">Giá: Thấp đến Cao</option>
+              <option value="price_desc">Giá: Cao đến Thấp</option>
             </select>
           </div>
         </div>
 
         {/* --- KẾT QUẢ SẢN PHẨM --- */}
-        {processedProducts.length > 0 ? (
+        {totalCount > 0 ? (
           <p className="text-gray-500 mb-4 text-sm font-medium">
-            Tìm thấy <strong className="text-[#5a8c76]">{processedProducts.length}</strong> sản phẩm
+            Tìm thấy <strong className="text-[#5a8c76]">{totalCount}</strong> sản phẩm
           </p>
         ) : null}
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-          {currentProducts.length > 0 ? (
-            currentProducts.map((product) => (
+          {products.length > 0 ? (
+            products.map((product) => (
               <ProductCard key={product._id} product={product} />
             ))
           ) : (

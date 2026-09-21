@@ -2,57 +2,51 @@ import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Loader2, Search, Filter } from 'lucide-react';
 import axiosClient from '../api/axiosClient';
 import ProductCard from '../components/ProductCard';
+import useDebouncedValue from '../hooks/useDebouncedValue';
 
 const ProductPage = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const productsPerPage = 15;
 
   // State mới cho Tìm kiếm và Sắp xếp
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOrder, setSortOrder] = useState('default');
+  const debouncedSearch = useDebouncedValue(searchTerm, 350);
 
   // Lấy dữ liệu từ API
   useEffect(() => {
+    const controller = new AbortController();
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        const response = await axiosClient.get('/product');
-        const data = response.data.data || response.data;
-        setProducts(data);
+        const response = await axiosClient.get('/product', {
+          params: {
+            page: currentPage,
+            limit: productsPerPage,
+            search: debouncedSearch || undefined,
+            sort: sortOrder === 'default' ? undefined : sortOrder
+          },
+          signal: controller.signal
+        });
+        setProducts(response.data.data || []);
+        setTotalPages(response.data.totalPages || 1);
+        setTotalCount(response.data.totalCount || 0);
       } catch (error) {
-        console.error("Lỗi tải sản phẩm:", error);
+        if (error.code !== 'ERR_CANCELED') {
+          console.error("Lỗi tải sản phẩm:", error);
+          setProducts([]);
+        }
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     };
-    fetchProducts();
-  }, []);
-
-  // Đưa về trang 1 mỗi khi gõ tìm kiếm hoặc đổi kiểu sắp xếp
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, sortOrder]);
-
-  // --- LOGIC LỌC (TÌM KIẾM) & SẮP XẾP ---
-  // 1. Lọc theo tên sản phẩm
-  let processedProducts = products.filter(product => 
-    product.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  // 2. Sắp xếp giá
-  if (sortOrder === 'asc') {
-    processedProducts.sort((a, b) => (a.price || 0) - (b.price || 0));
-  } else if (sortOrder === 'desc') {
-    processedProducts.sort((a, b) => (b.price || 0) - (a.price || 0));
-  }
-
-  // --- LOGIC PHÂN TRANG (Dựa trên danh sách đã lọc & sắp xếp) ---
-  const indexOfLastProduct = currentPage * productsPerPage;
-  const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
-  const currentProducts = processedProducts.slice(indexOfFirstProduct, indexOfLastProduct);
-  const totalPages = Math.ceil(processedProducts.length / productsPerPage);
+    void fetchProducts();
+    return () => controller.abort();
+  }, [currentPage, debouncedSearch, sortOrder]);
 
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
@@ -99,7 +93,10 @@ const ProductPage = () => {
               type="text" 
               placeholder="Sếp muốn tìm món gì..." 
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
               className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5a8c76]/40 focus:border-[#5a8c76] transition-all text-sm font-medium"
             />
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
@@ -110,27 +107,30 @@ const ProductPage = () => {
             <Filter size={20} className="text-gray-400 hidden md:block" />
             <select 
               value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value)}
+              onChange={(e) => {
+                setSortOrder(e.target.value);
+                setCurrentPage(1);
+              }}
               className="w-full md:w-auto px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5a8c76]/40 focus:border-[#5a8c76] text-gray-700 cursor-pointer text-sm font-medium transition-all"
             >
               <option value="default">Mới nhất / Mặc định</option>
-              <option value="asc">Giá: Thấp đến Cao</option>
-              <option value="desc">Giá: Cao đến Thấp</option>
+              <option value="price_asc">Giá: Thấp đến Cao</option>
+              <option value="price_desc">Giá: Cao đến Thấp</option>
             </select>
           </div>
           
         </div>
 
         {/* --- HIỂN THỊ DANH SÁCH SẢN PHẨM --- */}
-        {processedProducts.length > 0 ? (
+        {totalCount > 0 ? (
           <p className="text-gray-500 mb-4 text-sm font-medium">
-            Tìm thấy <strong className="text-[#5a8c76]">{processedProducts.length}</strong> sản phẩm phù hợp
+            Tìm thấy <strong className="text-[#5a8c76]">{totalCount}</strong> sản phẩm phù hợp
           </p>
         ) : null}
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-          {currentProducts.length > 0 ? (
-            currentProducts.map((product) => (
+          {products.length > 0 ? (
+            products.map((product) => (
               <ProductCard key={product._id} product={product} />
             ))
           ) : (
