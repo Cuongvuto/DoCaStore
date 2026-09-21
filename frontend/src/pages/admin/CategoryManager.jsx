@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { FolderTree, Plus, Edit, Trash2, ChevronDown, ChevronRight, Package, X, ChevronLeft, ChevronRight as ChevronRightIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import axiosClient from '../../api/axiosClient.js';
@@ -25,17 +25,7 @@ const CategoryManager = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    setIsLoading(true);
-    await Promise.all([fetchCategories(), fetchProducts()]);
-    setIsLoading(false);
-  };
-
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
       const res = await axiosClient.get('/category');
       setCategoriesTree(res.data?.data || []);
@@ -44,16 +34,28 @@ const CategoryManager = () => {
       console.error('Lỗi lấy danh mục:', error);
       toast.error('Không thể tải danh sách danh mục!');
     }
-  };
+  }, []);
 
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     try {
       const res = await axiosClient.get('/product');
       setProducts(res.data?.data || res.data || []);
     } catch (error) {
       console.error('Lỗi lấy sản phẩm:', error);
     }
-  };
+  }, []);
+
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    await Promise.all([fetchCategories(), fetchProducts()]);
+    setIsLoading(false);
+  }, [fetchCategories, fetchProducts]);
+
+  useEffect(() => {
+    // Tải dữ liệu quản trị khi màn hình được mở.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void fetchData();
+  }, [fetchData]);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;

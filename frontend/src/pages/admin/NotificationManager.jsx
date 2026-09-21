@@ -29,7 +29,7 @@ const NotificationManager = () => {
       if (res.data?.success) {
         setNotifications(res.data.data);
       }
-    } catch (error) {
+    } catch {
       toast.error("Lỗi khi tải danh sách thông báo!");
     } finally {
       setLoading(false);
@@ -84,7 +84,7 @@ const NotificationManager = () => {
         toast.success("Xóa thông báo thành công!");
         setNotifications(notifications.filter(n => n._id !== id));
       }
-    } catch (error) {
+    } catch {
       toast.error("Lỗi khi xóa thông báo!");
     }
   };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Star, ShoppingCart, Truck, ShieldCheck, CheckCircle, Package, ChevronRight } from 'lucide-react'; // Thêm Package icon
 import { toast } from 'sonner';
@@ -18,20 +18,20 @@ const ProductDetail = () => {
   const [quantity, setQuantity] = useState(1);
   const [adding, setAdding] = useState(false);
 
-  const fetchProductData = async () => {
+  const fetchProductData = useCallback(async () => {
     try {
       const res = await axiosClient.get(`/product/${id}`);
       setProduct(res.data?.data || res.data);
-    } catch (error) {
+    } catch {
       toast.error("Không tìm thấy sản phẩm!");
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     fetchProductData();
-  }, [id]);
+  }, [fetchProductData]);
 
   const handleAddToCart = async (isBuyNow = false) => {
     setAdding(true);
@@ -79,6 +79,8 @@ const ProductDetail = () => {
               src={allImages[activeImage]} 
               alt={product.name} 
               className="w-full h-full object-contain p-4 mix-blend-multiply transition-transform duration-700 group-hover:scale-110" 
+              decoding="async"
+              fetchPriority="high"
             />
           </div>
           <div className="flex flex-wrap gap-3 justify-start">
@@ -86,11 +88,19 @@ const ProductDetail = () => {
               <button
                 key={index}
                 onClick={() => setActiveImage(index)}
+                aria-label={`Xem ảnh ${index + 1} của ${product.name}`}
+                aria-pressed={activeImage === index}
                 className={`w-20 h-20 rounded-xl border-2 transition-all duration-300 overflow-hidden bg-gray-50 flex-shrink-0 ${
                   activeImage === index ? 'border-[#5a8c76] scale-105 shadow-md' : 'border-transparent hover:border-gray-200'
                 }`}
               >
-                <img src={img} className="w-full h-full object-cover" alt="thumbnail" />
+                <img
+                  src={img}
+                  className="w-full h-full object-cover"
+                  alt={`Ảnh ${index + 1} của ${product.name}`}
+                  loading="lazy"
+                  decoding="async"
+                />
               </button>
             ))}
           </div>

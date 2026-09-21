@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { 
   User, MapPin, ShoppingBag, 
@@ -46,31 +46,14 @@ const Profile = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const ordersPerPage = 6; 
 
-  // 1. Khởi tạo dữ liệu
-  useEffect(() => {
-    if (user && token) {
-      refreshUser();
-      fetchAddresses();
-      fetchOrders();
-      axios.get("https://provinces.open-api.vn/api/p/").then((res) => setProvinces(res.data));
-    }
-  }, [user?._id, token]);
-
-  // Fetch Lịch sử danh sách Vé hỗ trợ khi vào tab 'chat'
-  useEffect(() => {
-    if (activeTab === 'chat' && user) {
-      fetchSupportTickets();
-    }
-  }, [activeTab, user]);
-
-  const fetchAddresses = async () => {
+  const fetchAddresses = useCallback(async () => {
     try {
       const res = await axiosClient.get('/address');
       if (res.data.success) setAddresses(res.data.data);
     } catch (err) { console.error("Lỗi lấy địa chỉ:", err); }
-  };
+  }, []);
 
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     try {
       setLoading(true);
       const res = await axiosClient.get("/orders/my-orders"); 
@@ -86,10 +69,11 @@ const Profile = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // --- HÀM CHO TAB LỊCH SỬ HỖ TRỢ ---
-  const fetchSupportTickets = async () => {
+  const fetchSupportTickets = useCallback(async () => {
+    if (!user?._id) return;
     try {
       setLoadingTickets(true);
       const res = await axiosClient.get(`/messages/customer-tickets/${user._id}`);
@@ -102,7 +86,23 @@ const Profile = () => {
     } finally {
       setLoadingTickets(false);
     }
-  };
+  }, [user?._id]);
+
+  // 1. Khởi tạo dữ liệu
+  useEffect(() => {
+    if (user?._id && token) {
+      void refreshUser();
+      void fetchAddresses();
+      void fetchOrders();
+      axios.get("https://provinces.open-api.vn/api/p/").then((res) => setProvinces(res.data));
+    }
+  }, [user?._id, token, refreshUser, fetchAddresses, fetchOrders]);
+
+  useEffect(() => {
+    if (activeTab === 'chat' && user?._id) {
+      void fetchSupportTickets();
+    }
+  }, [activeTab, user?._id, fetchSupportTickets]);
 
   const handleToggleTicket = async (ticketId) => {
     // Nếu bấm đóng
@@ -205,7 +205,7 @@ const Profile = () => {
       setShowAddressForm(false);
       setEditingId(null);
       fetchAddresses();
-    } catch (err) { toast.error("Lỗi thao tác địa chỉ!"); }
+    } catch { toast.error("Lỗi thao tác địa chỉ!"); }
   };
 
   const deleteAddress = async (id) => {
@@ -214,7 +214,7 @@ const Profile = () => {
       await axiosClient.delete(`/address/${id}`);
       toast.success("Đã xóa!");
       fetchAddresses();
-    } catch (err) { toast.error("Không thể xóa!"); }
+    } catch { toast.error("Không thể xóa!"); }
   };
 
   const renderStatus = (status) => {

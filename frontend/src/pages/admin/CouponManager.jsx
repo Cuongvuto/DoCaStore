@@ -67,7 +67,7 @@ const CouponManager = () => {
           toast.success(res.data.message);
           fetchCoupons(); // Tải lại danh sách để cập nhật UI
         }
-      } catch (error) {
+      } catch {
         toast.error("Lỗi khi thay đổi trạng thái!");
       }
     }

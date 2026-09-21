@@ -38,7 +38,7 @@ const ProductManager = () => {
       const res = await axiosClient.get(`/product?page=${page}&limit=${itemsPerPage}`);
       setProducts(res.data?.data || res.data || []);
       if (res.data?.totalPages) setTotalPages(res.data.totalPages);
-    } catch (error) {
+    } catch {
       toast.error('Không thể tải danh sách sản phẩm!');
     } finally {
       setIsLoading(false);
@@ -50,7 +50,7 @@ const ProductManager = () => {
       const res = await axiosClient.get('/category');
       setCategoriesTree(res.data?.data || []);
       setFlatCategories(res.data?.flatData || []);
-    } catch (error) {
+    } catch {
       toast.error('Không thể tải danh mục!');
     }
   };

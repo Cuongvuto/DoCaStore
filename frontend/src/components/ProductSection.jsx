@@ -31,7 +31,7 @@ const ProductSection = ({ title, identifier, limit = 5 }) => {
     };
 
     if (identifier) fetchProducts();
-  }, [identifier, limit]);
+  }, [identifier, limit, title]);
 
   // Tạm tắt dòng dưới đây để nếu danh mục bị rỗng, nó vẫn hiện Tiêu đề để bạn biết web không bị lỗi
   // if (!loading && products.length === 0) return null;

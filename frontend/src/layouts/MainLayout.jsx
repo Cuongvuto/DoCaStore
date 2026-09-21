@@ -1,10 +1,20 @@
-import React from 'react';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
-import AIChatBot from '../components/AIChatBot';
+
+const AIChatBot = lazy(() => import('../components/AIChatBot'));
 
 const MainLayout = () => {
+  const [showAssistant, setShowAssistant] = useState(false);
+
+  useEffect(() => {
+    const schedule = window.requestIdleCallback || ((callback) => window.setTimeout(callback, 1200));
+    const cancel = window.cancelIdleCallback || window.clearTimeout;
+    const id = schedule(() => setShowAssistant(true));
+    return () => cancel(id);
+  }, []);
+
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
@@ -12,7 +22,11 @@ const MainLayout = () => {
         <Outlet /> 
       </main>
       <Footer />
-      <AIChatBot />
+      {showAssistant && (
+        <Suspense fallback={null}>
+          <AIChatBot />
+        </Suspense>
+      )}
     </div>
   );
 };

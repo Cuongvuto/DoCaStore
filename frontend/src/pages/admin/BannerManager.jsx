@@ -31,7 +31,7 @@ const BannerManager = () => {
       if (res.data && res.data.success) {
         setBanners(res.data.data);
       }
-    } catch (error) {
+    } catch {
       toast.error("Không thể tải dữ liệu banner!");
     } finally {
       setIsLoading(false);
@@ -131,7 +131,7 @@ const BannerManager = () => {
       await axiosClient.delete(`/banners/${id}`);
       toast.success("Đã xóa banner!");
       fetchBanners();
-    } catch (error) {
+    } catch {
       toast.error("Không thể xóa banner này!");
     }
   };
@@ -141,7 +141,7 @@ const BannerManager = () => {
       await axiosClient.put(`/banners/${banner._id}`, { isActive: !banner.isActive });
       toast.success(`Đã ${!banner.isActive ? 'Bật' : 'Tắt'} banner!`);
       fetchBanners();
-    } catch (error) {
+    } catch {
       toast.error("Lỗi cập nhật trạng thái!");
     }
   };

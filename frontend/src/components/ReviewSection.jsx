@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Star, Send, User, Calendar } from 'lucide-react';
 import axiosClient from '../api/axiosClient';
 import { toast } from 'sonner';
@@ -11,18 +11,18 @@ const ReviewSection = ({ productId, onReviewAdded }) => {
   const [loading, setLoading] = useState(false);
 
   // 1. Lấy danh sách đánh giá từ API
-  const fetchReviews = async () => {
+  const fetchReviews = useCallback(async () => {
     try {
       const res = await axiosClient.get(`/reviews/product/${productId}`);
       setReviews(res.data.data);
     } catch (error) {
       console.error("Lỗi lấy review:", error);
     }
-  };
+  }, [productId]);
 
   useEffect(() => {
     fetchReviews();
-  }, [productId]);
+  }, [fetchReviews]);
 
   // 2. Xử lý gửi đánh giá mới
   const handleSubmit = async (e) => {
@@ -111,7 +111,7 @@ const ReviewSection = ({ productId, onReviewAdded }) => {
               {/* Avatar khách */}
               <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 text-[#5a8c76]">
                 {rev.userId?.avatar ? (
-                    <img src={rev.userId.avatar} className="w-full h-full rounded-full object-cover" />
+                    <img src={rev.userId.avatar} alt={`Ảnh đại diện của ${rev.userId?.name || 'khách hàng'}`} loading="lazy" decoding="async" className="w-full h-full rounded-full object-cover" />
                 ) : (
                     <User size={24} />
                 )}

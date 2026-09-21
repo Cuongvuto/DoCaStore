@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axiosClient from '../api/axiosClient'; 
 import DOMPurify from 'dompurify';
@@ -10,19 +10,14 @@ const NewsDetail = () => {
   const [article, setArticle] = useState(null);
   const [relatedArticles, setRelatedArticles] = useState([]); 
   const [loading, setLoading] = useState(true);
-  const isFetched = useRef(false);
 
   // ==========================================
   const [showReviewForm, setShowReviewForm] = useState(false); // Ẩn/hiện form
   const [userRating, setUserRating] = useState(0); // Số sao user click chọn
   const [userComment, setUserComment] = useState(""); // Nội dung bình luận
   const [isSubmitting, setIsSubmitting] = useState(false); // Trạng thái đang gửi API
-  const fetchedSlug = useRef(null);
- useEffect(() => {
+  useEffect(() => {
     const fetchDetailAndRelated = async () => {
-      //  Chặn ngay từ đầu nếu slug này đã được tải rồi
-      if (slug === fetchedSlug.current) return; 
-      
       try {
         setLoading(true);
 
@@ -30,9 +25,6 @@ const NewsDetail = () => {
         const res = await axiosClient.get(`/news/${slug}`);
         setArticle(res.data.data);
         
-        //  Lưu lại slug này để React biết là đã tải xong bài này
-        fetchedSlug.current = slug;
-
         // 2. LẤY BÀI VIẾT LIÊN QUAN
         try {
           const resAll = await axiosClient.get('/news');

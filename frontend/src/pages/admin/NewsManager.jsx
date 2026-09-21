@@ -58,8 +58,8 @@ const NewsManager = () => {
       .replace(/ý|ỳ|ỷ|ỹ|ỵ/gi, 'y')
       .replace(/đ/gi, 'd')
       .replace(/\s+/g, '-') 
-      .replace(/[^\w\-]+/g, '') 
-      .replace(/\-\-+/g, '-') 
+      .replace(/[^\w-]+/g, '')
+      .replace(/-{2,}/g, '-')
       .replace(/^-+/, '') 
       .replace(/-+$/, ''); 
   };
@@ -88,7 +88,7 @@ const NewsManager = () => {
     
     // Nếu là thêm mới thì bắt buộc phải có ảnh. (Nếu sửa thì không bắt buộc chọn ảnh mới)
     if (!imageFile && !editingId) {
-      alert("⚠️ Sếp quên chọn ảnh bìa (thumbnail) rồi!");
+      toast.error("Vui lòng chọn ảnh bìa.");
       return;
     }
 
@@ -110,20 +110,20 @@ const NewsManager = () => {
         await axiosClient.put(`/news/${editingId}`, data, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
-        alert("🎉 Cập nhật bài viết thành công!");
+        toast.success("Cập nhật bài viết thành công!");
       } else {
         // GỌI API THÊM MỚI
         await axiosClient.post('/news/create', data, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
-        alert("🎉 Thêm bài viết thành công!");
+        toast.success("Thêm bài viết thành công!");
       }
       
       closeModal();
       fetchNews(currentPage); 
     } catch (error) {
       console.error("Lỗi khi lưu bài viết:", error);
-      alert(error.response?.data?.message || "❌ Có lỗi xảy ra, vui lòng thử lại!");
+      toast.error(error.response?.data?.message || "Có lỗi xảy ra, vui lòng thử lại!");
     } finally {
       setIsLoading(false);
     }
@@ -150,7 +150,7 @@ const NewsManager = () => {
         fetchNews(currentPage);
       } catch (error) {
         console.error("Lỗi xóa bài viết:", error);
-        alert("❌ Lỗi xóa bài viết!");
+        toast.error("Không thể xóa bài viết.");
       }
     }
   };

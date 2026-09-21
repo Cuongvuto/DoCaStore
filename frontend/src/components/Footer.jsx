@@ -26,18 +26,19 @@ const Footer = () => {
             </p>
             <div className="flex items-center gap-4">
               {[
-                { icon: FaFacebook, link: "#" },
-                { icon: FaInstagram, link: "#" },
-                { icon: FaXTwitter, link: "#" },
-                { icon: FaYoutube, link: "#" }
+                { icon: FaFacebook, name: "Facebook" },
+                { icon: FaInstagram, name: "Instagram" },
+                { icon: FaXTwitter, name: "X" },
+                { icon: FaYoutube, name: "YouTube" }
               ].map((social, index) => (
-                <a 
+                <span
                   key={index} 
-                  href={social.link} 
+                  aria-label={`${social.name} đang được cập nhật`}
+                  title={`${social.name} đang được cập nhật`}
                   className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-400 hover:text-[#5a8c76] hover:border-[#5a8c76] hover:shadow-lg hover:shadow-green-100 transition-all"
                 >
                   <social.icon size={18} />
-                </a>
+                </span>
               ))}
             </div>
           </div>
@@ -99,7 +100,7 @@ const Footer = () => {
                 <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-500 flex-shrink-0">
                   <Mail size={16} />
                 </div>
-                <p className="text-gray-500">support@docaustore.vn</p>
+                <a href="mailto:support@docaustore.vn" className="text-gray-500 hover:text-[#5a8c76]">support@docaustore.vn</a>
               </div>
             </div>
           </div>
@@ -118,10 +119,10 @@ const Footer = () => {
                 loading="lazy" 
               ></iframe>
             </div>
-            <div className="flex flex-wrap gap-2 opacity-50 grayscale hover:grayscale-0 transition-all duration-500">
-               <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" className="h-4" alt="Paypal" />
-               <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" className="h-4" alt="Visa" />
-               <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" className="h-4" alt="Mastercard" />
+            <div className="flex flex-wrap gap-2 text-[11px] font-black tracking-wide text-gray-500">
+               <span className="rounded border border-gray-200 bg-white px-2 py-1">PayPal</span>
+               <span className="rounded border border-gray-200 bg-white px-2 py-1 text-blue-700">VISA</span>
+               <span className="rounded border border-gray-200 bg-white px-2 py-1 text-red-600">Mastercard</span>
             </div>
           </div>
 

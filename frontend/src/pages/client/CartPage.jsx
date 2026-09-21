@@ -35,7 +35,7 @@ const CartPage = () => {
       // Gọi API update số lượng của sếp
       await axiosClient.put(`/cart/${productId}`, { quantity: newQuantity });
       fetchCart(); // Load lại dữ liệu để cập nhật tổng tiền
-    } catch (error) {
+    } catch {
       toast.error("Lỗi cập nhật số lượng!");
     }
   };
@@ -47,7 +47,7 @@ const CartPage = () => {
       toast.success("Đã xóa sản phẩm!");
       fetchCart();
       updateCartCount(); // Cập nhật lại số trên Header
-    } catch (error) {
+    } catch {
       toast.error("Lỗi khi xóa sản phẩm!");
     }
   };

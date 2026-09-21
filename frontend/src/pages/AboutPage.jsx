@@ -24,6 +24,8 @@ const AboutPage = () => {
                 src="/952c547c-0612-45bc-8f20-e3ebb52a7b73.jpg" 
                 alt="DocaStore Câu Cá" 
                 className="w-full h-[500px] object-cover hover:scale-105 transition-transform duration-700"
+                loading="lazy"
+                decoding="async"
               />
             </div>
             {/* Element trang trí */}

@@ -4,6 +4,7 @@ import { Package, Tag, Info, CheckCheck, BellOff, Circle, X } from 'lucide-react
 import axiosClient from '../api/axiosClient';
 import { useNotification } from '../context/NotificationContext';
 import { toast } from 'sonner';
+import { toInternalPath } from '../utils/navigation';
 
 const Notifications = () => {
   const [notifications, setNotifications] = useState([]);
@@ -79,7 +80,7 @@ const Notifications = () => {
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
       clearUnreadCount();
       toast.success('Đã đánh dấu đọc tất cả!');
-    } catch (error) {
+    } catch {
       toast.error('Có lỗi xảy ra!');
     }
   };
@@ -222,7 +223,7 @@ const Notifications = () => {
               {selectedNoti.linkUrl && (
                 <div className="mt-6">
                   <Link 
-                    to={selectedNoti.linkUrl} 
+                    to={toInternalPath(selectedNoti.linkUrl)}
                     className="flex justify-center items-center w-full py-3 bg-[#5a8c76] text-white rounded-xl font-black hover:bg-[#487360] transition-colors shadow-md active:scale-95"
                     onClick={() => setSelectedNoti(null)} // Bấm link thì đóng popup luôn
                   >

@@ -84,6 +84,8 @@ const NewsPage = () => {
                       src={item.thumbnail || "https://dummyimage.com/400x250/cccccc/000000.png&text=No+Image"} 
                       alt={item.title} 
                       className="w-full h-52 object-cover group-hover:scale-105 transition-transform duration-500"
+                      loading="lazy"
+                      decoding="async"
                       onError={(e) => { 
                         e.target.onerror = null; 
                         e.target.src = "https://dummyimage.com/400x250/cccccc/000000.png&text=No+Image"; 

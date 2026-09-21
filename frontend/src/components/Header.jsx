@@ -49,14 +49,9 @@ const Header = () => {
 
   const isActive = (path) => location.pathname === path;
 
-  // Tự động đóng menu mobile khi chuyển trang
-  useEffect(() => {
-    setIsMobileMenuOpen(false);
-  }, [location.pathname]);
-
   return (
     <header className={`sticky top-0 w-full transition-all duration-300 z-[100] ${
-      isScrolled ? 'bg-[#5a8c76]/95 shadow-lg backdrop-blur-md py-2' : 'bg-[#5a8c76] py-3'
+      isScrolled ? 'bg-[#3d6b56]/95 shadow-lg backdrop-blur-md py-2' : 'bg-[#3d6b56] py-3'
     }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
@@ -67,12 +62,15 @@ const Header = () => {
             <button 
               className="lg:hidden text-white p-1 rounded-md hover:bg-white/10 transition-colors"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              aria-label={isMobileMenuOpen ? 'Đóng menu' : 'Mở menu'}
+              aria-expanded={isMobileMenuOpen}
+              aria-controls="mobile-navigation"
             >
               {isMobileMenuOpen ? <X size={26} /> : <Menu size={26} />}
             </button>
 
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-2 group flex-shrink-0">
+            <Link to="/" className="flex items-center gap-2 group flex-shrink-0" aria-label="DocaStore - Trang chủ">
               <div className="bg-white p-1.5 rounded-lg group-hover:rotate-12 transition-transform duration-300 shadow-md">
                 <Fish className="text-[#5a8c76]" size={20} sm:size={24} />
               </div>
@@ -83,18 +81,18 @@ const Header = () => {
           </div>
 
           {/* --- KHU VỰC GIỮA: NAVIGATION (Chỉ hiện trên máy tính) --- */}
-          <nav className="hidden lg:flex items-center space-x-7 font-bold text-[13px] tracking-widest h-full">
-            <Link to="/" className={`h-full flex items-center transition-colors hover:text-yellow-300 ${isActive('/') ? 'text-yellow-300' : 'text-white'}`}>
+          <nav className="hidden lg:flex items-center space-x-7 font-bold text-[13px] tracking-widest h-full" aria-label="Điều hướng chính">
+            <Link to="/" aria-current={isActive('/') ? 'page' : undefined} className={`h-full flex items-center transition-colors hover:text-yellow-100 ${isActive('/') ? 'text-yellow-100' : 'text-white'}`}>
               TRANG CHỦ
             </Link>
             
             {/* Dropdown Sản phẩm (Desktop) */}
             <div className="relative group h-full flex items-center">
-              <Link to="/products" className={`flex items-center gap-1 transition-colors hover:text-yellow-300 h-full ${isActive('/products') ? 'text-yellow-300' : 'text-white'}`}>
+              <Link to="/products" aria-current={isActive('/products') ? 'page' : undefined} className={`flex items-center gap-1 transition-colors hover:text-yellow-100 h-full ${isActive('/products') ? 'text-yellow-100' : 'text-white'}`}>
                 SẢN PHẨM <ChevronDown size={14} className="group-hover:rotate-180 transition-transform duration-300" />
               </Link>
               
-              <ul className="absolute left-0 top-[100%] w-60 bg-white text-gray-800 shadow-2xl rounded-xl py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 border border-gray-100 translate-y-2 group-hover:translate-y-0">
+              <ul className="absolute left-0 top-[100%] w-60 bg-white text-gray-800 shadow-2xl rounded-xl py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible transition-all duration-300 border border-gray-100 translate-y-2 group-hover:translate-y-0 group-focus-within:translate-y-0">
                 {categories.map((category) => (
                   <li key={category._id} className="relative group/item px-2">
                     <Link to={`/category/${category.slug}`} className="flex items-center justify-between px-4 py-3 rounded-xl hover:bg-[#5a8c76]/10 hover:text-[#5a8c76] transition-all font-semibold uppercase text-[11px]">
@@ -102,7 +100,7 @@ const Header = () => {
                       {category.children?.length > 0 && <ChevronRight size={14} className="text-gray-400" />}
                     </Link>
                     {category.children && category.children.length > 0 && (
-                      <ul className="absolute left-[100%] top-0 ml-1 w-56 bg-white text-gray-800 shadow-2xl rounded-xl py-2 opacity-0 invisible group-hover/item:opacity-100 group-hover/item:visible transition-all duration-300 border border-gray-100 translate-x-2 group-hover/item:translate-x-0">
+                      <ul className="absolute left-[100%] top-0 ml-1 w-56 bg-white text-gray-800 shadow-2xl rounded-xl py-2 opacity-0 invisible group-hover/item:opacity-100 group-hover/item:visible group-focus-within/item:opacity-100 group-focus-within/item:visible transition-all duration-300 border border-gray-100 translate-x-2 group-hover/item:translate-x-0 group-focus-within/item:translate-x-0">
                         {category.children.map((child) => (
                           <li key={child._id} className="px-2">
                             <Link to={`/category/${child.slug}`} className="block px-4 py-2.5 text-[11px] uppercase rounded-lg hover:bg-gray-50 hover:text-[#5a8c76] transition-colors font-semibold border-b border-gray-50 last:border-0">
@@ -128,7 +126,7 @@ const Header = () => {
             <CustomerChatWidget />
 
             {/* THÔNG BÁO */}
-            <Link to="/notifications" className="p-1.5 sm:p-2.5 hover:bg-white/10 rounded-full transition-all relative group">
+            <Link to="/notifications" aria-label="Thông báo" className="p-1.5 sm:p-2.5 hover:bg-white/10 rounded-full transition-all relative group">
               <Bell size={20} className={`text-white group-hover:scale-110 transition-transform ${unreadCount > 0 ? 'animate-ring text-yellow-300' : ''}`} />
               {unreadCount > 0 && (
                 <span className="absolute top-0 right-0 bg-red-500 text-white text-[9px] sm:text-[10px] font-black rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center border sm:border-2 border-[#5a8c76] shadow-sm">
@@ -138,7 +136,7 @@ const Header = () => {
             </Link>
 
             {/* WISHLIST */}
-            <Link to="/wishlist" className="hidden sm:block p-1.5 sm:p-2.5 hover:bg-white/10 rounded-full transition-all relative group">
+            <Link to="/wishlist" aria-label="Sản phẩm yêu thích" className="hidden sm:block p-1.5 sm:p-2.5 hover:bg-white/10 rounded-full transition-all relative group">
               <Star size={20} className="text-white group-hover:scale-110 transition-transform" />
               {wishlist?.length > 0 && (
                 <span className="absolute top-0 right-0 bg-yellow-400 text-[#5a8c76] text-[10px] font-black rounded-full h-5 w-5 flex items-center justify-center border-2 border-[#5a8c76] animate-bounce-short shadow-sm">
@@ -148,7 +146,7 @@ const Header = () => {
             </Link>
 
             {/* GIỎ HÀNG */}
-            <Link to="/cart" className="p-1.5 sm:p-2.5 hover:bg-white/10 rounded-full transition-all relative group">
+            <Link to="/cart" aria-label="Giỏ hàng" className="p-1.5 sm:p-2.5 hover:bg-white/10 rounded-full transition-all relative group">
               <ShoppingCart size={20} className="text-white group-hover:scale-110 transition-transform" />
               {cartCount > 0 && (
                 <span className="absolute top-0 right-0 bg-yellow-400 text-[#5a8c76] text-[9px] sm:text-[10px] font-black rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center border sm:border-2 border-[#5a8c76] animate-bounce-short shadow-sm">
@@ -169,10 +167,10 @@ const Header = () => {
                   <span className="text-sm font-bold text-white uppercase">{user.name}</span>
                 </div>
                 <div className="relative group">
-                   <button className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/10 border border-white/30 flex items-center justify-center hover:bg-white/20 transition-all overflow-hidden shadow-inner">
+                   <button aria-label="Mở menu tài khoản" className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/10 border border-white/30 flex items-center justify-center hover:bg-white/20 transition-all overflow-hidden shadow-inner">
                       <User size={18} className="text-white" />
                    </button>
-                   <div className="absolute right-0 top-[120%] w-48 sm:w-52 bg-white rounded-2xl shadow-2xl py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 border border-gray-100 translate-y-2 group-hover:translate-y-0 overflow-hidden">
+                   <div className="absolute right-0 top-[120%] w-48 sm:w-52 bg-white rounded-2xl shadow-2xl py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible transition-all duration-300 border border-gray-100 translate-y-2 group-hover:translate-y-0 group-focus-within:translate-y-0 overflow-hidden">
                       <div className="px-4 py-3 border-b border-gray-50 bg-gray-50/50 md:hidden">
                         <p className="text-[10px] text-gray-400 font-bold uppercase">Tài khoản</p>
                         <p className="text-sm font-bold text-[#5a8c76] truncate">{user.name}</p>
@@ -212,15 +210,15 @@ const Header = () => {
       </div>
 
       {/* --- MENU MOBILE DROPDOWN (Chỉ hiện khi bấm nút 3 gạch) --- */}
-      <div className={`lg:hidden overflow-hidden transition-all duration-300 ease-in-out bg-[#4a7562] ${isMobileMenuOpen ? 'max-h-[400px] border-t border-white/10' : 'max-h-0'}`}>
+      <div id="mobile-navigation" className={`lg:hidden overflow-hidden transition-all duration-300 ease-in-out bg-[#315744] ${isMobileMenuOpen ? 'max-h-[400px] border-t border-white/10' : 'max-h-0'}`}>
         <div className="flex flex-col px-4 py-2 space-y-1 font-bold text-[13px] tracking-wider">
-          <Link to="/" className="text-white py-3 border-b border-white/10 flex items-center">TRANG CHỦ</Link>
-          <Link to="/products" className="text-white py-3 border-b border-white/10 flex items-center justify-between">
+          <Link onClick={() => setIsMobileMenuOpen(false)} to="/" className="text-white py-3 border-b border-white/10 flex items-center">TRANG CHỦ</Link>
+          <Link onClick={() => setIsMobileMenuOpen(false)} to="/products" className="text-white py-3 border-b border-white/10 flex items-center justify-between">
             SẢN PHẨM <ChevronRight size={16} />
           </Link>
-          <Link to="/about" className="text-white py-3 border-b border-white/10 flex items-center">GIỚI THIỆU</Link>
-          <Link to="/news" className="text-white py-3 border-b border-white/10 flex items-center">TIN TỨC</Link>
-          <Link to="/contact" className="text-white py-3 flex items-center">LIÊN HỆ</Link>
+          <Link onClick={() => setIsMobileMenuOpen(false)} to="/about" className="text-white py-3 border-b border-white/10 flex items-center">GIỚI THIỆU</Link>
+          <Link onClick={() => setIsMobileMenuOpen(false)} to="/news" className="text-white py-3 border-b border-white/10 flex items-center">TIN TỨC</Link>
+          <Link onClick={() => setIsMobileMenuOpen(false)} to="/contact" className="text-white py-3 flex items-center">LIÊN HỆ</Link>
         </div>
       </div>
 

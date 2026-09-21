@@ -2,36 +2,37 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import axiosClient from '../../../api/axiosClient';
+import { toInternalPath } from '../../../utils/navigation';
+
+const DEFAULT_BANNERS = [
+  {
+    _id: 'default-1',
+    imageUrl: '/banner2.jpg',
+    title: 'Chinh Phục Mọi Thủy Vực',
+    description: 'Cung cấp thiết bị câu cá chính hãng, chất lượng cao dành cho các cần thủ chuyên nghiệp và đam mê dã ngoại.',
+    link: '/products'
+  }
+];
 
 const Banner = () => {
   const [banners, setBanners] = useState([]);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
-  const defaultBanner = [
-    {
-      _id: 'default-1',
-      imageUrl: 'https://images.unsplash.com/photo-1544321285-b91c06d0937a?q=80&w=1920&auto=format&fit=crop',
-      title: 'Chinh Phục Mọi Thủy Vực',
-      description: 'Cung cấp thiết bị câu cá chính hãng, chất lượng cao dành cho các cần thủ chuyên nghiệp và đam mê dã ngoại.',
-      link: '/products'
-    }
-  ];
-
   useEffect(() => {
     const fetchBanners = async () => {
       try {
-        const res = await axiosClient.get('/banners');
+        const res = await axiosClient.get('/banners/active');
         const fetchedBanners = res.data?.data || res.data || [];
         
         if (fetchedBanners.length > 0) {
           setBanners(fetchedBanners);
         } else {
-          setBanners(defaultBanner);
+          setBanners(DEFAULT_BANNERS);
         }
       } catch (error) {
         console.error('Lỗi lấy banner:', error);
-        setBanners(defaultBanner);
+        setBanners(DEFAULT_BANNERS);
       } finally {
         setIsLoading(false);
       }
@@ -58,11 +59,11 @@ const Banner = () => {
   };
 
   if (isLoading) {
-    return <div className="h-[500px] w-full bg-slate-200 animate-pulse flex items-center justify-center text-slate-500">Đang tải banner...</div>;
+    return <div className="h-[380px] sm:h-[440px] lg:h-[500px] w-full bg-slate-200 animate-pulse flex items-center justify-center text-slate-600" role="status">Đang tải banner...</div>;
   }
 
   return (
-    <section className="relative w-full h-[500px] overflow-hidden group bg-gray-900">
+    <section className="relative w-full h-[380px] sm:h-[440px] lg:h-[500px] overflow-hidden group bg-gray-900" aria-label="Khuyến mãi nổi bật">
       
       {/* 🟢 KHUNG TRƯỢT (SLIDER TRACK): Chứa tất cả banner nằm ngang */}
       <div 
@@ -85,7 +86,7 @@ const Banner = () => {
             {/* Nội dung chữ - 🟢 CÓ HIỆU ỨNG BAY VÀO DỰA THEO currentSlide */}
             <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
               <h1 
-                className={`text-4xl md:text-6xl font-bold mb-4 uppercase tracking-wide drop-shadow-lg text-white transition-all duration-700 ease-out transform ${
+                className={`text-3xl sm:text-4xl md:text-6xl font-bold mb-4 uppercase tracking-wide drop-shadow-lg text-white transition-all duration-700 ease-out transform ${
                   index === currentSlide ? 'translate-y-0 opacity-100 delay-300' : 'translate-y-10 opacity-0'
                 }`}
               >
@@ -106,7 +107,7 @@ const Banner = () => {
                 }`}
               >
                 <Link 
-                  to={banner.linkUrl || banner.link || '/products'} 
+                  to={toInternalPath(banner.linkUrl || banner.link, '/products')}
                   className="inline-block bg-[#5a8c76] hover:bg-[#4a7562] text-white font-bold py-3 px-8 rounded-md transition-all duration-300 hover:scale-105 shadow-lg text-lg"
                 >
                   MUA SẮM NGAY
@@ -122,13 +123,15 @@ const Banner = () => {
         <>
           <button 
             onClick={prevSlide}
-            className="absolute left-4 top-1/2 -translate-y-1/2 z-20 bg-black/30 hover:bg-black/60 text-white p-3 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110"
+            aria-label="Banner trước"
+            className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-20 bg-black/50 hover:bg-black/70 text-white p-2.5 sm:p-3 rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-300 hover:scale-110"
           >
             <ChevronLeft size={28} />
           </button>
           <button 
             onClick={nextSlide}
-            className="absolute right-4 top-1/2 -translate-y-1/2 z-20 bg-black/30 hover:bg-black/60 text-white p-3 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110"
+            aria-label="Banner tiếp theo"
+            className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-20 bg-black/50 hover:bg-black/70 text-white p-2.5 sm:p-3 rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-300 hover:scale-110"
           >
             <ChevronRight size={28} />
           </button>

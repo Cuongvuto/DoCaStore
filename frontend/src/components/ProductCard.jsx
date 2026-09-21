@@ -7,7 +7,7 @@ import { useWishlist } from '../context/WishlistContext';
 import { toast } from 'sonner';
 
 const ProductCard = ({ product }) => {
-  const { cartCount, updateCartCount } = useCart();
+  const { updateCartCount } = useCart();
   const { wishlist, setWishlist } = useWishlist(); 
   const inWishlist = wishlist.includes(product._id);
 
@@ -72,6 +72,8 @@ const ProductCard = ({ product }) => {
       <button 
         onClick={handleToggleWishlist}
         className="absolute top-4 right-4 z-10 p-2 bg-white/90 backdrop-blur-sm rounded-full hover:bg-white hover:scale-110 transition-all shadow-sm"
+        aria-label={inWishlist ? `Bỏ ${product.name} khỏi yêu thích` : `Thêm ${product.name} vào yêu thích`}
+        aria-pressed={inWishlist}
       >
         <Star size={18} className={`transition-colors duration-300 ${inWishlist ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300 fill-none'}`} />
       </button>
@@ -79,10 +81,12 @@ const ProductCard = ({ product }) => {
       {/* ẢNH SẢN PHẨM - Đã fix theo thông số của sếp */}
       {/* h-[285px]: Ép chiều cao chuẩn theo web mẫu */}
       {/* flex items-center justify-center p-2: Để ảnh luôn nằm giữa và có khoảng thở (padding) */}
-      <Link to={`/product/${product._id}`} className="block relative w-full h-[285px] flex items-center justify-center p-2 overflow-hidden rounded-lg">
+      <Link to={`/product/${product._id}`} className="block relative w-full aspect-square flex items-center justify-center p-2 overflow-hidden rounded-lg">
         <img 
           src={imageUrl} 
           alt={product.name} 
+          loading="lazy"
+          decoding="async"
           // object-contain: Bí quyết để ảnh hiển thị full 100% không bị cắt góc
           className={`w-full h-full object-contain transition-transform duration-500 ${
             isOutOfStock ? 'opacity-70 grayscale-[30%]' : 'group-hover:scale-105'
@@ -128,6 +132,7 @@ const ProductCard = ({ product }) => {
           <button 
             onClick={handleAddToCart}
             disabled={isOutOfStock}
+            aria-label={`Thêm ${product.name} vào giỏ hàng`}
             className={`p-2.5 rounded-full transition-all shadow-sm ${
               isOutOfStock 
                 ? 'bg-gray-100 text-gray-300 cursor-not-allowed' 
