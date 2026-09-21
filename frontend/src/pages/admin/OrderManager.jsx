@@ -22,7 +22,7 @@ const OrderManager = () => {
   const fetchOrders = async (page = 1) => {
     setLoading(true);
     try {
-      const res = await axiosClient.get(`/order?page=${page}&limit=${itemsPerPage}`); 
+      const res = await axiosClient.get(`/orders?page=${page}&limit=${itemsPerPage}`);
       if (res.data?.success) {
         setOrders(res.data.data);
         if (res.data.totalPages) setTotalPages(res.data.totalPages);
@@ -45,7 +45,7 @@ const OrderManager = () => {
   const handleUpdateStatus = async (orderId, newStatus) => {
     setUpdatingId(orderId);
     try {
-      const res = await axiosClient.put(`/order/${orderId}/status`, { status: newStatus });
+      const res = await axiosClient.put(`/orders/${orderId}/status`, { status: newStatus });
       
       if (res.data?.success || res.status === 200) {
         toast.success("Cập nhật trạng thái thành công!");
@@ -91,7 +91,6 @@ const OrderManager = () => {
   };
 
   // --- LOGIC PHÂN TRANG ---
-  const indexOfFirstItem = (currentPage - 1) * itemsPerPage;
   const currentOrders = orders;
 
   const handleNextPage = () => { if (currentPage < totalPages) setCurrentPage(currentPage + 1); };

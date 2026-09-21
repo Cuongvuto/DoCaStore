@@ -40,14 +40,20 @@ export const getConversations = async (req, res) => {
 // 2. DÀNH CHO ADMIN & KHÁCH: Xem tin nhắn của 1 Ticket cụ thể
 export const getChatHistory = async (req, res) => {
     try {
-        // LƯU Ý: Giờ mình dùng conversationId thay vì customerId nhé
         const { conversationId } = req.params; 
-        
-        // Kiểm tra xem người gọi API có phải admin không
-        const isAdmin = req.user && req.user.role !== 'customer';
+        const conversation = await Conversation.findById(conversationId);
+        if (!conversation) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy phiên hỗ trợ.' });
+        }
 
-        // Đánh dấu đã đọc nếu admin mở Ticket này
-        if (isAdmin) {
+        const requesterId = req.user.id || req.user._id;
+        const canManageSupport = ['superadmin', 'admin', 'support_admin'].includes(req.user.role);
+        const isOwner = conversation.customerId.toString() === requesterId.toString();
+        if (!canManageSupport && !isOwner) {
+            return res.status(403).json({ success: false, message: 'Bạn không có quyền xem phiên hỗ trợ này.' });
+        }
+
+        if (canManageSupport) {
             await Message.updateMany(
                 { conversationId, sender: 'customer', isRead: false },
                 { $set: { isRead: true } }
@@ -68,6 +74,11 @@ export const getChatHistory = async (req, res) => {
 export const getCustomerTicket = async (req, res) => {
     try {
         const { customerId } = req.params;
+        const requesterId = req.user.id || req.user._id;
+        const canManageSupport = ['superadmin', 'admin', 'support_admin'].includes(req.user.role);
+        if (!canManageSupport && customerId !== requesterId.toString()) {
+            return res.status(403).json({ success: false, message: 'Bạn không có quyền xem phiên hỗ trợ này.' });
+        }
         
         // 1. Tìm xem khách có phiên nào đang mở không (pending hoặc active)
         let conversation = await Conversation.findOne({
@@ -105,6 +116,11 @@ export const getCustomerTicket = async (req, res) => {
 export const getCustomerAllTickets = async (req, res) => {
     try {
         const { customerId } = req.params;
+        const requesterId = req.user.id || req.user._id;
+        const canManageSupport = ['superadmin', 'admin', 'support_admin'].includes(req.user.role);
+        if (!canManageSupport && customerId !== requesterId.toString()) {
+            return res.status(403).json({ success: false, message: 'Bạn không có quyền xem danh sách này.' });
+        }
         const conversations = await Conversation.find({ customerId }).sort({ createdAt: -1 });
         res.status(200).json({ success: true, conversations });
     } catch (error) {

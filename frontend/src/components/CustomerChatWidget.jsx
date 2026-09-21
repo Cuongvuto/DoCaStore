@@ -36,9 +36,14 @@ const CustomerChatWidget = () => {
   useEffect(() => {
     if (isOpen) {
       scrollToBottom();
-      setUnreadCount(0); 
     }
   }, [messages, isOpen]);
+
+  const toggleChat = () => {
+    const nextOpen = !isOpen;
+    setIsOpen(nextOpen);
+    if (nextOpen) setUnreadCount(0);
+  };
 
   // FETCH LỊCH SỬ CHAT THEO API TICKET MỚI
   useEffect(() => {
@@ -57,7 +62,7 @@ const CustomerChatWidget = () => {
       };
       fetchHistory();
     }
-  }, [user, isOpen]);
+  }, [user, isOpen, messages.length]);
 
   useEffect(() => {
     if (!socket) return;
@@ -137,13 +142,15 @@ const CustomerChatWidget = () => {
     setCurrentTicket(null); // Reset Ticket ID -> Tin nhắn tiếp theo sẽ tạo Bìa hồ sơ mới
   };
 
-  if (user?.role && user.role !== 'customer') return null;
+  if (!user || user.role !== 'customer') return null;
 
   return (
     <>
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={toggleChat}
         className="p-1.5 sm:p-2.5 hover:bg-white/10 rounded-full transition-all relative group"
+        aria-label={isOpen ? 'Đóng hỗ trợ khách hàng' : 'Mở hỗ trợ khách hàng'}
+        aria-expanded={isOpen}
       >
         <MessageCircle size={20} className="text-white group-hover:scale-110 transition-transform" />
         {unreadCount > 0 && (
@@ -154,7 +161,7 @@ const CustomerChatWidget = () => {
       </button>
 
       {isOpen && (
-        <div className="fixed top-20 right-4 sm:right-6 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col z-50 border border-gray-100" style={{ height: '500px', maxHeight: 'calc(100vh - 100px)' }}>
+        <div role="dialog" aria-label="Hỗ trợ khách hàng" className="fixed top-20 right-4 sm:right-6 w-[calc(100vw-2rem)] max-w-96 bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col z-50 border border-gray-100" style={{ height: '500px', maxHeight: 'calc(100vh - 100px)' }}>
           <div className="bg-[#5a8c76] p-4 text-white flex items-center justify-between shadow-md z-10 shrink-0">
             <div>
               <h3 className="font-bold text-lg">Hỗ trợ khách hàng</h3>
@@ -162,11 +169,11 @@ const CustomerChatWidget = () => {
             </div>
             <div className="flex gap-3">
               {sessionState === 'active' && messages.length > 0 && (
-                <button onClick={handleEndSession} title="Kết thúc chat" className="opacity-80 hover:opacity-100 hover:text-red-200 transition-colors">
+                <button onClick={handleEndSession} title="Kết thúc chat" aria-label="Kết thúc phiên hỗ trợ" className="opacity-80 hover:opacity-100 hover:text-red-200 transition-colors">
                   <XCircle className="w-5 h-5"/>
                 </button>
               )}
-              <button onClick={() => setIsOpen(false)} className="opacity-80 hover:opacity-100">
+              <button onClick={() => setIsOpen(false)} aria-label="Đóng cửa sổ hỗ trợ" className="opacity-80 hover:opacity-100">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -201,7 +208,7 @@ const CustomerChatWidget = () => {
                     <div className={`max-w-[80%] rounded-2xl px-4 py-2 shadow-sm ${msg.sender === 'customer' ? 'bg-[#5a8c76] text-white rounded-tr-none' : 'bg-white text-gray-800 rounded-tl-none border border-gray-100'}`}>
                       <p className="text-sm">{msg.text}</p>
                       <span className={`text-[10px] mt-1 block ${msg.sender === 'customer' ? 'text-gray-200' : 'text-gray-400'}`}>
-                        {new Date(msg.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : ''}
                       </span>
                     </div>
                   </div>
@@ -229,6 +236,7 @@ const CustomerChatWidget = () => {
                 <button 
                   type="submit" 
                   disabled={!inputText.trim()}
+                  aria-label="Gửi tin nhắn"
                   className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${inputText.trim() ? 'bg-[#5a8c76] text-white hover:bg-[#46705d]' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
                 >
                   <Send className="w-4 h-4 ml-1" />

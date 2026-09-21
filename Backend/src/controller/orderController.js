@@ -391,7 +391,7 @@ export const getOrderById = async (req, res) => {
 
     if (!order) return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng!' });
 
-    const isAdmin = req.user.role === 'admin';
+    const isAdmin = ['superadmin', 'admin', 'order_admin'].includes(req.user.role);
     const isOwner = order.userId._id.toString() === userId;
 
     if (!isAdmin && !isOwner) return res.status(403).json({ success: false, message: 'Không có quyền truy cập!' });
@@ -461,11 +461,13 @@ export const payosWebhook = async (req, res) => {
       .update(signString)
       .digest('hex');
 
-    console.log("👉 SIGN STRING WEBHOOK:", signString);
-    console.log("👉 PayOS Signature:", signature);
-    console.log("👉 My Signature:", mySignature);
+    const isSignatureFormatValid = /^[a-f0-9]{64}$/i.test(String(signature));
+    const isSignatureValid = isSignatureFormatValid && crypto.timingSafeEqual(
+      Buffer.from(mySignature, 'hex'),
+      Buffer.from(String(signature), 'hex')
+    );
 
-    if (mySignature !== signature) {
+    if (!isSignatureValid) {
       console.warn("⚠️ Sai chữ ký Webhook!");
       return res.json({ error: -1, message: "Invalid signature", data: null });
     }
@@ -500,16 +502,11 @@ export const payosWebhook = async (req, res) => {
         // 3. Socket notify
         try {
           const io = socketUtil.getIo();
-          const userSocketId = socketUtil.getUserSocket(order.userId.toString());
-
-          if (userSocketId) {
-            io.to(userSocketId).emit('payment_success', {
-              orderId: order._id.toString(),
-              orderCode: actualOrderCode,
-              status: 'paid'
-            });
-            console.log(`🚀 Đã bắn Socket cho User: ${order.userId}`);
-          }
+          io.to(`room_user_${order.userId}`).emit('payment_success', {
+            orderId: order._id.toString(),
+            orderCode: actualOrderCode,
+            status: 'paid'
+          });
         } catch (err) {
           console.error("🚨 Socket error:", err.message);
         }

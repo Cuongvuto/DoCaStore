@@ -1,397 +1,204 @@
-import React, { useState, useEffect } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
-import axiosClient from "../api/axiosClient";
-import { QRCodeCanvas } from "qrcode.react";
-import { io } from "socket.io-client";
-import { toast } from "sonner";
+import React, { useEffect, useState } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { QRCodeCanvas } from 'qrcode.react';
 import {
-  Box,
-  Typography,
-  Button,
-  Paper,
-  Stack,
-  IconButton,
-  Tooltip,
-  Snackbar,
-  Alert,
-  Container,
-  CircularProgress,
-  Fade,
-} from "@mui/material";
-import ContentCopyIcon from "@mui/icons-material/ContentCopy";
-import QrCodeScannerIcon from "@mui/icons-material/QrCodeScanner";
-import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
-import VerifiedUserIcon from "@mui/icons-material/VerifiedUser";
+  ArrowLeft,
+  Check,
+  CheckCircle2,
+  Copy,
+  LoaderCircle,
+  QrCode,
+  ShieldCheck,
+  WalletCards
+} from 'lucide-react';
+import { toast } from 'sonner';
+import axiosClient from '../api/axiosClient';
+import { useNotification } from '../context/NotificationContext';
+
+const formatCurrency = (value) =>
+  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(value) || 0);
 
 const PaymentPage = () => {
   const { orderId } = useParams();
-  const location = useLocation();
+  const { state } = useLocation();
   const navigate = useNavigate();
-
-  const [openSnackbar, setOpenSnackbar] = useState(false);
-  const [paymentStatus, setPaymentStatus] = useState("pending");
+  const { socket } = useNotification();
+  const [paymentStatus, setPaymentStatus] = useState('pending');
   const [isCancelling, setIsCancelling] = useState(false);
+  const [copiedValue, setCopiedValue] = useState('');
 
-  // 1. LẤY DỮ LIỆU TỪ STATE
-  const { qrCode, amount, orderCode } = location.state || {};
+  const { qrCode, amount, orderCode } = state || {};
 
-  // 2. LOGIC SOCKET.IO
   useEffect(() => {
     if (!qrCode) {
-      navigate("/");
-      return;
+      navigate('/', { replace: true });
+      return undefined;
     }
+    if (!socket) return undefined;
 
-    const socketUrl = import.meta.env.VITE_SOCKET_URL || "http://localhost:5001";
-    const socket = io(socketUrl, {
-      withCredentials: true,
-    });
-
-    socket.on("connect", () => {
-      console.log("🟢 Connected to Socket:", socket.id);
-      try {
-        const userStr = localStorage.getItem("user");
-        if (userStr) {
-          const currentUser = JSON.parse(userStr);
-          const userId = currentUser?._id || currentUser?.id;
-          if (userId) {
-            socket.emit("registerUser", userId);
-            console.log(`📝 Đã đăng ký User: ${userId}`);
-          }
-        }
-      } catch (e) {
-        console.error("Lỗi parse user:", e);
-      }
-    });
-
-    socket.on("payment_success", (data) => {
+    const handlePaymentSuccess = (data) => {
       if (String(data.orderId) === String(orderId) || String(data.orderCode) === String(orderCode)) {
-        setPaymentStatus("success");
-        toast.success("Thanh toán thành công!");
-        socket.disconnect();
-        setTimeout(() => navigate(`/order-success/${orderId}`), 2000);
+        setPaymentStatus('success');
+        toast.success('Thanh toán thành công!');
+        window.setTimeout(() => navigate(`/order-success/${orderId}`, { replace: true }), 1800);
       }
-    });
-
-    return () => {
-      socket.disconnect();
     };
-  }, [orderId, qrCode, orderCode, navigate]);
 
-  const handleCopy = (text) => {
-    navigator.clipboard.writeText(text);
-    setOpenSnackbar(true);
-  };
+    socket.on('payment_success', handlePaymentSuccess);
+    return () => socket.off('payment_success', handlePaymentSuccess);
+  }, [navigate, orderCode, orderId, qrCode, socket]);
 
-  const handleGoHomeAndCancel = async () => {
-    if (paymentStatus === "pending") {
-      const confirmLeave = window.confirm(
-        "Bạn chưa thanh toán. Rời khỏi trang này đơn hàng sẽ bị hủy. Tiếp tục?"
-      );
-      if (!confirmLeave) return;
-
-      setIsCancelling(true);
-      try {
-        await axiosClient.put(`/orders/${orderId}/cancel`);
-        toast.info("Đơn hàng đã hủy.");
-      } catch (error) {
-        console.error("Lỗi hủy đơn:", error);
-      } finally {
-        setIsCancelling(false);
-        navigate("/");
-      }
-    } else {
-      navigate("/");
+  const copyValue = async (value, label) => {
+    try {
+      await navigator.clipboard.writeText(String(value));
+      setCopiedValue(label);
+      toast.success(`Đã sao chép ${label.toLowerCase()}`);
+      window.setTimeout(() => setCopiedValue(''), 1600);
+    } catch {
+      toast.error('Không thể sao chép. Vui lòng thử lại.');
     }
   };
 
-  const InfoRow = ({ label, value, copyable }) => (
-    <Stack
-      direction="row"
-      sx={{
-        justifyContent: "space-between",
-        alignItems: "center",
-        py: 1.8,
-        borderBottom: "1px dashed #e0e0e0",
-        "&:last-child": { borderBottom: "none" },
-      }}
-    >
-      <Typography variant="body2" color="text.secondary" sx={{ fontWeight: "500" }}>
-        {label}
-      </Typography>
-      <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-        <Typography variant="subtitle2" color="text.primary" sx={{ fontWeight: "700" }}>
-          {value}
-        </Typography>
-        {copyable && (
-          <Tooltip title="Sao chép" placement="top" arrow>
-            <IconButton
-              size="small"
-              onClick={() => handleCopy(value)}
-              sx={{
-                color: "primary.main",
-                bgcolor: "primary.50",
-                "&:hover": { bgcolor: "primary.100", transform: "scale(1.1)" },
-                transition: "all 0.2s",
-              }}
-            >
-              <ContentCopyIcon sx={{ fontSize: "1.1rem" }} />
-            </IconButton>
-          </Tooltip>
-        )}
-      </Stack>
-    </Stack>
-  );
+  const cancelPayment = async () => {
+    if (paymentStatus === 'success') return;
+    if (!window.confirm('Đơn hàng chưa được thanh toán. Bạn có chắc muốn hủy giao dịch?')) return;
+
+    setIsCancelling(true);
+    try {
+      await axiosClient.put(`/orders/${orderId}/cancel`);
+      toast.info('Đơn hàng đã được hủy.');
+      navigate('/', { replace: true });
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Không thể hủy đơn hàng lúc này.');
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
+  if (!qrCode) return null;
 
   return (
-    <Box
-      sx={{
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        minHeight: "100vh",
-        background: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)",
-        py: { xs: 2, md: 5 },
-        px: 2,
-      }}
-    >
-      <Container maxWidth="md">
-        <Fade in={true} timeout={800}>
-          <Paper
-            elevation={24}
-            sx={{
-              p: 0,
-              overflow: "hidden",
-              borderRadius: "24px",
-              boxShadow: "0px 20px 40px rgba(0,0,0,0.1)",
-              border: "1px solid rgba(255,255,255,0.7)",
-              bgcolor: "rgba(255, 255, 255, 0.95)",
-              backdropFilter: "blur(10px)",
-            }}
-          >
-            {/* HEADER */}
-            <Box
-              sx={{
-                background: "linear-gradient(90deg, #1e3c72 0%, #2a5298 100%)",
-                color: "#fff",
-                py: 3,
-                px: { xs: 3, md: 5 },
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
-                <AccountBalanceWalletIcon sx={{ fontSize: 28 }} />
-                <Typography variant="h6" sx={{ fontWeight: "bold", letterSpacing: 0.5 }}>
-                  Cổng Thanh Toán
-                </Typography>
-              </Stack>
-              <Typography
-                variant="body2"
-                sx={{
-                  fontWeight: "600",
-                  bgcolor: "rgba(255,255,255,0.2)",
-                  backdropFilter: "blur(4px)",
-                  px: 2,
-                  py: 0.8,
-                  borderRadius: "12px",
-                  border: "1px solid rgba(255,255,255,0.3)",
-                }}
+    <main className="min-h-screen bg-gradient-to-b from-emerald-950 via-[#315744] to-[#eef5f1] px-4 py-8 sm:py-12">
+      <div className="mx-auto max-w-5xl">
+        <button
+          type="button"
+          onClick={cancelPayment}
+          disabled={isCancelling || paymentStatus === 'success'}
+          className="mb-5 inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-bold text-white/90 transition hover:bg-white/10 disabled:opacity-50"
+        >
+          <ArrowLeft size={18} />
+          {isCancelling ? 'Đang hủy đơn...' : 'Hủy giao dịch và quay lại'}
+        </button>
+
+        <section className="overflow-hidden rounded-3xl border border-white/30 bg-white shadow-2xl shadow-emerald-950/20">
+          <header className="flex flex-col gap-4 bg-[#3d6b56] px-6 py-6 text-white sm:flex-row sm:items-center sm:justify-between sm:px-9">
+            <div className="flex items-center gap-4">
+              <span className="grid h-12 w-12 place-items-center rounded-2xl bg-white/15">
+                <WalletCards size={26} aria-hidden="true" />
+              </span>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-100">Thanh toán an toàn</p>
+                <h1 className="mt-1 text-2xl font-black">Quét mã để hoàn tất đơn hàng</h1>
+              </div>
+            </div>
+            <span className="inline-flex w-fit items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-bold">
+              <ShieldCheck size={18} />
+              Bảo mật giao dịch
+            </span>
+          </header>
+
+          <div className="grid lg:grid-cols-[1fr_0.9fr]">
+            <div className="flex flex-col items-center justify-center border-b border-slate-200 bg-[#f7faf8] p-6 sm:p-10 lg:border-b-0 lg:border-r">
+              <div className="mb-5 inline-flex items-center gap-2 rounded-full bg-emerald-100 px-4 py-2 text-sm font-bold text-emerald-900">
+                <QrCode size={18} />
+                Mở ứng dụng ngân hàng và quét mã
+              </div>
+              <div className="rounded-3xl border border-emerald-200 bg-white p-4 shadow-xl shadow-emerald-900/10">
+                <QRCodeCanvas
+                  value={qrCode}
+                  size={260}
+                  level="H"
+                  includeMargin
+                  className="h-auto w-full max-w-[260px]"
+                  aria-label="Mã QR thanh toán"
+                />
+              </div>
+              <p className="mt-5 max-w-sm text-center text-sm leading-6 text-slate-600">
+                Nội dung và số tiền đã được điền sẵn. Vui lòng không thay đổi thông tin khi chuyển khoản.
+              </p>
+            </div>
+
+            <div className="flex flex-col p-6 sm:p-10">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#3d6b56]">Thông tin giao dịch</p>
+              <div className="mt-5 divide-y divide-slate-200 rounded-2xl border border-slate-200 bg-slate-50 px-5">
+                <PaymentRow
+                  label="Mã đơn hàng"
+                  value={orderCode || orderId}
+                  copied={copiedValue === 'Mã đơn hàng'}
+                  onCopy={() => copyValue(orderCode || orderId, 'Mã đơn hàng')}
+                />
+                <PaymentRow
+                  label="Số tiền"
+                  value={formatCurrency(amount)}
+                  copied={copiedValue === 'Số tiền'}
+                  onCopy={() => copyValue(amount, 'Số tiền')}
+                  emphasized
+                />
+              </div>
+
+              <div
+                className={`mt-6 flex min-h-16 items-center justify-center gap-3 rounded-2xl px-5 text-center font-bold ${
+                  paymentStatus === 'success'
+                    ? 'bg-emerald-100 text-emerald-900'
+                    : 'bg-amber-50 text-amber-900'
+                }`}
+                role="status"
+                aria-live="polite"
               >
-                #{orderId?.slice(-6).toUpperCase()}
-              </Typography>
-            </Box>
+                {paymentStatus === 'success' ? (
+                  <>
+                    <CheckCircle2 size={24} />
+                    Thanh toán thành công, đang chuyển hướng...
+                  </>
+                ) : (
+                  <>
+                    <LoaderCircle className="animate-spin" size={23} />
+                    Hệ thống đang chờ xác nhận thanh toán
+                  </>
+                )}
+              </div>
 
-            {/* VÙNG CHIA 2 CỘT BẰNG FLEXBOX (THAY THẾ GRID ĐỂ TRÁNH LỖI) */}
-            <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" } }}>
-              
-              {/* CỘT TRÁI - HIỂN THỊ QR */}
-              <Box
-                sx={{
-                  width: { xs: "100%", sm: "45%", md: "41.66%" },
-                  p: { xs: 4, md: 5 },
-                  textAlign: "center",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRight: { sm: "1px solid #f0f0f0" },
-                  bgcolor: "#ffffff",
-                }}
-              >
-                <Typography variant="subtitle1" color="text.secondary" gutterBottom sx={{ fontWeight: "600" }}>
-                  Quét mã để thanh toán
-                </Typography>
-
-                <Box
-                  sx={{
-                    position: "relative",
-                    display: "inline-flex",
-                    p: 2,
-                    borderRadius: 4,
-                    mt: 3,
-                    mb: 4,
-                    background: "#fff",
-                    boxShadow: "0 12px 28px rgba(30, 60, 114, 0.15)",
-                    "&::before": {
-                      content: '""',
-                      position: "absolute",
-                      top: -2,
-                      left: -2,
-                      right: -2,
-                      bottom: -2,
-                      background: "linear-gradient(45deg, #1e3c72, #2a5298, #00d2ff, #3a7bd5)",
-                      zIndex: -1,
-                      borderRadius: 4.5,
-                      animation: paymentStatus === "pending" ? "gradientShift 3s ease infinite" : "none",
-                      backgroundSize: "200% 200%",
-                    },
-                    "@keyframes gradientShift": {
-                      "0%": { backgroundPosition: "0% 50%" },
-                      "50%": { backgroundPosition: "100% 50%" },
-                      "100%": { backgroundPosition: "0% 50%" },
-                    },
-                  }}
-                >
-                  {qrCode ? (
-                    <Box sx={{ bgcolor: "#fff", p: 1, borderRadius: 2 }}>
-                      <QRCodeCanvas value={qrCode} size={220} level={"H"} />
-                    </Box>
-                  ) : (
-                    <Box sx={{ width: 220, height: 220, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <CircularProgress size={50} thickness={4} />
-                    </Box>
-                  )}
-                </Box>
-
-                <Stack direction="row" spacing={1} sx={{ alignItems: "center", color: "primary.main" }}>
-                  <QrCodeScannerIcon fontSize="small" />
-                  <Typography variant="body2" sx={{ fontWeight: "600" }}>
-                    Hỗ trợ mọi ứng dụng ngân hàng
-                  </Typography>
-                </Stack>
-              </Box>
-
-              {/* CỘT PHẢI - THÔNG TIN & TRẠNG THÁI */}
-              <Box
-                sx={{
-                  width: { xs: "100%", sm: "55%", md: "58.33%" },
-                  p: { xs: 4, md: 5 },
-                  display: "flex",
-                  flexDirection: "column",
-                  bgcolor: "#fafbfc",
-                }}
-              >
-                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: "600", textTransform: "uppercase", letterSpacing: 1 }}>
-                  Tổng tiền cần thanh toán
-                </Typography>
-                <Typography
-                  variant="h3"
-                  sx={{
-                    fontWeight: "800",
-                    mb: 1,
-                    mt: 1,
-                    background: "linear-gradient(90deg, #d32f2f 0%, #ff512f 100%)",
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                    display: "inline-block",
-                  }}
-                >
-                  {amount?.toLocaleString("vi-VN") || 0}{" "}
-                  <Typography component="span" variant="h5" sx={{ fontWeight: "700", WebkitTextFillColor: "#d32f2f" }}>
-                    VNĐ
-                  </Typography>
-                </Typography>
-
-                <Box sx={{ my: 4 }}>
-                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: "700", mb: 1.5, display: "block", letterSpacing: 0.5 }}>
-                    THÔNG TIN CHUYỂN KHOẢN (THỦ CÔNG)
-                  </Typography>
-                  <Paper
-                    elevation={0}
-                    sx={{
-                      bgcolor: "#ffffff",
-                      px: 3,
-                      py: 1,
-                      borderRadius: 3,
-                      border: "1px solid #e0e6ed",
-                      boxShadow: "inset 0 2px 4px rgba(0,0,0,0.02)",
-                    }}
-                  >
-                    <InfoRow label="Số tiền" value={`${amount?.toLocaleString("vi-VN")} VNĐ`} copyable={true} />
-                    <InfoRow label="Nội dung ghi chú" value={`Thanh toan don ST${orderId?.slice(-4)}`} copyable={true} />
-                  </Paper>
-                </Box>
-
-                <Box sx={{ mt: "auto" }}>
-                  <Button
-                    variant="contained"
-                    color={paymentStatus === "pending" ? "primary" : "success"}
-                    size="large"
-                    fullWidth
-                    disabled={paymentStatus === "pending"}
-                    sx={{
-                      py: 2,
-                      borderRadius: 3,
-                      textTransform: "none",
-                      fontWeight: "bold",
-                      fontSize: "1.05rem",
-                      boxShadow: paymentStatus === "pending" ? "0 8px 20px rgba(25, 118, 210, 0.3)" : "0 8px 20px rgba(46, 125, 50, 0.3)",
-                      animation: paymentStatus === "pending" ? "pulse 2s infinite" : "none",
-                      "@keyframes pulse": {
-                        "0%": { boxShadow: "0 0 0 0 rgba(25, 118, 210, 0.4)" },
-                        "70%": { boxShadow: "0 0 0 15px rgba(25, 118, 210, 0)" },
-                        "100%": { boxShadow: "0 0 0 0 rgba(25, 118, 210, 0)" },
-                      },
-                    }}
-                  >
-                    {paymentStatus === "pending" ? (
-                      <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
-                        <CircularProgress size={22} color="inherit" thickness={5} />
-                        <span>Hệ thống đang chờ nhận tiền...</span>
-                      </Stack>
-                    ) : (
-                      <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-                        <VerifiedUserIcon />
-                        <span>Thanh toán thành công! Đang chuyển hướng...</span>
-                      </Stack>
-                    )}
-                  </Button>
-
-                  <Button
-                    variant="text"
-                    fullWidth
-                    sx={{
-                      mt: 2,
-                      color: "text.secondary",
-                      fontWeight: "600",
-                      "&:hover": { bgcolor: "rgba(0,0,0,0.04)" },
-                    }}
-                    onClick={handleGoHomeAndCancel}
-                    disabled={isCancelling || paymentStatus === "success"}
-                  >
-                    {isCancelling ? "Đang xử lý hủy..." : "Hủy giao dịch & Trở về trang chủ"}
-                  </Button>
-                </Box>
-              </Box>
-            </Box>
-          </Paper>
-        </Fade>
-      </Container>
-
-      <Snackbar
-        open={openSnackbar}
-        autoHideDuration={2000}
-        onClose={() => setOpenSnackbar(false)}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-      >
-        <Alert severity="success" variant="filled" sx={{ width: "100%", borderRadius: 2, fontWeight: "500" }}>
-          Đã sao chép vào khay nhớ tạm!
-        </Alert>
-      </Snackbar>
-    </Box>
+              <div className="mt-auto pt-8 text-sm leading-6 text-slate-500">
+                <p className="flex items-start gap-2">
+                  <ShieldCheck className="mt-0.5 shrink-0 text-[#3d6b56]" size={18} />
+                  Đơn hàng chỉ được xác nhận sau khi hệ thống nhận thông báo thành công từ cổng thanh toán.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
   );
 };
+
+const PaymentRow = ({ label, value, onCopy, copied, emphasized = false }) => (
+  <div className="flex items-center justify-between gap-4 py-5">
+    <div className="min-w-0">
+      <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{label}</p>
+      <p className={`mt-1 break-all font-black ${emphasized ? 'text-2xl text-red-600' : 'text-base text-slate-900'}`}>
+        {value}
+      </p>
+    </div>
+    <button
+      type="button"
+      onClick={onCopy}
+      aria-label={`Sao chép ${label.toLowerCase()}`}
+      className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-slate-200 bg-white text-[#3d6b56] transition hover:border-[#3d6b56] hover:bg-emerald-50"
+    >
+      {copied ? <Check size={18} /> : <Copy size={18} />}
+    </button>
+  </div>
+);
 
 export default PaymentPage;

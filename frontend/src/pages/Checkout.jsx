@@ -76,7 +76,7 @@ const Checkout = () => {
       } catch (error) {
         console.error("Lỗi lấy dữ liệu:", error);
       } finally {
-        loading && setLoading(false);
+        setLoading(false);
       }
     };
     initData();
