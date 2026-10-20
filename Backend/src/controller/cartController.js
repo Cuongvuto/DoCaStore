@@ -57,7 +57,7 @@ export const getCart = async (req, res) => {
 
     // Nếu chưa có đơn nào VÀ giỏ hàng có tiền
     if (!existingOrder && subTotal > 0) {
-      discountAmount = subTotal * 0.15; // Tính 15%
+      discountAmount = Math.round(subTotal * 0.15); // Tính 15%
       discountMessages.push("Giảm 15% ưu đãi đơn hàng đầu tiên");
     }
 

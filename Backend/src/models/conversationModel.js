@@ -15,5 +15,7 @@ const conversationSchema = new mongoose.Schema({
   
 }, { timestamps: true });
 
+conversationSchema.index({ updatedAt: -1, _id: -1 });
+conversationSchema.index({ customerId: 1, status: 1, createdAt: -1 });
 const Conversation = mongoose.model('Conversation', conversationSchema);
 export default Conversation;

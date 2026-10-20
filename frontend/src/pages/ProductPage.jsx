@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Loader2, Search, Filter } from 'lucide-react';
 import axiosClient from '../api/axiosClient';
 import ProductCard from '../components/ProductCard';
 import useDebouncedValue from '../hooks/useDebouncedValue';
 
-const ProductPage = () => {
+const ProductPageContent = ({ initialSearch = '' }) => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -13,7 +14,7 @@ const ProductPage = () => {
   const productsPerPage = 15;
 
   // State mới cho Tìm kiếm và Sắp xếp
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(initialSearch);
   const [sortOrder, setSortOrder] = useState('default');
   const debouncedSearch = useDebouncedValue(searchTerm, 350);
 
@@ -204,4 +205,9 @@ const ProductPage = () => {
   );
 };
 
-export default ProductPage;
+export default function ProductPage() {
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const search = searchParams.get('search') || '';
+  return <ProductPageContent key={location.key} initialSearch={search} />;
+}

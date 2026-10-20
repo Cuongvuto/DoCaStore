@@ -1,198 +1,198 @@
-import React, { useState, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Trash2, Plus, Minus, ShoppingBag, ArrowLeft, CreditCard, ChevronRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, ChevronRight, CircleAlert, CreditCard, ImageOff, LoaderCircle, Minus, Package, Plus, RefreshCw, ShoppingBag, TicketPercent, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import axiosClient from '../../api/axiosClient';
 import { useCart } from '../../context/CartContext';
+import { useAuth } from '../../context/AuthContext';
+import './CartPage.css';
 
-const CartPage = () => {
+const money = value => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(Number(value) || 0);
+const hasStockIssue = item => !item.product_id || item.product_id.stock <= 0 || item.quantity > item.product_id.stock;
+const cartError = error => error.response?.data?.message || 'Không thể kết nối tới cửa hàng. Vui lòng thử lại.';
+
+function ProductPhoto({ src, name }) {
+  const [broken, setBroken] = useState(false);
+  return src && !broken
+    ? <img src={src} alt={name} loading="lazy" onError={() => setBroken(true)} />
+    : <span className="cart-photo-fallback"><ImageOff size={28} aria-hidden="true" /><span>Chưa có ảnh</span></span>;
+}
+
+function QuantityControl({ quantity, stock, name, disabled, onChange }) {
+  const [draft, setDraft] = useState(String(quantity));
+  const commit = () => {
+    const next = Number(draft);
+    if (!/^\d+$/.test(draft) || !Number.isSafeInteger(next) || next < 1 || (Number.isFinite(stock) && next > stock)) {
+      setDraft(String(quantity));
+      toast.error(stock > 0 ? 'Số lượng phải từ 1 đến ' + stock + '.' : 'Số lượng không hợp lệ.');
+      return;
+    }
+    if (next !== quantity) {
+      setDraft(String(quantity));
+      onChange(next);
+    }
+  };
+  return <div className="cart-quantity" role="group" aria-label={'Số lượng ' + name}>
+    <button type="button" disabled={disabled || quantity <= 1 || stock === 0} aria-label={'Giảm số lượng ' + name} onClick={() => onChange(Math.min(quantity - 1, stock ?? quantity - 1))}><Minus size={15} /></button>
+    <input aria-label={'Nhập số lượng ' + name} type="text" inputMode="numeric" pattern="[0-9]*" maxLength={6} value={draft} disabled={disabled || stock === 0} onChange={event => setDraft(event.target.value)} onBlur={commit} onKeyDown={event => { if (event.key === 'Enter') event.currentTarget.blur(); if (event.key === 'Escape') { event.preventDefault(); setDraft(String(quantity)); } }} />
+    <button type="button" disabled={disabled || quantity >= stock} aria-label={'Tăng số lượng ' + name} onClick={() => onChange(quantity + 1)}><Plus size={15} /></button>
+  </div>;
+}
+
+function CartSkeleton() {
+  return <div className="cart-layout cart-skeleton" role="status" aria-label="Đang tải giỏ hàng">
+    <div className="cart-items-panel">{[1, 2, 3].map(item => <div className="cart-skeleton-row" key={item}><div /><span><i /><i /><i /></span></div>)}</div>
+    <div className="cart-skeleton-summary"><i /><i /><i /></div>
+    <span className="sr-only">Đang tải giỏ hàng…</span>
+  </div>;
+}
+
+function CartContent() {
   const [cart, setCart] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [version, setVersion] = useState(0);
+  const [operation, setOperation] = useState(null);
+  const [removeId, setRemoveId] = useState(null);
+  const lock = useRef(false);
+  const lifetime = useRef(null);
   const { updateCartCount } = useCart();
   const navigate = useNavigate();
 
-  // 1. LẤY DỮ LIỆU GIỎ HÀNG
-  const fetchCart = async () => {
-    try {
-      const res = await axiosClient.get('/cart');
-      setCart(res.data.data);
-    } catch (error) {
-      console.error("Lỗi lấy giỏ hàng:", error);
-      toast.error("Không thể tải giỏ hàng!");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchCart();
+  const readCart = useCallback(async signal => {
+    const response = await axiosClient.get('/cart', { signal });
+    const data = response.data?.data;
+    if (!data || !Array.isArray(data.items)) throw new Error('Invalid cart response');
+    if (!signal.aborted) setCart(data);
+    return data;
   }, []);
 
-  // 2. CẬP NHẬT SỐ LƯỢNG (Tăng/Giảm)
-  const handleUpdateQuantity = async (productId, newQuantity) => {
-    if (newQuantity < 1) return; // Không cho giảm dưới 1 (Xóa thì dùng nút xóa riêng)
+  useEffect(() => {
+    const controller = new AbortController();
+    lifetime.current = controller;
+    const load = async () => {
+      setLoading(true); setError('');
+      try { await readCart(controller.signal); }
+      catch (error) { if (!controller.signal.aborted) setError(cartError(error)); }
+      finally { if (!controller.signal.aborted) setLoading(false); }
+    };
+    void load();
+    return () => controller.abort();
+  }, [readCart, version]);
+
+  const mutate = async (id, quantity) => {
+    if (lock.current || loading || error || !id) return;
+    lock.current = true;
+    const signal = lifetime.current.signal;
+    const removing = quantity === null;
+    setOperation({ id, kind: removing ? 'remove' : 'quantity' });
+    let saved = false;
     try {
-      // Gọi API update số lượng của sếp
-      await axiosClient.put(`/cart/${productId}`, { quantity: newQuantity });
-      fetchCart(); // Load lại dữ liệu để cập nhật tổng tiền
-    } catch {
-      toast.error("Lỗi cập nhật số lượng!");
+      if (removing) await axiosClient.delete('/cart/' + id, { signal });
+      else await axiosClient.put('/cart/' + id, { quantity }, { signal });
+      saved = true;
+      await readCart(signal);
+      if (signal.aborted) return;
+      if (removing) { setRemoveId(null); toast.success('Đã xóa sản phẩm khỏi giỏ hàng.'); void updateCartCount(); }
+    } catch (error) {
+      if (signal.aborted) return;
+      if (saved) setError('Đã gửi thay đổi nhưng chưa tải lại được giỏ hàng. Hãy thử tải lại để kiểm tra tổng tiền.');
+      else toast.error(cartError(error));
+    } finally {
+      lock.current = false;
+      if (!signal.aborted) setOperation(null);
     }
   };
 
-  // 3. XÓA SẢN PHẨM
-  const handleRemoveItem = async (productId) => {
+  const checkout = async () => {
+    if (lock.current || loading || error) return;
+    lock.current = true;
+    const signal = lifetime.current.signal;
+    setOperation({ kind: 'checkout' });
     try {
-      await axiosClient.delete(`/cart/${productId}`);
-      toast.success("Đã xóa sản phẩm!");
-      fetchCart();
-      updateCartCount(); // Cập nhật lại số trên Header
-    } catch {
-      toast.error("Lỗi khi xóa sản phẩm!");
-    }
+      const current = await readCart(signal);
+      if (signal.aborted) return;
+      if (!current.items.length) return toast.info('Giỏ hàng hiện đang trống.');
+      if (current.items.some(hasStockIssue)) return toast.error('Vui lòng điều chỉnh các sản phẩm có cảnh báo tồn kho.');
+      navigate('/checkout');
+    } catch (error) { if (!signal.aborted) setError(cartError(error)); }
+    finally { lock.current = false; if (!signal.aborted) setOperation(null); }
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-[#5a8c76] font-bold">Đang kiểm tra giỏ hàng của sếp...</div>;
+  const items = cart?.items || [];
+  const quantity = items.reduce((sum, item) => sum + item.quantity, 0);
+  const stockIssues = items.filter(hasStockIssue).length;
+  const busy = Boolean(operation);
+  const total = cart?.finalPrice ?? cart?.totalPrice ?? cart?.subTotal ?? 0;
+  const blocked = busy || loading || Boolean(error) || stockIssues > 0 || !items.length;
+  const checkoutLabel = operation?.kind === 'checkout' ? 'Đang kiểm tra…' : 'Tiến hành thanh toán';
 
-  // Trường hợp giỏ hàng trống
-  if (!cart || !cart.items || cart.items.length === 0) {
-    return (
-      <div className="min-h-[70vh] flex flex-col items-center justify-center p-4">
-        <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mb-6">
-          <ShoppingBag size={40} className="text-gray-300" />
-        </div>
-        <h2 className="text-2xl font-black text-gray-800 mb-2">Giỏ hàng đang trống!</h2>
-        <p className="text-gray-500 mb-8 text-center">Sếp chưa chọn được "chiến hữu" nào để đi câu sao?</p>
-        <Link to="/products" className="bg-[#5a8c76] text-white px-8 py-4 rounded-2xl font-bold flex items-center gap-2 hover:bg-[#4a7562] transition-all">
-          <ArrowLeft size={20} /> TIẾP TỤC MUA SẮM
-        </Link>
-      </div>
-    );
-  }
+  return <div className={'cart-page' + (items.length ? ' cart-page-filled' : '')}>
+    <div className="cart-container">
+      <nav className="cart-breadcrumb" aria-label="Đường dẫn"><Link to="/">Trang chủ</Link><ChevronRight size={13} aria-hidden="true" /><span aria-current="page">Giỏ hàng</span></nav>
+      <header className="cart-heading">
+        <div><p className="cart-eyebrow">CHUẨN BỊ CHO CHUYẾN CÂU TIẾP THEO</p><h1>Giỏ hàng của bạn<span className="cart-heading-dot">.</span></h1><p>Kiểm tra lựa chọn của bạn trước khi lên đường.</p></div>
+        <ol className="cart-steps" aria-label="Các bước mua hàng">
+          <li aria-current="step"><span>01</span>Giỏ hàng</li><li><span>02</span>Thanh toán</li><li><span>03</span>Hoàn tất</li>
+        </ol>
+      </header>
 
-  return (
-    <div className="max-w-7xl mx-auto px-4 py-6 sm:py-10">
-      <h1 className="text-2xl sm:text-3xl font-black text-gray-900 mb-6 sm:mb-8 flex items-center gap-3 sm:gap-4 uppercase tracking-tighter">
-        Giỏ hàng của sếp <span className="text-xs sm:text-sm font-medium text-gray-400 bg-gray-100 px-3 py-1 rounded-full uppercase tracking-normal">({cart.items.length} món)</span>
-      </h1>
+      {error && <div className="cart-error" role="alert"><CircleAlert size={21} /><div><strong>Chưa thể cập nhật giỏ hàng</strong><p>{error}</p></div><button className="cart-button cart-button-outline" disabled={busy || loading} onClick={() => setVersion(value => value + 1)}><RefreshCw size={16} />Thử lại</button></div>}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-10">
-        {/* --- DANH SÁCH SẢN PHẨM (CỘT TRÁI) --- */}
-        <div className="lg:col-span-2 flex flex-col gap-4 sm:gap-6">
-          {cart.items.map((item) => (
-            // SỬA Ở ĐÂY: Ép luôn flex-row (ngang), bỏ text-center
-            <div key={item.product_id?._id || item._id} className="flex flex-row items-start sm:items-center gap-3 sm:gap-6 p-3 sm:p-6 bg-white border border-gray-100 rounded-2xl sm:rounded-3xl hover:shadow-xl hover:shadow-gray-100 transition-all group">
-              
-              {/* Ảnh sản phẩm (SỬA: Thu nhỏ gọn gàng trên mobile w-20 h-20) */}
-              <div className="w-20 h-20 sm:w-32 sm:h-32 bg-[#f8f9fa] rounded-xl sm:rounded-2xl p-1.5 sm:p-2 flex-shrink-0 relative overflow-hidden">
-                <img 
-                  src={item.product_id?.imageUrl || 'https://via.placeholder.com/150'} 
-                  alt={item.product_id?.name || 'Sản phẩm'} 
-                  className="w-full h-full object-contain mix-blend-multiply group-hover:scale-110 transition-transform duration-500" 
-                />
-              </div>
-
-              {/* Thông tin */}
-              <div className="flex-1 flex flex-col min-w-0">
-                <h3 className="text-sm sm:text-lg font-black text-gray-900 uppercase leading-tight mb-1 group-hover:text-[#5a8c76] transition-colors line-clamp-2 pr-2">
-                  {item.product_id?.name || 'Sản phẩm không xác định'}
-                </h3>
-                
-                <p className="text-[#5a8c76] font-bold text-base sm:text-xl mb-3 sm:mb-4">
-                  {(item.product_id?.price || 0).toLocaleString('vi-VN')} <span className="text-[10px] sm:text-sm">đ</span>
-                </p>
-
-                <div className="flex items-center justify-between sm:justify-start gap-4 mt-auto">
-                  {/* Bộ tăng giảm (SỬA: Nhỏ gọn lại trên di động) */}
-                  <div className="flex items-center bg-gray-50 rounded-lg sm:rounded-xl border border-gray-100 p-0.5 sm:p-1">
-                    <button 
-                      onClick={() => handleUpdateQuantity(item.product_id?._id, item.quantity - 1)}
-                      className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center hover:bg-white hover:text-red-500 rounded-md sm:rounded-lg transition-all text-gray-600"
-                    >
-                      <Minus size={14} />
-                    </button>
-                    <span className="w-8 sm:w-10 text-center font-bold text-sm">{item.quantity}</span>
-                    <button 
-                      onClick={() => handleUpdateQuantity(item.product_id?._id, item.quantity + 1)}
-                      className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center hover:bg-white hover:text-green-600 rounded-md sm:rounded-lg transition-all text-gray-600"
-                    >
-                      <Plus size={14} />
-                    </button>
+      {loading && !cart ? <CartSkeleton /> : !cart ? <div className="cart-failed"><Package size={38} aria-hidden="true" /><p>Thông tin giỏ hàng sẽ xuất hiện khi kết nối được khôi phục.</p><Link to="/products" className="cart-back"><ArrowLeft size={16} />Quay lại cửa hàng</Link></div> : !items.length ? <section className="cart-empty">
+        <div className="cart-empty-art"><ShoppingBag size={48} strokeWidth={1.3} /><span><Plus size={18} /></span></div>
+        <p className="cart-eyebrow">CHUYẾN CÂU BẮT ĐẦU TỪ ĐÂY</p><h2>Giỏ hàng đang chờ bạn</h2><p>Khám phá đồ câu và chọn những món phù hợp<br className="hidden sm:block" /> cho chuyến đi sắp tới.</p>
+        <Link to="/products" className="cart-button cart-button-primary">Khám phá sản phẩm<ArrowRight size={18} /></Link><Link to="/wishlist" className="cart-empty-wishlist">Xem sản phẩm yêu thích</Link>
+      </section> : <div className="cart-layout">
+        <section className="cart-products" aria-labelledby="cart-products-title">
+          <div className="cart-section-heading"><h2 id="cart-products-title">Sản phẩm đã chọn <span>{items.length}</span></h2><span>{quantity} sản phẩm</span></div>
+          {stockIssues > 0 && <div className="cart-stock-alert" role="status"><CircleAlert size={17} /><p>Có {stockIssues} mặt hàng cần điều chỉnh số lượng hoặc xóa trước khi thanh toán.</p></div>}
+          <div className="cart-items-panel" aria-busy={busy || loading}>
+            <div className="cart-table-labels" aria-hidden="true"><span>Sản phẩm</span><span>Số lượng</span><span>Thành tiền</span><span /></div>
+            <ul>{items.map((item, index) => {
+              const product = item.product_id;
+              const id = product?._id;
+              const name = product?.name || 'Sản phẩm không còn khả dụng';
+              const outOfStock = !product || product.stock <= 0;
+              const overStock = product && item.quantity > product.stock && !outOfStock;
+              const updating = operation?.id === id;
+              const rowKey = id || item._id || String(index);
+              return <li key={rowKey} className={'cart-item' + (outOfStock ? ' cart-item-unavailable' : '')}>
+                <div className="cart-item-main">
+                  {id ? <Link to={'/product/' + id} className="cart-product-photo" aria-label={'Xem ' + name}><ProductPhoto key={product.imageUrl} src={product.imageUrl} name={name} /></Link> : <div className="cart-product-photo"><ProductPhoto name={name} /></div>}
+                  <div className="cart-product-info">{id ? <Link className="cart-product-name" to={'/product/' + id}>{name}</Link> : <h3 className="cart-product-name">{name}</h3>}
+                    <p className="cart-unit-price">{money(product?.price)}<span> / sản phẩm</span></p>
+                    <p className={'cart-stock ' + (outOfStock || overStock ? 'cart-stock-warning' : '')}>{outOfStock ? <CircleAlert size={13} /> : <span className="cart-stock-dot" />}{outOfStock ? 'Tạm hết hàng' : overStock ? 'Chỉ còn ' + product.stock + ' sản phẩm' : product.stock <= 5 ? 'Còn ' + product.stock + ' sản phẩm' : 'Còn hàng'}</p>
                   </div>
-                  
-                  {/* Nút xóa */}
-                  <button 
-                    onClick={() => handleRemoveItem(item.product_id?._id)}
-                    className="text-gray-300 hover:text-red-500 transition-colors p-2 active:scale-90"
-                  >
-                    <Trash2 size={18} className="sm:w-5 sm:h-5" />
-                  </button>
                 </div>
-              </div>
-
-              {/* Thành tiền 1 món (Vẫn giữ ẩn trên Mobile cho đỡ rối) */}
-              <div className="hidden sm:block text-right min-w-[120px] ml-4">
-                <p className="text-xs text-gray-400 font-bold uppercase mb-1">Thành tiền</p>
-                <p className="font-black text-gray-900">
-                  {((item.product_id?.price || 0) * item.quantity).toLocaleString('vi-VN')} đ
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* --- TỔNG KẾT ĐƠN HÀNG (CỘT PHẢI) - Giữ nguyên của bạn --- */}
-        <div className="lg:col-span-1">
-          <div className="bg-[#1a1a1a] text-white p-6 sm:p-8 rounded-3xl sm:rounded-[2rem] sticky top-24 shadow-2xl shadow-gray-200">
-            <h2 className="text-lg sm:text-xl font-black mb-6 sm:mb-8 border-b border-white/10 pb-4 uppercase tracking-widest">Tóm tắt đơn hàng</h2>
-            
-            <div className="space-y-4 mb-8 text-sm sm:text-base">
-              <div className="flex justify-between text-gray-400 font-medium">
-                <span>Tạm tính ({cart.items.length} món)</span>
-                <span>{(cart.subTotal || cart.totalPrice || 0).toLocaleString('vi-VN')} đ</span>
-              </div>
-              
-              {cart.discountAmount > 0 && (
-                <div className="flex justify-between text-[#ff4757] font-medium">
-                  <span>Giảm giá (Khách mới)</span>
-                  <span>-{(cart.discountAmount || 0).toLocaleString('vi-VN')} đ</span>
-                </div>
-              )}
-
-              <div className="flex justify-between text-gray-400 font-medium">
-                <span>Vận chuyển</span>
-                <span className="text-green-400 font-bold italic underline">An toàn</span>
-              </div>
-            </div>
-
-            <div className="flex justify-between items-end mb-8 sm:mb-10">
-              <span className="text-gray-400 font-bold uppercase text-xs">Tổng cộng</span>
-              <span className="text-3xl sm:text-4xl font-black text-white">
-                {(cart.finalPrice || cart.totalPrice || 0).toLocaleString('vi-VN')} <span className="text-sm sm:text-lg">đ</span>
-              </span>
-            </div>
-
-            <button 
-              onClick={() => navigate('/checkout')}
-              className="w-full bg-[#5a8c76] hover:bg-[#6ba38a] text-white py-4 sm:py-5 rounded-2xl sm:rounded-2xl font-black flex items-center justify-center gap-3 transition-all active:scale-95 group shadow-lg shadow-green-900/20 text-sm sm:text-base"
-            >
-              TIẾN HÀNH THANH TOÁN
-              <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform sm:w-5 sm:h-5" />
-            </button>
-
-            <div className="mt-6 sm:mt-8 flex flex-col gap-3 sm:gap-4">
-               <div className="flex items-center gap-2 sm:gap-3 text-xs text-gray-500 font-medium">
-                  <CreditCard size={14} className="sm:w-4 sm:h-4" /> Bảo mật thanh toán 100%
-               </div>
-               <div className="p-3 sm:p-4 bg-white/5 rounded-xl border border-white/5 text-[10px] sm:text-[11px] text-gray-400 leading-relaxed italic">
-                 "Đồ câu xịn, cá dính liền. Sếp yên tâm thanh toán, shop ship siêu tốc!"
-               </div>
-            </div>
+                <div className="cart-item-quantity"><QuantityControl key={item.quantity + ':' + busy} quantity={item.quantity} stock={product?.stock} name={name} disabled={busy || loading || Boolean(error) || !id} onChange={next => mutate(id, next)} />{updating && operation.kind === 'quantity' && <span className="cart-item-saving" role="status"><LoaderCircle size={12} className="animate-spin" />Đang lưu</span>}</div>
+                <div className="cart-item-total"><span>Thành tiền</span><strong>{money((product?.price || 0) * item.quantity)}</strong></div>
+                <button className="cart-remove" type="button" aria-label={'Xóa ' + name} title="Xóa sản phẩm" disabled={busy || loading || Boolean(error) || !id} onClick={() => setRemoveId(removeId === id ? null : id)}><Trash2 size={17} /></button>
+                {removeId === id && id && <div className="cart-remove-confirm"><p>Xóa sản phẩm này khỏi giỏ hàng?</p><div><button type="button" disabled={busy} onClick={() => setRemoveId(null)}>Giữ lại</button><button type="button" className="cart-confirm-danger" disabled={busy} onClick={() => mutate(id, null)}>{updating ? 'Đang xóa…' : 'Xóa sản phẩm'}</button></div></div>}
+              </li>;
+            })}</ul>
           </div>
-        </div>
-      </div>
-    </div>
-  );
-};
+          <div className="cart-list-footer"><Link to="/products" className="cart-back"><ArrowLeft size={16} />Tiếp tục mua sắm</Link><p><RefreshCw size={13} className={loading ? 'animate-spin' : ''} />{loading ? 'Đang cập nhật giỏ hàng…' : 'Giá và tồn kho được kiểm tra lại khi thanh toán.'}</p></div>
+          {cart.discountAmount > 0 && <div className="cart-discount-note"><span className="cart-discount-icon"><TicketPercent size={22} /></span><div><strong>Thêm một lý do để bắt đầu chuyến đi</strong><p>{cart.discountMessages?.join(' · ') || 'Ưu đãi của bạn đã được áp dụng vào tổng tiền.'}</p></div><span className="cart-discount-value">−{money(cart.discountAmount)}</span></div>}
+        </section>
 
-export default CartPage;
+        <aside className="cart-summary" aria-labelledby="cart-summary-title">
+          <p className="cart-summary-kicker">SẴN SÀNG CHO CHUYẾN ĐI</p><h2 id="cart-summary-title">Tóm tắt giỏ hàng</h2>
+          <dl className="cart-summary-lines"><div><dt>Tạm tính <span>({quantity} sản phẩm)</span></dt><dd>{money(cart.subTotal ?? cart.totalPrice)}</dd></div>{cart.discountAmount > 0 && <div className="cart-summary-discount"><dt>Ưu đãi đã áp dụng</dt><dd>−{money(cart.discountAmount)}</dd></div>}</dl>
+          <div className="cart-summary-total" aria-live="polite" aria-atomic="true"><span>Tổng tiền hàng</span><strong>{money(total)}</strong>{cart.discountAmount > 0 && <p><Check size={14} />Bạn tiết kiệm {money(cart.discountAmount)}</p>}</div>
+          <button className="cart-button cart-checkout" type="button" disabled={blocked} onClick={checkout}>{busy ? <LoaderCircle size={18} className="animate-spin" /> : null}{checkoutLabel}{!busy && <ArrowRight size={18} />}</button>
+          {stockIssues > 0 && <p className="cart-summary-warning">Vui lòng xử lý cảnh báo tồn kho để tiếp tục.</p>}
+          <div className="cart-summary-coupon"><TicketPercent size={19} /><p>Có mã giảm giá?<span>Nhập mã ở bước thanh toán.</span></p></div>
+          <div className="cart-summary-methods"><CreditCard size={17} /><span>Thanh toán khi nhận hàng hoặc VietQR</span></div>
+        </aside>
+      </div>}
+      <p className="sr-only" role="status">{operation?.kind === 'quantity' ? 'Đang cập nhật số lượng và tổng tiền.' : operation?.kind === 'remove' ? 'Đang xóa sản phẩm.' : ''}</p>
+    </div>
+    {items.length > 0 && <div className="cart-mobile-checkout"><div><span>Tổng tiền hàng</span><strong>{money(total)}</strong></div><button className="cart-button cart-button-primary" disabled={blocked} onClick={checkout}>{busy ? <LoaderCircle size={17} className="animate-spin" /> : null}{busy ? 'Đang xử lý…' : 'Thanh toán'}{!busy && <ArrowRight size={17} />}</button></div>}
+  </div>;
+}
+
+export default function CartPage() {
+  const { user } = useAuth();
+  return <CartContent key={user?._id || user?.id || 'guest'} />;
+}

@@ -1,236 +1,134 @@
-import React, { useEffect, useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-// Đã thêm LayoutDashboard vào danh sách import
-import { Star, ShoppingCart, User, LogOut, ChevronDown, ChevronRight, Fish, Bell, Menu, X, LayoutDashboard } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { ArrowRight, Bell, ChevronDown, ChevronRight, Fish, Heart, LayoutDashboard, LayoutGrid, LogOut, MapPin, Menu, Package, Search, ShoppingBag, User, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
-import { useNotification } from '../context/NotificationContext'; 
+import { useNotification } from '../context/NotificationContext';
 import axiosClient from '../api/axiosClient';
 import CustomerChatWidget from './CustomerChatWidget';
+import './Header.css';
 
-const Header = () => {
+const navigation = [
+  { to: '/', label: 'Trang chủ', end: true },
+  { to: '/products', label: 'Sản phẩm' },
+  { to: '/about', label: 'Giới thiệu' },
+  { to: '/news', label: 'Tin tức' },
+  { to: '/contact', label: 'Liên hệ' },
+];
+const staffRoles = ['admin', 'superadmin', 'product_admin', 'order_admin', 'support_admin'];
+
+function HeaderSearch({ initialValue }) {
+  const [value, setValue] = useState(initialValue);
   const navigate = useNavigate();
-  const location = useLocation();
+  const submit = event => {
+    event.preventDefault();
+    const query = value.trim();
+    navigate(query ? '/products?' + new URLSearchParams({ search: query }) : '/products');
+  };
+  return <form className="store-search" role="search" aria-label="Tìm sản phẩm" onSubmit={submit}><Search size={18} aria-hidden="true" /><input type="search" name="search" aria-label="Tên sản phẩm cần tìm" placeholder="Tìm cần câu, máy câu, phụ kiện…" maxLength={120} value={value} onChange={event => setValue(event.target.value)} /><button type="submit" aria-label="Tìm kiếm sản phẩm"><ArrowRight size={17} /></button></form>;
+}
+
+function ActionLink({ to, label, count, icon: Icon, className = '' }) {
+  const safeCount = Math.max(0, Number(count) || 0);
+  return <NavLink to={to} className={'store-action ' + className} aria-label={label + (safeCount ? ', ' + safeCount : '')} title={label}>{Icon && <Icon size={20} strokeWidth={1.65} />}{safeCount > 0 && <span className="store-counter" aria-hidden="true">{safeCount > 99 ? '99+' : safeCount}</span>}</NavLink>;
+}
+
+export default function Header() {
   const { user, logout } = useAuth();
   const { cartCount } = useCart();
-  const { wishlist } = useWishlist(); 
-  const { unreadCount } = useNotification(); 
-  
+  const { wishlist } = useWishlist();
+  const { unreadCount } = useNotification();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [categories, setCategories] = useState([]);
-  const [isScrolled, setIsScrolled] = useState(false);
-  
-  // State quản lý việc đóng/mở menu trên điện thoại
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [categoryLoading, setCategoryLoading] = useState(true);
+  const [categoryError, setCategoryError] = useState(false);
+  const [categoryVersion, setCategoryVersion] = useState(0);
+  const [menu, setMenu] = useState(null);
+  const routeKey = location.key + ':' + (user?._id || user?.id || 'guest');
+  const openMenu = menu?.routeKey === routeKey ? menu.name : null;
+  const accountRoot = useRef(null);
+  const categoryRoot = useRef(null);
+  const mobilePanel = useRef(null);
+  const mobileButton = useRef(null);
+  const accountButton = useRef(null);
+  const categoryButton = useRef(null);
 
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
-
-  useEffect(() => {
-    const fetchCategories = async () => {
+    const controller = new AbortController();
+    const load = async () => {
+      setCategoryLoading(true); setCategoryError(false);
       try {
-        const response = await axiosClient.get('/category');
-        const categoryTree = response.data.data; 
-        setCategories(categoryTree || []);
-      } catch (error) {
-        console.error("Lỗi tải danh mục:", error);
-      }
+        const response = await axiosClient.get('/category', { signal: controller.signal });
+        if (!controller.signal.aborted) setCategories(Array.isArray(response.data.data) ? response.data.data : []);
+      } catch { if (!controller.signal.aborted) setCategoryError(true); }
+      finally { if (!controller.signal.aborted) setCategoryLoading(false); }
     };
-    fetchCategories();
-  }, []);
+    void load();
+    return () => controller.abort();
+  }, [categoryVersion]);
 
-  const isActive = (path) => location.pathname === path;
+  useEffect(() => {
+    if (!openMenu) return;
+    const root = openMenu === 'account' ? accountRoot : openMenu === 'categories' ? categoryRoot : mobilePanel;
+    const trigger = openMenu === 'account' ? accountButton : openMenu === 'categories' ? categoryButton : mobileButton;
+    if (openMenu === 'mobile') mobilePanel.current?.querySelector('a')?.focus({ preventScroll: true });
+    const outside = event => {
+      if (!root.current?.contains(event.target) && !trigger.current?.contains(event.target)) setMenu(null);
+    };
+    const escape = event => {
+      if (event.key === 'Escape') { event.preventDefault(); setMenu(null); trigger.current?.focus(); }
+    };
+    const media = window.matchMedia('(max-width: 1023px)');
+    const resize = () => setMenu(null);
+    document.addEventListener('pointerdown', outside);
+    document.addEventListener('focusin', outside);
+    document.addEventListener('keydown', escape);
+    media.addEventListener('change', resize);
+    return () => {
+      document.removeEventListener('pointerdown', outside);
+      document.removeEventListener('focusin', outside);
+      document.removeEventListener('keydown', escape);
+      media.removeEventListener('change', resize);
+    };
+  }, [openMenu]);
 
-  return (
-    <header className={`sticky top-0 w-full transition-all duration-300 z-[100] ${
-      isScrolled ? 'bg-[#3d6b56]/95 shadow-lg backdrop-blur-md py-2' : 'bg-[#3d6b56] py-3'
-    }`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          
-          {/* --- KHU VỰC TRÁI: MENU MOBILE & LOGO --- */}
-          <div className="flex items-center gap-2 sm:gap-4">
-            {/* Nút Hamburger (Chỉ hiện trên điện thoại) */}
-            <button 
-              className="lg:hidden text-white p-1 rounded-md hover:bg-white/10 transition-colors"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              aria-label={isMobileMenuOpen ? 'Đóng menu' : 'Mở menu'}
-              aria-expanded={isMobileMenuOpen}
-              aria-controls="mobile-navigation"
-            >
-              {isMobileMenuOpen ? <X size={26} /> : <Menu size={26} />}
-            </button>
+  const toggle = name => setMenu(openMenu === name ? null : { name, routeKey });
+  const close = () => setMenu(null);
+  const signOut = () => { close(); logout(); navigate('/login'); };
+  const categoryFeedback = categoryLoading
+    ? <p className="store-menu-feedback" role="status">Đang tải danh mục…</p>
+    : categoryError
+      ? <div className="store-menu-feedback" role="alert">Chưa tải được danh mục. <button type="button" onClick={() => setCategoryVersion(value => value + 1)}>Thử lại</button></div>
+      : !categories.length ? <p className="store-menu-feedback">Danh mục đang được cập nhật. Bạn có thể xem tất cả sản phẩm.</p> : null;
+  const initials = (user?.name || '').trim().split(/\s+/).slice(-2).map(part => part[0]).join('').toLocaleUpperCase('vi-VN');
+  const currentSearch = location.pathname === '/products' ? new URLSearchParams(location.search).get('search') || '' : '';
 
-            {/* Logo */}
-            <Link to="/" className="flex items-center gap-2 group flex-shrink-0" aria-label="DocaStore - Trang chủ">
-              <div className="bg-white p-1.5 rounded-lg group-hover:rotate-12 transition-transform duration-300 shadow-md">
-                <Fish className="text-[#5a8c76]" size={20} sm:size={24} />
-              </div>
-              <span className="text-xl sm:text-2xl font-black uppercase tracking-tighter text-white">
-                Doca<span className="text-yellow-400">Store</span>
-              </span>
-            </Link>
-          </div>
-
-          {/* --- KHU VỰC GIỮA: NAVIGATION (Chỉ hiện trên máy tính) --- */}
-          <nav className="hidden lg:flex items-center space-x-7 font-bold text-[13px] tracking-widest h-full" aria-label="Điều hướng chính">
-            <Link to="/" aria-current={isActive('/') ? 'page' : undefined} className={`h-full flex items-center transition-colors hover:text-yellow-100 ${isActive('/') ? 'text-yellow-100' : 'text-white'}`}>
-              TRANG CHỦ
-            </Link>
-            
-            {/* Dropdown Sản phẩm (Desktop) */}
-            <div className="relative group h-full flex items-center">
-              <Link to="/products" aria-current={isActive('/products') ? 'page' : undefined} className={`flex items-center gap-1 transition-colors hover:text-yellow-100 h-full ${isActive('/products') ? 'text-yellow-100' : 'text-white'}`}>
-                SẢN PHẨM <ChevronDown size={14} className="group-hover:rotate-180 transition-transform duration-300" />
-              </Link>
-              
-              <ul className="absolute left-0 top-[100%] w-60 bg-white text-gray-800 shadow-2xl rounded-xl py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible transition-all duration-300 border border-gray-100 translate-y-2 group-hover:translate-y-0 group-focus-within:translate-y-0">
-                {categories.map((category) => (
-                  <li key={category._id} className="relative group/item px-2">
-                    <Link to={`/category/${category.slug}`} className="flex items-center justify-between px-4 py-3 rounded-xl hover:bg-[#5a8c76]/10 hover:text-[#5a8c76] transition-all font-semibold uppercase text-[11px]">
-                      {category.name}
-                      {category.children?.length > 0 && <ChevronRight size={14} className="text-gray-400" />}
-                    </Link>
-                    {category.children && category.children.length > 0 && (
-                      <ul className="absolute left-[100%] top-0 ml-1 w-56 bg-white text-gray-800 shadow-2xl rounded-xl py-2 opacity-0 invisible group-hover/item:opacity-100 group-hover/item:visible group-focus-within/item:opacity-100 group-focus-within/item:visible transition-all duration-300 border border-gray-100 translate-x-2 group-hover/item:translate-x-0 group-focus-within/item:translate-x-0">
-                        {category.children.map((child) => (
-                          <li key={child._id} className="px-2">
-                            <Link to={`/category/${child.slug}`} className="block px-4 py-2.5 text-[11px] uppercase rounded-lg hover:bg-gray-50 hover:text-[#5a8c76] transition-colors font-semibold border-b border-gray-50 last:border-0">
-                              {child.name}
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <Link to="/about" className={`h-full flex items-center transition-colors hover:text-yellow-300 ${isActive('/about') ? 'text-yellow-300' : 'text-white'}`}>GIỚI THIỆU</Link>
-            <Link to="/news" className={`h-full flex items-center transition-colors hover:text-yellow-300 ${isActive('/news') ? 'text-yellow-300' : 'text-white'}`}>TIN TỨC</Link>
-            <Link to="/contact" className={`h-full flex items-center transition-colors hover:text-yellow-300 ${isActive('/contact') ? 'text-yellow-300' : 'text-white'}`}>LIÊN HỆ</Link>
-          </nav>
-
-          {/* --- KHU VỰC PHẢI: ICONS & USER --- */}
-          <div className="flex items-center gap-1 sm:gap-3">
-            
-            <CustomerChatWidget />
-
-            {/* THÔNG BÁO */}
-            <Link to="/notifications" aria-label="Thông báo" className="p-1.5 sm:p-2.5 hover:bg-white/10 rounded-full transition-all relative group">
-              <Bell size={20} className={`text-white group-hover:scale-110 transition-transform ${unreadCount > 0 ? 'animate-ring text-yellow-300' : ''}`} />
-              {unreadCount > 0 && (
-                <span className="absolute top-0 right-0 bg-red-500 text-white text-[9px] sm:text-[10px] font-black rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center border sm:border-2 border-[#5a8c76] shadow-sm">
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </span>
-              )}
-            </Link>
-
-            {/* WISHLIST */}
-            <Link to="/wishlist" aria-label="Sản phẩm yêu thích" className="hidden sm:block p-1.5 sm:p-2.5 hover:bg-white/10 rounded-full transition-all relative group">
-              <Star size={20} className="text-white group-hover:scale-110 transition-transform" />
-              {wishlist?.length > 0 && (
-                <span className="absolute top-0 right-0 bg-yellow-400 text-[#5a8c76] text-[10px] font-black rounded-full h-5 w-5 flex items-center justify-center border-2 border-[#5a8c76] animate-bounce-short shadow-sm">
-                  {wishlist.length}
-                </span>
-              )}
-            </Link>
-
-            {/* GIỎ HÀNG */}
-            <Link to="/cart" aria-label="Giỏ hàng" className="p-1.5 sm:p-2.5 hover:bg-white/10 rounded-full transition-all relative group">
-              <ShoppingCart size={20} className="text-white group-hover:scale-110 transition-transform" />
-              {cartCount > 0 && (
-                <span className="absolute top-0 right-0 bg-yellow-400 text-[#5a8c76] text-[9px] sm:text-[10px] font-black rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center border sm:border-2 border-[#5a8c76] animate-bounce-short shadow-sm">
-                  {cartCount}
-                </span>
-              )}
-            </Link>
-
-            <div className="h-6 sm:h-8 w-[1px] bg-white/20 mx-0.5 sm:mx-1" />
-
-            {/* USER LOGIN / LOGOUT */}
-            {user ? (
-              <div className="flex items-center gap-2 sm:gap-3 ml-1">
-                <div className="hidden md:flex flex-col items-end leading-tight">
-                  <span className="text-[10px] text-green-200 font-bold uppercase tracking-tighter">
-                    {user.role === 'customer' ? 'Thành viên' : 'Quản trị viên'}
-                  </span>
-                  <span className="text-sm font-bold text-white uppercase">{user.name}</span>
-                </div>
-                <div className="relative group">
-                   <button aria-label="Mở menu tài khoản" className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/10 border border-white/30 flex items-center justify-center hover:bg-white/20 transition-all overflow-hidden shadow-inner">
-                      <User size={18} className="text-white" />
-                   </button>
-                   <div className="absolute right-0 top-[120%] w-48 sm:w-52 bg-white rounded-2xl shadow-2xl py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible transition-all duration-300 border border-gray-100 translate-y-2 group-hover:translate-y-0 group-focus-within:translate-y-0 overflow-hidden">
-                      <div className="px-4 py-3 border-b border-gray-50 bg-gray-50/50 md:hidden">
-                        <p className="text-[10px] text-gray-400 font-bold uppercase">Tài khoản</p>
-                        <p className="text-sm font-bold text-[#5a8c76] truncate">{user.name}</p>
-                      </div>
-                      
-                      <Link to="/profile" className="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-[#5a8c76]/5 hover:text-[#5a8c76] transition-colors font-semibold">
-                        <User size={16} /> Hồ sơ cá nhân
-                      </Link>
-
-                      {/* --- NÚT TỚI TRANG QUẢN TRỊ (CHỈ HIỆN KHI LÀ ADMIN) --- */}
-                      {user.role && user.role !== 'customer' && (
-                        <Link to="/admin" className="flex items-center gap-3 px-4 py-3 text-sm text-[#5a8c76] hover:bg-[#5a8c76]/10 transition-colors font-bold border-t border-gray-50">
-                          <LayoutDashboard size={16} /> Trang quản trị
-                        </Link>
-                      )}
-
-                      <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 font-bold border-t border-gray-50 transition-colors">
-                        <LogOut size={16} /> Đăng xuất
-                      </button>
-                   </div>
-                </div>
-              </div>
-            ) : (
-              <>
-                {/* Nút Đăng nhập cho Desktop (To) */}
-                <Link to="/login" className="hidden sm:flex bg-white text-[#5a8c76] px-5 py-2.5 rounded-xl text-sm font-black hover:bg-yellow-400 transition-all shadow-md active:scale-95 uppercase">
-                  Đăng nhập
-                </Link>
-                {/* Nút Đăng nhập cho Mobile (Bé xíu hình User) */}
-                <Link to="/login" className="sm:hidden w-8 h-8 rounded-full bg-white flex items-center justify-center text-[#5a8c76] shadow-md active:scale-95 ml-1">
-                  <User size={18} />
-                </Link>
-              </>
-            )}
-          </div>
-        </div>
+  return <header className="store-header">
+    <div className="store-header-container store-main">
+      <button type="button" ref={mobileButton} className="store-action store-mobile-trigger" onClick={() => toggle('mobile')} aria-label={openMenu === 'mobile' ? 'Đóng menu điều hướng' : 'Mở menu điều hướng'} aria-expanded={openMenu === 'mobile'} aria-controls="store-mobile-navigation">{openMenu === 'mobile' ? <X size={23} /> : <Menu size={23} />}</button>
+      <Link className="store-brand" to="/" onClick={close} aria-label="DoCa Store — Trang chủ"><span className="store-brand-mark"><Fish size={28} strokeWidth={1.45} /></span><span className="store-brand-wordmark">DoCa<span>Store</span><small>ĐỒ CÂU & PHỤ KIỆN</small></span></Link>
+      <HeaderSearch key={location.key} initialValue={currentSearch} />
+      <div className="store-actions">
+        <div className="store-chat"><CustomerChatWidget triggerClassName="store-action store-chat-trigger" /></div>
+        <ActionLink to="/wishlist" label="Sản phẩm yêu thích" count={user ? wishlist?.length : 0} icon={Heart} className="store-wishlist" />
+        <ActionLink to="/notifications" label="Thông báo chưa đọc" count={user ? unreadCount : 0} icon={Bell} />
+        <ActionLink to="/cart" label="Giỏ hàng" count={user ? cartCount : 0} icon={ShoppingBag} />
+        <span className="store-action-divider" />
+        {user ? <div className="store-account" ref={accountRoot}>
+          <button type="button" ref={accountButton} className="store-account-toggle" aria-label="Menu tài khoản" aria-expanded={openMenu === 'account'} aria-controls="store-account-navigation" onClick={() => toggle('account')}><span className="store-avatar" aria-hidden="true">{initials || <User size={18} />}</span><span className="store-account-name"><small>Xin chào,</small><strong>{user.name}</strong></span><ChevronDown size={13} /></button>
+          {openMenu === 'account' && <nav id="store-account-navigation" className="store-account-menu" aria-label="Tài khoản"><div className="store-account-intro"><strong>{user.name}</strong><span>{user.email}</span></div><Link to="/profile" onClick={close}><User size={16} />Hồ sơ cá nhân</Link><Link to="/profile?tab=orders" onClick={close}><Package size={16} />Đơn hàng của tôi</Link><Link to="/profile?tab=addresses" onClick={close}><MapPin size={16} />Sổ địa chỉ</Link><Link to="/wishlist" onClick={close}><Heart size={16} />Sản phẩm yêu thích</Link>{staffRoles.includes(user.role) && <Link to="/admin" onClick={close}><LayoutDashboard size={16} />Trang quản trị</Link>}<button type="button" className="store-logout" onClick={signOut}><LogOut size={16} />Đăng xuất</button></nav>}
+        </div> : <Link to="/login" className="store-login" aria-label="Đăng nhập"><User size={17} /><span>Đăng nhập</span></Link>}
       </div>
-
-      {/* --- MENU MOBILE DROPDOWN (Chỉ hiện khi bấm nút 3 gạch) --- */}
-      <div id="mobile-navigation" className={`lg:hidden overflow-hidden transition-all duration-300 ease-in-out bg-[#315744] ${isMobileMenuOpen ? 'max-h-[400px] border-t border-white/10' : 'max-h-0'}`}>
-        <div className="flex flex-col px-4 py-2 space-y-1 font-bold text-[13px] tracking-wider">
-          <Link onClick={() => setIsMobileMenuOpen(false)} to="/" className="text-white py-3 border-b border-white/10 flex items-center">TRANG CHỦ</Link>
-          <Link onClick={() => setIsMobileMenuOpen(false)} to="/products" className="text-white py-3 border-b border-white/10 flex items-center justify-between">
-            SẢN PHẨM <ChevronRight size={16} />
-          </Link>
-          <Link onClick={() => setIsMobileMenuOpen(false)} to="/about" className="text-white py-3 border-b border-white/10 flex items-center">GIỚI THIỆU</Link>
-          <Link onClick={() => setIsMobileMenuOpen(false)} to="/news" className="text-white py-3 border-b border-white/10 flex items-center">TIN TỨC</Link>
-          <Link onClick={() => setIsMobileMenuOpen(false)} to="/contact" className="text-white py-3 flex items-center">LIÊN HỆ</Link>
-        </div>
+    </div>
+    <div className="store-navigation-bar"><div className="store-header-container store-navigation-inner">
+      <div className="store-categories" ref={categoryRoot}><button type="button" ref={categoryButton} className="store-category-toggle" onClick={() => toggle('categories')} aria-expanded={openMenu === 'categories'} aria-controls="store-category-navigation"><LayoutGrid size={16} />Danh mục sản phẩm<ChevronDown size={13} /></button>
+        {openMenu === 'categories' && <nav id="store-category-navigation" className="store-category-menu" aria-label="Danh mục sản phẩm"><div className="store-category-menu-heading"><div><span>KHÁM PHÁ DOCA STORE</span><h2>Chọn đồ nghề cho chuyến câu</h2></div><Link to="/products" onClick={close}>Tất cả sản phẩm <ArrowRight size={15} /></Link></div>{categoryFeedback}<div className="store-category-grid">{!categoryLoading && !categoryError && categories.map(category => <div key={category._id}><Link className="store-category-parent" to={'/category/' + encodeURIComponent(category.slug)} onClick={close}>{category.name}<ChevronRight size={14} /></Link>{category.children?.length > 0 && <ul>{category.children.map(child => <li key={child._id}><Link to={'/category/' + encodeURIComponent(child.slug)} onClick={close}>{child.name}</Link></li>)}</ul>}</div>)}</div></nav>}
       </div>
-
-      <style>{`
-        /* Giữ nguyên phần CSS keyframes của bạn ở đây */
-        @keyframes bounce-short { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
-        .animate-bounce-short { animation: bounce-short 2.5s ease-in-out infinite; }
-        @keyframes ring { 0% { transform: rotate(0); } 10% { transform: rotate(15deg); } 20% { transform: rotate(-10deg); } 30% { transform: rotate(15deg); } 40% { transform: rotate(-10deg); } 50% { transform: rotate(0); } 100% { transform: rotate(0); } }
-        .animate-ring { animation: ring 2s ease-in-out infinite; transform-origin: top center; }
-      `}</style>
-    </header>
-  );
-};
-
-export default Header;
+      <nav className="store-navigation" aria-label="Điều hướng chính">{navigation.map(item => <NavLink key={item.to} to={item.to} end={item.end} onClick={close} className={({ isActive }) => isActive || (item.to === '/products' && /^\/(category|product)\//.test(location.pathname)) ? 'store-nav-link store-nav-active' : 'store-nav-link'}>{item.label}</NavLink>)}</nav>
+      <span className="store-tagline"><span />Đồng hành cùng cần thủ</span>
+    </div></div>
+    {openMenu === 'mobile' && <nav id="store-mobile-navigation" className="store-mobile-panel" ref={mobilePanel} aria-label="Điều hướng trên điện thoại"><div className="store-mobile-links">{navigation.map(item => <NavLink key={item.to} to={item.to} end={item.end} onClick={close}>{item.label}<ChevronRight size={15} /></NavLink>)}</div><div className="store-mobile-categories"><h2>Danh mục sản phẩm</h2>{categoryFeedback}{!categoryLoading && !categoryError && categories.map(category => category.children?.length ? <details key={category._id}><summary>{category.name}<ChevronDown size={15} /></summary><Link to={'/category/' + encodeURIComponent(category.slug)} onClick={close}>Xem tất cả {category.name.toLocaleLowerCase('vi-VN')}</Link>{category.children.map(child => <Link key={child._id} to={'/category/' + encodeURIComponent(child.slug)} onClick={close}>{child.name}</Link>)}</details> : <Link key={category._id} to={'/category/' + encodeURIComponent(category.slug)} onClick={close}>{category.name}<ChevronRight size={14} /></Link>)}</div><div className="store-mobile-quick"><Link to="/wishlist" onClick={close}><Heart size={16} />Yêu thích{user && wishlist?.length > 0 && <span>{wishlist.length}</span>}</Link><Link to="/profile?tab=orders" onClick={close}><Package size={16} />Đơn hàng của tôi</Link></div></nav>}
+  </header>;
+}

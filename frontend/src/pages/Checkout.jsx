@@ -1,722 +1,172 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import axios from "axios";
-import axiosClient from "../api/axiosClient";
-import { toast } from "sonner";
-import { useCart } from "../context/CartContext";
-import { useNotification } from "../context/NotificationContext";
+import { useEffect, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ArrowLeft, ArrowRight, MapPin, Package, QrCode, TicketPercent, Truck, WalletCards } from 'lucide-react';
+import { toast } from 'sonner';
+import axiosClient from '../api/axiosClient';
+import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
+import { useNotification } from '../context/NotificationContext';
+import { PurchaseAlert, PurchaseCard, PurchaseLoading, PurchaseProducts, PurchaseShell, PurchaseSummary } from '../components/purchase/PurchaseUI';
+import ShippingFields from '../components/purchase/ShippingFields';
+import { addressText, money } from '../components/purchase/purchaseFormat';
 
-const Checkout = () => {
+function CheckoutContent() {
   const navigate = useNavigate();
   const { updateCartCount } = useCart();
   const { fetchUnreadCount } = useNotification();
-
-  // 1. STATE DỮ LIỆU GIỎ HÀNG
-  const [cartData, setCartData] = useState({
-    items: [],
-    subTotal: 0,
-    discountAmount: 0,
-    finalPrice: 0,
-    discountMessages: [],
-  });
+  const request = useRef(null);
+  const lock = useRef(false);
+  const couponLock = useRef(false);
+  const [placing, setPlacing] = useState(false);
+  const [uncertain, setUncertain] = useState(false);
+  const [cart, setCart] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [orderError, setOrderError] = useState('');
+  const [version, setVersion] = useState(0);
+  const [addresses, setAddresses] = useState([]);
+  const [addressWarning, setAddressWarning] = useState('');
+  const [addressId, setAddressId] = useState('new');
+  const [shipping, setShipping] = useState({ receiverName: '', phone: '', street: '', city: '', district: '', ward: '' });
+  const [note, setNote] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('COD');
+  const [coupon, setCoupon] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState('');
+  const [couponBusy, setCouponBusy] = useState(false);
+  const [couponError, setCouponError] = useState('');
 
-  // 2. STATE QUẢN LÝ ĐỊA CHỈ
-  const [userAddresses, setUserAddresses] = useState([]);
-  const [selectedAddress, setSelectedAddress] = useState(null);
-  const [showAddressForm, setShowAddressForm] = useState(false);
-
-  const [formData, setFormData] = useState({
-    receiverName: "",
-    phone: "",
-    street: "",
-    note: "",
-    provinceCode: "",
-    provinceName: "",
-    districtCode: "",
-    districtName: "",
-    wardCode: "",
-    wardName: "",
-  });
-  const [provinces, setProvinces] = useState([]);
-  const [districts, setDistricts] = useState([]);
-  const [wards, setWards] = useState([]);
-  const [errors, setErrors] = useState({});
-
-  // 3. STATE THANH TOÁN & COUPON
-  const [paymentType, setPaymentType] = useState("COD");
-  const [qrMethod, setQrMethod] = useState("VietQR");
-
-  const [couponCode, setCouponCode] = useState("");
-  const [discountInfo, setDiscountInfo] = useState({
-    amount: 0,
-    message: "",
-    isApplied: false,
-  });
-
-  // --- BƯỚC 1: LẤY GIỎ HÀNG & SỔ ĐỊA CHỈ ---
   useEffect(() => {
-    const initData = async () => {
-      try {
-        const cartRes = await axiosClient.get("/cart");
-        if (cartRes.data?.data) setCartData(cartRes.data.data);
-
-        const addressRes = await axiosClient.get("/address");
-        const addresses = addressRes.data?.data || [];
-        setUserAddresses(addresses);
-
-        if (addresses.length > 0) {
-          const defaultAddress =
-            addresses.find((addr) => addr.isDefault) || addresses[0];
-          setSelectedAddress(defaultAddress);
-          setShowAddressForm(false);
-        } else {
-          setShowAddressForm(true);
-        }
-      } catch (error) {
-        console.error("Lỗi lấy dữ liệu:", error);
-      } finally {
-        setLoading(false);
+    const controller = new AbortController();
+    const load = async () => {
+      setLoading(true); setLoadError('');
+      const results = await Promise.allSettled([
+        axiosClient.get('/cart', { signal: controller.signal }),
+        axiosClient.get('/address', { signal: controller.signal }),
+      ]);
+      if (controller.signal.aborted) return;
+      const [cartResult, addressResult] = results;
+      if (cartResult.status === 'fulfilled' && Array.isArray(cartResult.value.data?.data?.items)) {
+        setCart(cartResult.value.data.data);
+      } else {
+        setLoadError(cartResult.reason?.response?.data?.message || 'Không thể tải giỏ hàng. Vui lòng thử lại.');
       }
+      if (addressResult.status === 'fulfilled') {
+        const saved = addressResult.value.data?.data || [];
+        setAddresses(saved);
+        setAddressId((saved.find(address => address.isDefault) || saved[0])?._id || 'new');
+        setAddressWarning('');
+      } else {
+        setAddressWarning('Chưa tải được sổ địa chỉ. Bạn vẫn có thể nhập địa chỉ giao hàng bên dưới.');
+      }
+      setLoading(false);
     };
-    initData();
-  }, []);
+    void load();
+    return () => controller.abort();
+  }, [version]);
 
-  // --- BƯỚC 2: API TỈNH THÀNH ---
-  useEffect(() => {
-    axios
-      .get("https://provinces.open-api.vn/api/p/")
-      .then((res) => setProvinces(res.data));
-  }, []);
-
-  const handleProvinceChange = (e) => {
-    const code = e.target.value;
-    const name = e.target.options[e.target.selectedIndex].text;
-    setFormData({
-      ...formData,
-      provinceCode: code,
-      provinceName: name,
-      districtCode: "",
-      districtName: "",
-      wardCode: "",
-      wardName: "",
-    });
-    if (code)
-      axios
-        .get(`https://provinces.open-api.vn/api/p/${code}?depth=2`)
-        .then((res) => setDistricts(res.data.districts));
-  };
-
-  const handleDistrictChange = (e) => {
-    const code = e.target.value;
-    const name = e.target.options[e.target.selectedIndex].text;
-    setFormData({
-      ...formData,
-      districtCode: code,
-      districtName: name,
-      wardCode: "",
-      wardName: "",
-    });
-    if (code)
-      axios
-        .get(`https://provinces.open-api.vn/api/d/${code}?depth=2`)
-        .then((res) => setWards(res.data.wards));
-  };
-
-  // --- BƯỚC 3: XỬ LÝ MÃ GIẢM GIÁ (ĐÃ CHUẨN HOÁ) ---
-  const handleApplyCoupon = async () => {
-    if (!couponCode.trim()) return toast.warning("Vui lòng nhập mã giảm giá!");
-
+  const applyCoupon = async (remove = false) => {
+    if (couponLock.current || lock.current || uncertain) return;
+    const code = remove ? '' : coupon.trim();
+    if (!remove && !code) { setCouponError('Nhập mã giảm giá trước khi áp dụng.'); return; }
+    couponLock.current = true; setCouponBusy(true); setCouponError('');
     try {
-      const res = await axiosClient.post("/orders/preview", { couponCode });
-      const { finalPrice, totalDiscount, messages } = res.data.data;
-
-      // Áp dụng thành công -> Cập nhật lại giá
-      setCartData((prev) => ({
-        ...prev,
-        finalPrice: finalPrice,
-        discountAmount: totalDiscount,
-        discountMessages: messages,
-      }));
-
-      setDiscountInfo({
-        amount: totalDiscount,
-        message: "Đã áp dụng mã thành công",
-        isApplied: true,
-      });
-      toast.success("Áp dụng mã thành công!");
+      const response = await axiosClient.post('/orders/preview', { couponCode: code || undefined });
+      const pricing = response.data.data;
+      setCart(previous => ({ ...previous, subTotal: pricing.originalPrice, finalPrice: pricing.finalPrice, discountAmount: pricing.totalDiscount, discountMessages: pricing.messages || [] }));
+      setAppliedCoupon(code);
+      setCoupon(code);
     } catch (error) {
-      // THẤT BẠI (Mã sai, hết hạn, hoặc user đã dùng) -> Reset lại UI và báo lỗi
-      setDiscountInfo({ amount: 0, message: "", isApplied: false });
-
-      setCartData((prev) => ({
-        ...prev,
-        finalPrice: prev.subTotal, // Trả lại giá bằng đúng tiền tạm tính
-        discountAmount: 0, // Xoá tiền giảm
-        discountMessages: [], // Xoá tin nhắn giảm giá
-      }));
-
-      toast.error(
-        error.response?.data?.message || "Mã không hợp lệ hoặc đã hết hạn!",
-      );
-    }
+      // Keep the last server-confirmed price, including automatic customer offers.
+      setCouponError(error.response?.data?.message || 'Chưa thể cập nhật ưu đãi. Vui lòng thử lại.');
+    } finally { couponLock.current = false; setCouponBusy(false); }
   };
 
-  // --- BƯỚC 4: VALIDATE & ĐẶT HÀNG ---
-  const validateForm = () => {
-    let newErrors = {};
-    if (!formData.receiverName.trim())
-      newErrors.receiverName = "Nhập tên người nhận";
-    if (!formData.phone.trim()) newErrors.phone = "Nhập số điện thoại";
-    if (!formData.provinceCode) newErrors.provinceCode = "Chọn Tỉnh/Thành";
-    if (!formData.districtCode) newErrors.districtCode = "Chọn Quận/Huyện";
-    if (!formData.wardCode) newErrors.wardCode = "Chọn Phường/Xã";
-    if (!formData.street.trim()) newErrors.street = "Nhập địa chỉ nhà";
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handlePlaceOrder = async () => {
-    let shippingAddressToUse = null;
-
-    if (!showAddressForm && selectedAddress) {
-      shippingAddressToUse = {
-        receiverName: selectedAddress.receiverName,
-        phone: selectedAddress.phone,
-        street: selectedAddress.street,
-        ward: selectedAddress.ward,
-        district: selectedAddress.district,
-        city: selectedAddress.city,
-      };
-    } else {
-      if (!validateForm()) {
-        toast.error("Vui lòng điền đầy đủ thông tin giao hàng!");
+  const placeOrder = async event => {
+    event.preventDefault();
+    if (lock.current || couponLock.current || !cart?.items.length) return;
+    if (!request.current) {
+      const selected = addressId === 'new' ? shipping : addresses.find(address => address._id === addressId);
+      const shippingAddress = Object.fromEntries(['receiverName', 'phone', 'street', 'ward', 'district', 'city'].map(key => [key, selected?.[key]?.trim() || '']));
+      if (Object.values(shippingAddress).some(value => !value)) {
+        setOrderError('Vui lòng điền đầy đủ địa chỉ và thông tin người nhận.');
+        toast.error('Vui lòng điền đầy đủ địa chỉ và thông tin người nhận.');
         return;
       }
-      shippingAddressToUse = {
-        receiverName: formData.receiverName,
-        phone: formData.phone,
-        street: formData.street,
-        ward: formData.wardName,
-        district: formData.districtName,
-        city: formData.provinceName,
-      };
+      request.current = { key: crypto.randomUUID(), payload: { shippingAddress, note: note.trim(), paymentMethod, couponCode: appliedCoupon || null } };
     }
-
-    const orderPayload = {
-      shippingAddress: shippingAddressToUse,
-      note: formData.note,
-      paymentMethod: paymentType === "COD" ? "COD" : qrMethod,
-      couponCode: discountInfo.isApplied ? couponCode : null,
-    };
-
+    lock.current = true; setPlacing(true); setOrderError('');
     try {
-      const res = await axiosClient.post("/orders", orderPayload);
-      const orderId = res.data?.data?._id || res.data?.data?.id;
-      const checkoutUrl = res.data?.payosCheckoutUrl;
-      const qrCodeString = res.data?.qrCode;
-
-      toast.success("🎉 Đặt hàng thành công!");
-
-      updateCartCount();
-      fetchUnreadCount();
-
-      if (paymentType === "QR" && qrMethod === "VietQR") {
-        toast.info("Đang tạo mã QR thanh toán...");
-        navigate(`/payment/${orderId}`, {
-          state: { qrCode: qrCodeString, amount: cartData.finalPrice },
-        });
-        return;
-      } else if (paymentType === "QR" && checkoutUrl) {
-        toast.info("Đang chuyển hướng đến trang thanh toán...");
-        setTimeout(() => {
-          window.location.href = checkoutUrl;
-        }, 1500);
-        return;
-      }
-
-      navigate(`/order-success/${orderId}`);
+      const response = await axiosClient.post('/orders', request.current.payload, { headers: { 'Idempotency-Key': request.current.key } });
+      const order = response.data?.data;
+      if (!order?._id) throw new Error('Missing order');
+      request.current = null; setUncertain(false);
+      void updateCartCount(); void fetchUnreadCount();
+      toast.success('Đã tạo đơn hàng.');
+      if (order.paymentMethod === 'VietQR' && order.status === 'pending' && order.paymentStatus !== 'paid') {
+        navigate('/payment/' + order._id);
+      } else navigate('/order-success/' + order._id);
     } catch (error) {
-      toast.error(error.response?.data?.message || "❌ Lỗi khi đặt hàng!");
-    }
+      const definite = [400, 401, 403, 404, 409, 422, 502, 503].includes(error.response?.status);
+      if (definite) request.current = null;
+      setUncertain(!definite);
+      const message = error.response?.data?.message || 'Chưa xác nhận được đơn hàng. Bấm thử lại để kiểm tra cùng yêu cầu đặt hàng.';
+      setOrderError(message);
+      toast.error(message);
+    } finally { lock.current = false; setPlacing(false); }
   };
 
-  if (loading)
-    return (
-      <div className="p-10 text-center font-semibold text-gray-600">
-        Đang tải dữ liệu...
+  const items = cart?.items || [];
+  const unavailable = items.some(item => !item.product_id || item.product_id.stock <= 0 || item.quantity > item.product_id.stock);
+  const disabled = placing || couponBusy || (!uncertain && unavailable);
+  const submitLabel = placing ? 'Đang xử lý…' : uncertain ? 'Thử lại đặt hàng' : 'Xác nhận đặt hàng';
+  return <PurchaseShell title="Thanh toán" description="Kiểm tra thông tin để món đồ bạn chọn đến đúng nơi." mobile={!loading && !loadError && items.length > 0}>
+    {loading ? <PurchaseLoading /> : loadError ? <PurchaseAlert onRetry={() => setVersion(value => value + 1)}>{loadError}</PurchaseAlert> : !items.length ? <div className="purchase-card purchase-empty"><h2>Giỏ hàng đang trống</h2><p className="purchase-muted">Chọn sản phẩm yêu thích trước khi thanh toán nhé.</p><Link className="cart-button cart-button-primary" to="/products">Khám phá sản phẩm <ArrowRight size={16} /></Link></div> : <>
+      {orderError && <PurchaseAlert tone="error">{orderError}</PurchaseAlert>}
+      {uncertain && <PurchaseAlert>Thông tin đơn được giữ nguyên trong lúc chờ xác nhận. Bấm “Thử lại đặt hàng” để tránh tạo đơn trùng.</PurchaseAlert>}
+      {unavailable && !uncertain && <PurchaseAlert>Một số sản phẩm đã hết hàng hoặc không đủ số lượng. <Link className="purchase-text-button" to="/cart">Cập nhật giỏ hàng</Link></PurchaseAlert>}
+      <div className="cart-layout">
+        <form id="checkout-form" className="purchase-form purchase-stack" onSubmit={placeOrder}>
+          <fieldset disabled={placing || uncertain}>
+            <PurchaseCard title="Thông tin giao hàng" icon={MapPin}>
+              {addressWarning && <PurchaseAlert>{addressWarning}</PurchaseAlert>}
+              {addresses.length > 0 && <div className="purchase-options">
+                {addresses.map(address => <label className="purchase-option" key={address._id}><input type="radio" name="shipping-address" value={address._id} checked={addressId === address._id} onChange={() => setAddressId(address._id)} /><div><strong>{address.receiverName}{address.isDefault && <span className="purchase-badge">Mặc định</span>}</strong><p>{address.phone}</p><p>{addressText(address)}</p></div></label>)}
+                <label className="purchase-option"><input type="radio" name="shipping-address" value="new" checked={addressId === 'new'} onChange={() => setAddressId('new')} /><strong>Dùng địa chỉ khác</strong></label>
+              </div>}
+              {addressId === 'new' && <div className={addresses.length ? 'purchase-form-section' : ''}><ShippingFields value={shipping} onChange={setShipping} /></div>}
+              <label className="purchase-field purchase-form-section">Ghi chú đơn hàng <span className="purchase-muted">Không bắt buộc · tối đa 1.000 ký tự</span><textarea rows={3} maxLength={1000} value={note} onChange={event => setNote(event.target.value)} placeholder="Ví dụ: gọi cho tôi trước khi giao hàng" /></label>
+            </PurchaseCard>
+          </fieldset>
+          <fieldset disabled={placing || uncertain}>
+            <PurchaseCard title="Phương thức thanh toán" icon={WalletCards}>
+              <div className="purchase-options purchase-methods">
+                <label className="purchase-option"><input type="radio" name="payment-method" checked={paymentMethod === 'COD'} onChange={() => setPaymentMethod('COD')} /><div><strong><Truck size={18} /> Khi nhận hàng</strong><p>Thanh toán cho người giao hàng khi nhận đơn.</p></div></label>
+                <label className="purchase-option"><input type="radio" name="payment-method" checked={paymentMethod === 'VietQR'} onChange={() => setPaymentMethod('VietQR')} /><div><strong><QrCode size={18} /> Chuyển khoản VietQR</strong><p>Quét mã bằng ứng dụng ngân hàng sau khi đặt hàng.</p></div></label>
+              </div>
+            </PurchaseCard>
+          </fieldset>
+          <PurchaseCard title={'Sản phẩm trong đơn · ' + items.reduce((sum, item) => sum + item.quantity, 0)} icon={Package} action={<Link className="purchase-text-button" to="/cart">Sửa giỏ hàng</Link>}><PurchaseProducts items={items} cart /></PurchaseCard>
+          <fieldset disabled={placing || uncertain || couponBusy}>
+            <PurchaseCard title="Ưu đãi của bạn" icon={TicketPercent}>
+              <label className="purchase-field" htmlFor="checkout-coupon">Mã giảm giá</label><div className="purchase-coupon"><input id="checkout-coupon" value={coupon} disabled={Boolean(appliedCoupon)} maxLength={50} onChange={event => setCoupon(event.target.value)} placeholder="Nhập mã ưu đãi" onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); if (!appliedCoupon) void applyCoupon(); } }} /><button type="button" className="cart-button cart-button-outline" onClick={() => applyCoupon(Boolean(appliedCoupon))}>{couponBusy ? 'Đang kiểm tra…' : appliedCoupon ? 'Gỡ mã' : 'Áp dụng'}</button></div>
+              {appliedCoupon && <p className="purchase-coupon-status" role="status">Đã áp dụng mã {appliedCoupon}.</p>}
+              {couponError && <div className="purchase-form-section"><PurchaseAlert tone="error">{couponError}</PurchaseAlert></div>}
+            </PurchaseCard>
+          </fieldset>
+          <Link className="cart-back" to="/cart"><ArrowLeft size={16} /> Quay lại giỏ hàng</Link>
+        </form>
+        <PurchaseSummary subtotal={cart.subTotal} discount={cart.discountAmount} total={cart.finalPrice} messages={cart.discountMessages}>
+          <dl className="purchase-summary-meta"><div><dt>Thanh toán</dt><dd>{paymentMethod === 'COD' ? 'Khi nhận hàng' : 'VietQR'}</dd></div><div><dt>Số lượng</dt><dd>{items.reduce((sum, item) => sum + item.quantity, 0)} sản phẩm</dd></div></dl>
+          <button type="submit" form="checkout-form" className="cart-button cart-checkout purchase-desktop-submit" disabled={disabled}>{submitLabel}<ArrowRight size={16} /></button>
+          <p className="purchase-muted">{paymentMethod === 'COD' ? 'Bạn sẽ thanh toán khi nhận hàng.' : 'Mã QR sẽ xuất hiện ở bước tiếp theo. Đơn chỉ ghi nhận đã thanh toán khi hệ thống xác nhận.'}</p>
+        </PurchaseSummary>
       </div>
-    );
+      <div className="cart-mobile-checkout"><div><span>Tổng thanh toán</span><strong>{money(cart.finalPrice)}</strong></div><button type="submit" form="checkout-form" className="cart-button cart-checkout" disabled={disabled}>{submitLabel}<ArrowRight size={16} /></button></div>
+    </>}
+  </PurchaseShell>;
+}
 
-  return (
-    <div className="bg-gray-50 min-h-screen py-8">
-      <div className="max-w-6xl mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* CỘT TRÁI: ĐỊA CHỈ + THANH TOÁN */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* BOX 1: THÔNG TIN GIAO HÀNG */}
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-            <div className="flex justify-between items-center mb-5">
-              <h2 className="text-lg font-bold flex items-center gap-2 uppercase">
-                <span className="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">
-                  1
-                </span>
-                Thông tin giao hàng
-              </h2>
-            </div>
-
-            {!showAddressForm && selectedAddress ? (
-              <div className="border border-blue-200 bg-blue-50/30 p-4 rounded-lg relative">
-                <div className="flex items-center gap-4 mb-2">
-                  <span className="font-bold text-gray-800 text-lg">
-                    {selectedAddress.receiverName}
-                  </span>
-                  <span className="text-gray-500">|</span>
-                  <span className="font-bold text-gray-800">
-                    {selectedAddress.phone}
-                  </span>
-                  {selectedAddress.isDefault && (
-                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded border border-blue-200">
-                      Mặc định
-                    </span>
-                  )}
-                </div>
-                <p className="text-gray-600 leading-relaxed">
-                  {selectedAddress.street}, {selectedAddress.ward},{" "}
-                  {selectedAddress.district}, {selectedAddress.city}
-                </p>
-                <button
-                  onClick={() => setShowAddressForm(true)}
-                  className="mt-4 text-blue-600 text-sm font-semibold hover:underline"
-                >
-                  + Nhập địa chỉ giao hàng khác
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-4 animate-fade-in">
-                {userAddresses.length > 0 && (
-                  <button
-                    onClick={() => setShowAddressForm(false)}
-                    className="text-blue-600 text-sm font-semibold mb-2 hover:underline"
-                  >
-                    ← Quay lại dùng địa chỉ đã lưu
-                  </button>
-                )}
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <input
-                      type="text"
-                      placeholder="Họ tên người nhận"
-                      value={formData.receiverName}
-                      className={`w-full border p-2.5 rounded-md outline-none ${errors.receiverName ? "border-red-500" : "focus:border-blue-500"}`}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          receiverName: e.target.value,
-                        })
-                      }
-                    />
-                    {errors.receiverName && (
-                      <p className="text-red-500 text-xs mt-1">
-                        {errors.receiverName}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <input
-                      type="text"
-                      placeholder="Số điện thoại"
-                      value={formData.phone}
-                      className={`w-full border p-2.5 rounded-md outline-none ${errors.phone ? "border-red-500" : "focus:border-blue-500"}`}
-                      onChange={(e) =>
-                        setFormData({ ...formData, phone: e.target.value })
-                      }
-                    />
-                    {errors.phone && (
-                      <p className="text-red-500 text-xs mt-1">
-                        {errors.phone}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <select
-                      value={formData.provinceCode}
-                      onChange={handleProvinceChange}
-                      className={`w-full border p-2.5 rounded-md outline-none ${errors.provinceCode ? "border-red-500" : ""}`}
-                    >
-                      <option value="">Tỉnh/Thành</option>
-                      {provinces.map((p) => (
-                        <option key={p.code} value={p.code}>
-                          {p.name}
-                        </option>
-                      ))}
-                    </select>
-                    {errors.provinceCode && (
-                      <p className="text-red-500 text-xs mt-1">
-                        {errors.provinceCode}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <select
-                      value={formData.districtCode}
-                      onChange={handleDistrictChange}
-                      disabled={!formData.provinceCode}
-                      className={`w-full border p-2.5 rounded-md outline-none ${errors.districtCode ? "border-red-500" : ""}`}
-                    >
-                      <option value="">Quận/Huyện</option>
-                      {districts.map((d) => (
-                        <option key={d.code} value={d.code}>
-                          {d.name}
-                        </option>
-                      ))}
-                    </select>
-                    {errors.districtCode && (
-                      <p className="text-red-500 text-xs mt-1">
-                        {errors.districtCode}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <select
-                      value={formData.wardCode}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          wardCode: e.target.value,
-                          wardName:
-                            e.target.options[e.target.selectedIndex].text,
-                        })
-                      }
-                      disabled={!formData.districtCode}
-                      className={`w-full border p-2.5 rounded-md outline-none ${errors.wardCode ? "border-red-500" : ""}`}
-                    >
-                      <option value="">Phường/Xã</option>
-                      {wards.map((w) => (
-                        <option key={w.code} value={w.code}>
-                          {w.name}
-                        </option>
-                      ))}
-                    </select>
-                    {errors.wardCode && (
-                      <p className="text-red-500 text-xs mt-1">
-                        {errors.wardCode}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <input
-                    type="text"
-                    placeholder="Số nhà, tên đường..."
-                    value={formData.street}
-                    className={`w-full border p-2.5 rounded-md outline-none ${errors.street ? "border-red-500" : "focus:border-blue-500"}`}
-                    onChange={(e) =>
-                      setFormData({ ...formData, street: e.target.value })
-                    }
-                  />
-                  {errors.street && (
-                    <p className="text-red-500 text-xs mt-1">{errors.street}</p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            <div className="mt-4">
-              <textarea
-                rows="2"
-                placeholder="Ghi chú đơn hàng (Tùy chọn)"
-                value={formData.note}
-                className="w-full border border-gray-300 rounded-md p-2.5 focus:border-blue-500 outline-none"
-                onChange={(e) =>
-                  setFormData({ ...formData, note: e.target.value })
-                }
-              ></textarea>
-            </div>
-          </div>
-
-          {/* BOX 2: HÌNH THỨC THANH TOÁN */}
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-            <h2 className="text-lg font-bold mb-5 flex items-center gap-2 uppercase">
-              <span className="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">
-                2
-              </span>
-              Phương thức thanh toán
-            </h2>
-            <div className="flex gap-4">
-              <button
-                onClick={() => setPaymentType("COD")}
-                className={`flex-1 p-4 border rounded-lg flex flex-col items-center justify-center gap-2 transition-all ${paymentType === "COD" ? "border-blue-600 bg-blue-50 shadow-sm" : "hover:border-gray-400"}`}
-              >
-                <span className="text-2xl">🚚</span>
-                <span className="font-semibold text-gray-700">
-                  Thanh toán khi nhận hàng
-                </span>
-              </button>
-              <button
-                onClick={() => setPaymentType("QR")}
-                className={`flex-1 p-4 border rounded-lg flex flex-col items-center justify-center gap-2 transition-all ${paymentType === "QR" ? "border-blue-600 bg-blue-50 shadow-sm" : "hover:border-gray-400"}`}
-              >
-                <span className="text-2xl">📱</span>
-                <span className="font-semibold text-gray-700">
-                  Chuyển khoản / QR Pay
-                </span>
-              </button>
-            </div>
-
-            {paymentType === "QR" && (
-              <div className="mt-4 p-5 bg-gray-50 border border-gray-200 rounded-xl transition-all duration-300">
-                <label className="block text-sm font-semibold text-gray-700 mb-3">
-                  Chọn ứng dụng thanh toán:
-                </label>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div
-                    onClick={() => setQrMethod("VietQR")}
-                    className={`relative cursor-pointer rounded-xl border-2 p-3 flex flex-col items-center justify-center gap-2 transition-all ${qrMethod === "VietQR" ? "border-blue-600 bg-blue-50" : "border-gray-200 bg-white hover:border-blue-300"}`}
-                  >
-                    {qrMethod === "VietQR" && (
-                      <div className="absolute top-2 right-2 text-blue-600">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-5 w-5"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                      </div>
-                    )}
-                    <img
-                      src="/VietQRlogo.png"
-                      alt="VietQR"
-                      className="h-8 object-contain"
-                    />
-                    <span className="text-xs font-semibold text-gray-700 text-center">
-                      Chuyển khoản NH
-                    </span>
-                  </div>
-
-                  <div
-                    onClick={() => setQrMethod("Momo")}
-                    className={`relative cursor-pointer rounded-xl border-2 p-3 flex flex-col items-center justify-center gap-2 transition-all ${qrMethod === "Momo" ? "border-blue-600 bg-blue-50" : "border-gray-200 bg-white hover:border-blue-300"}`}
-                  >
-                    {qrMethod === "Momo" && (
-                      <div className="absolute top-2 right-2 text-blue-600">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-5 w-5"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                      </div>
-                    )}
-                    <img
-                      src="https://developers.momo.vn/v3/assets/images/icon-52bd5808cecdb1970e1aeec3c31a3ee1.png"
-                      alt="MoMo"
-                      className="h-8 object-contain"
-                    />
-                    <span className="text-xs font-semibold text-gray-700 text-center">
-                      Ví MoMo
-                    </span>
-                  </div>
-
-                  <div
-                    onClick={() => setQrMethod("VNPay")}
-                    className={`relative cursor-pointer rounded-xl border-2 p-3 flex flex-col items-center justify-center gap-2 transition-all ${qrMethod === "VNPay" ? "border-blue-600 bg-blue-50" : "border-gray-200 bg-white hover:border-blue-300"}`}
-                  >
-                    {qrMethod === "VNPay" && (
-                      <div className="absolute top-2 right-2 text-blue-600">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-5 w-5"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                      </div>
-                    )}
-                    <img
-                      src="https://vnpay.vn/s1/statics.vnpay.vn/2023/9/06ncktiwd6dc1694418196384.png"
-                      alt="VNPay"
-                      className="h-8 object-contain"
-                    />
-                    <span className="text-xs font-semibold text-gray-700 text-center">
-                      VNPAY-QR
-                    </span>
-                  </div>
-                </div>
-
-                <p className="mt-4 text-xs text-gray-500 italic flex items-center gap-1.5">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-4 w-4 text-gray-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  Mã QR thanh toán sẽ được tạo tự động ngay sau khi bạn bấm đặt
-                  hàng.
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* CỘT PHẢI: TÓM TẮT ĐƠN HÀNG */}
-        <div className="lg:col-span-1">
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 sticky top-6">
-            <h2 className="text-lg font-bold text-gray-800 mb-6 uppercase border-b pb-4">
-              Đơn hàng của bạn
-            </h2>
-
-            {cartData.items.length === 0 ? (
-              <p className="text-gray-500 text-center my-10">Giỏ hàng trống.</p>
-            ) : (
-              <div className="space-y-4 mb-4 border-b pb-6 max-h-[300px] overflow-y-auto pr-2">
-                {cartData.items.map((item) => (
-                  <div
-                    key={item._id || item.product_id?._id}
-                    className="flex justify-between items-start gap-2"
-                  >
-                    <div className="flex gap-3">
-                      <img
-                        src={
-                          item.product_id?.imageUrl ||
-                          "https://dummyimage.com/60x60"
-                        }
-                        alt="Product"
-                        className="w-14 h-14 object-cover rounded-md border"
-                      />
-                      <div>
-                        <p className="font-medium text-gray-800 text-sm line-clamp-2 leading-tight">
-                          {item.product_id?.name || "Sản phẩm"}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          SL: {item.quantity}
-                        </p>
-                      </div>
-                    </div>
-                    <p className="font-semibold text-gray-800 text-sm whitespace-nowrap">
-                      {item.product_id?.price
-                        ? (
-                            item.product_id.price * item.quantity
-                          ).toLocaleString()
-                        : 0}
-                      đ
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* BOX NHẬP MÃ GIẢM GIÁ */}
-            <div className="py-4 border-b mb-4">
-              <label className="text-sm font-semibold text-gray-700 mb-2 block">
-                Mã giảm giá
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Nhập mã ưu đãi..."
-                  className="flex-1 border border-gray-300 p-2.5 rounded-md uppercase outline-none focus:border-blue-500 transition text-sm"
-                  value={couponCode}
-                  onChange={(e) => setCouponCode(e.target.value)}
-                />
-                <button
-                  onClick={handleApplyCoupon}
-                  className="bg-gray-800 text-white px-4 py-2.5 rounded-md text-sm font-semibold hover:bg-black transition whitespace-nowrap"
-                >
-                  Áp dụng
-                </button>
-              </div>
-              {discountInfo.isApplied && (
-                <p className="text-green-600 text-sm mt-2 font-medium flex items-center gap-1">
-                  ✅ {discountInfo.message}
-                </p>
-              )}
-            </div>
-
-            {/* TỔNG TIỀN */}
-            <div className="space-y-3 mb-6 text-sm">
-              <div className="flex justify-between text-gray-600">
-                <span>Tạm tính</span>
-                <span className="font-medium">
-                  {cartData.subTotal ? cartData.subTotal.toLocaleString() : 0}đ
-                </span>
-              </div>
-
-              {cartData.discountAmount > 0 && (
-                <div className="flex flex-col gap-1 text-green-600">
-                  <div className="flex justify-between font-medium">
-                    <span>Tổng Khuyến mãi</span>
-                    <span>-{cartData.discountAmount.toLocaleString()}đ</span>
-                  </div>
-                  {cartData.discountMessages?.map((msg, idx) => (
-                    <span key={idx} className="text-xs italic pl-2">
-                      🎁 {msg}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              <div className="flex justify-between text-gray-600">
-                <span>Phí vận chuyển</span>
-                <span>Chưa tính</span>
-              </div>
-
-              <div className="flex justify-between items-center pt-4 border-t">
-                <span className="text-gray-800 font-bold">Tổng thanh toán</span>
-                <span className="text-red-600 text-2xl font-bold">
-                  {cartData.finalPrice
-                    ? cartData.finalPrice.toLocaleString()
-                    : 0}
-                  đ
-                </span>
-              </div>
-              <p className="text-right text-xs text-gray-400 mt-1">
-                (Đã bao gồm VAT nếu có)
-              </p>
-            </div>
-
-            <button
-              onClick={handlePlaceOrder}
-              disabled={cartData.items.length === 0}
-              className={`w-full font-bold py-4 rounded-lg transition-colors text-lg uppercase tracking-wide ${cartData.items.length === 0 ? "bg-gray-400 cursor-not-allowed" : "bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-600/30"}`}
-            >
-              Xác nhận đặt hàng
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default Checkout;
+export default function Checkout() {
+  const { user } = useAuth();
+  return <CheckoutContent key={user?._id || user?.id || 'guest'} />;
+}

@@ -1,6 +1,9 @@
 import mongoose from "mongoose";
 
 const notificationSchema = new mongoose.Schema({
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'user' },
+  requestKey: String,
+  requestHash: String,
   
   userId: { 
     type: mongoose.Schema.Types.ObjectId, 
@@ -39,6 +42,7 @@ const notificationSchema = new mongoose.Schema({
 // Tự động xóa sau 30 ngày
 notificationSchema.index({ createdAt: 1 }, { expireAfterSeconds: 2592000 });
 
+notificationSchema.index({ createdBy: 1, requestKey: 1 }, { unique: true, partialFilterExpression: { requestKey: { $type: 'string' } } });
 const Notification = mongoose.model('Notification', notificationSchema);
 
 export default Notification;

@@ -3,6 +3,7 @@ import User from '../models/userModel.js';
 import bcrypt from 'bcryptjs'; 
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
+import { pagination, queryText, escapeRegex, enumFilter } from '../utils/adminQuery.js';
 import crypto from 'crypto'; 
 import { sendEmail } from '../utils/sendEmail.js';
 import { sendVerificationOTP } from '../utils/sendEmail.js';
@@ -11,9 +12,9 @@ import { ALL_ROLES, canGrantRole, canManageAccount } from '../config/roles.js';
 export const createUser = async (req, res) => {
   try {
     const { name, email, password } = req.body;
-    const normalizedEmail = email?.trim().toLowerCase();
+    const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
 
-    if (!name?.trim() || !normalizedEmail || !password) {
+    if (typeof name !== 'string' || !name.trim() || !normalizedEmail || typeof password !== 'string' || !password) {
       return res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ thông tin!' });
     }
 
@@ -30,16 +31,15 @@ export const createUser = async (req, res) => {
       // Cập nhật thông tin cho tài khoản chưa xác thực và gửi lại OTP
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(password, salt);
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-      existingUser.name = name.trim();
-      existingUser.password = hashedPassword;
-      // Endpoint đăng ký công khai không bao giờ được phép cấp quyền nhân viên.
-      existingUser.role = 'customer';
-      existingUser.verifyOtp = otp;
-      existingUser.otpExpires = Date.now() + 10 * 60 * 1000;
-
-      const savedUser = await existingUser.save();
+      const otp = crypto.randomInt(100000, 1000000).toString();
+      // Google/OTP verification may win while bcrypt is running. Never replace
+      // credentials on an account that has become verified in the meantime.
+      const savedUser = await User.findOneAndUpdate(
+        { _id: existingUser._id, isVerified: false },
+        { $set: { name: name.trim(), password: hashedPassword, role: 'customer', verifyOtp: otp, otpExpires: new Date(Date.now() + 10 * 60 * 1000) } },
+        { new: true, runValidators: true }
+      );
+      if (!savedUser) return res.status(409).json({ success: false, message: 'Tài khoản đã được xác thực. Vui lòng đăng nhập.' });
       console.log("✅ Đã cập nhật User chưa xác thực. Đang chuẩn bị gửi mail...");
 
       try {
@@ -62,7 +62,7 @@ export const createUser = async (req, res) => {
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = crypto.randomInt(100000, 1000000).toString();
 
     // TẠO USER VỚI isVerified: false (BẮT BUỘC)
     const newUser = new User({
@@ -91,7 +91,7 @@ export const createUser = async (req, res) => {
     } catch (mailError) {
       // NẾU GỬI MAIL LỖI -> XÓA USER VỪA TẠO ĐỂ KHÔNG BỊ RÁC DB
       console.error("❌ LỖI GỬI MAIL CHI TIẾT:", mailError);
-      await User.findByIdAndDelete(savedUser._id);
+      await User.deleteOne({ _id: savedUser._id, isVerified: false, verifyOtp: otp });
       return res.status(500).json({ 
         success: false, 
         message: 'Không thể gửi email lúc này: ' + mailError.message 
@@ -106,9 +106,12 @@ export const createUser = async (req, res) => {
 export const verifyEmail = async (req, res) => {
   try {
     const { email, otp } = req.body;
+    if (typeof email !== 'string' || typeof otp !== 'string' || !/^\d{6}$/.test(otp)) {
+      return res.status(400).json({ success: false, message: 'Email hoặc mã OTP không hợp lệ.' });
+    }
 
     // 1. Tìm người dùng theo email
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: email.trim().toLowerCase() });
     if (!user) {
       return res.status(404).json({ 
         success: false, 
@@ -133,10 +136,12 @@ export const verifyEmail = async (req, res) => {
     }
 
     // 4. Nếu OTP đúng -> Cập nhật trạng thái và xóa OTP cũ đi
-    user.isVerified = true;
-    user.verifyOtp = undefined;
-    user.otpExpires = undefined;
-    await user.save();
+    const verified = await User.findOneAndUpdate(
+      { _id: user._id, isVerified: false, verifyOtp: otp, otpExpires: { $gt: new Date() } },
+      { $set: { isVerified: true }, $unset: { verifyOtp: 1, otpExpires: 1 } },
+      { new: true }
+    );
+    if (!verified) return res.status(409).json({ success: false, message: 'Mã xác thực đã thay đổi hoặc hết hạn. Vui lòng thử lại.' });
 
     console.log(`✅ User ${user.email} đã xác thực thành công.`);
 
@@ -161,11 +166,11 @@ export const resendOTP = async (req, res) => {
   try {
     const { email } = req.body;
 
-    if (!email) {
+    if (typeof email !== 'string' || !email.trim()) {
       return res.status(400).json({ success: false, message: 'Vui lòng cung cấp email!' });
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: email.trim().toLowerCase() });
     if (!user) {
       return res.status(404).json({ success: false, message: 'Người dùng không tồn tại!' });
     }
@@ -178,11 +183,13 @@ export const resendOTP = async (req, res) => {
     }
 
     // Tạo mã OTP mới
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    user.verifyOtp = otp;
-    user.otpExpires = Date.now() + 10 * 60 * 1000; // 10 phút
-
-    await user.save();
+    const otp = crypto.randomInt(100000, 1000000).toString();
+    const pendingUser = await User.findOneAndUpdate(
+      { _id: user._id, isVerified: false },
+      { $set: { verifyOtp: otp, otpExpires: new Date(Date.now() + 10 * 60 * 1000) } },
+      { new: true }
+    );
+    if (!pendingUser) return res.status(409).json({ success: false, message: 'Tài khoản đã được xác thực. Vui lòng đăng nhập.' });
 
     await sendVerificationOTP(user.email, user.name, otp);
 
@@ -198,20 +205,21 @@ export const resendOTP = async (req, res) => {
 // 2. Hàm lấy danh sách người dùng (Hàm kiểm tra dữ liệu đã lưu)
 export const getAllUsers = async (req, res) => {
   try {
-    // Lấy tất cả user từ DB, loại bỏ trường password
-    const users = await User.find().select('-password');
-
-    res.status(200).json({
-      success: true,
-      count: users.length, 
-      data: users
-    });
+    const { page, limit, skip } = pagination(req.query);
+    const search = queryText(req.query.search);
+    const role = enumFilter(req.query.role, ALL_ROLES);
+    const verified = enumFilter(req.query.verified, ['true', 'false']);
+    const filter = {};
+    if (search) filter.$or = ['name', 'email'].map(field => ({ [field]: { $regex: escapeRegex(search), $options: 'i' } }));
+    if (role) filter.role = role;
+    if (verified) filter.isVerified = verified === 'true';
+    const [users, totalCount] = await Promise.all([
+      User.find(filter).select('name email role isVerified tier totalSpent totalOrders createdAt').sort({ createdAt: -1, _id: -1 }).skip(skip).limit(limit).lean(),
+      User.countDocuments(filter)
+    ]);
+    return res.json({ success: true, data: users, count: users.length, totalCount, currentPage: page, totalPages: Math.max(1, Math.ceil(totalCount / limit)) });
   } catch (error) {
-    res.status(500).json({ 
-      success: false, 
-      message: 'Lỗi khi lấy dữ liệu', 
-      error: error.message 
-    });
+    return res.status(error.status || 500).json({ success: false, message: error.status ? error.message : 'Không thể tải danh sách người dùng.' });
   }
 };
 
@@ -219,7 +227,7 @@ export const getAllUsers = async (req, res) => {
 export const getMe = async (req, res) => {
   try {
     // req.user.id này có được sau khi đi qua middleware verifyToken
-    const user = await User.findById(req.user.id).select('-password');
+    const user = await User.findById(req.user.id).select('-password -verifyOtp -otpExpires -resetPasswordToken -resetPasswordExpire');
 
     if (!user) {
       return res.status(404).json({
@@ -364,7 +372,7 @@ export const getUserById = async (req,res)=>{
     }
 
     //Tìm user trong DB và loại bỏ trường password
-    const user = await User.findById(userId).select('-password');
+    const user = await User.findById(userId).select('-password -verifyOtp -otpExpires -resetPasswordToken -resetPasswordExpire');
     ///Nếu không tìm thấy
     if(!user){
       return res.status(404).json({
@@ -402,7 +410,7 @@ export const getUserByName = async (req,res)=>{
     
     const users = await User.find({
       name: { $regex: keyword, $options: 'i' } 
-    }).select('-password');
+    }).select('-password -verifyOtp -otpExpires -resetPasswordToken -resetPasswordExpire');
     return res.status(200).json({
       success: true,
       count: users.length,
@@ -423,8 +431,9 @@ export const getUserByName = async (req,res)=>{
 // QUÊN MẬT KHẨU: KHÁCH HÀNG BÁO QUÊN MẬT KHẨU (GỬI MAIL)
 export const forgotPassword = async (req, res) => {
   try {
+    if (typeof req.body.email !== 'string' || !req.body.email.trim()) return res.status(400).json({ success: false, message: 'Email không hợp lệ.' });
     // Tìm người dùng theo email khách nhập
-    const user = await User.findOne({ email: req.body.email });
+    const user = await User.findOne({ email: req.body.email.trim().toLowerCase(), isVerified: true });
     
     if (!user) {
       return res.status(404).json({ 
@@ -494,9 +503,10 @@ export const forgotPassword = async (req, res) => {
 
     } catch (error) {
       // Nếu lỗi gửi mail (vd: sai cấu hình SMTP), xóa token trong DB đi để bảo mật
-      user.resetPasswordToken = undefined;
-      user.resetPasswordExpire = undefined;
-      await user.save({ validateBeforeSave: false });
+      await User.updateOne(
+        { _id: user._id, resetPasswordToken: crypto.createHash('sha256').update(resetToken).digest('hex') },
+        { $unset: { resetPasswordToken: 1, resetPasswordExpire: 1 } }
+      );
 
       console.error("❌ Lỗi gửi mail thực tế:", error);
       return res.status(500).json({ 
@@ -518,11 +528,15 @@ export const forgotPassword = async (req, res) => {
 //  KHÁCH HÀNG NHẬP PASS MỚI
 export const resetPassword = async (req, res) => {
   try {
+    if (typeof req.params.token !== 'string' || !/^[a-f\d]{40}$/i.test(req.params.token) || typeof req.body.password !== 'string' || req.body.password.length < 8) {
+      return res.status(400).json({ success: false, message: 'Mã đặt lại không hợp lệ hoặc mật khẩu chưa đủ 8 ký tự.' });
+    }
     // 1. Lấy mã Token từ URL và băm ra để so sánh với DB
     const resetPasswordToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
 
     // 2. Tìm user có mã này và mã chưa hết hạn
     const user = await User.findOne({
+      isVerified: true,
       resetPasswordToken,
       resetPasswordExpire: { $gt: Date.now() } // $gt: greater than (còn hạn)
     });
@@ -533,13 +547,14 @@ export const resetPassword = async (req, res) => {
 
     // 3. Đổi mật khẩu mới
     const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(req.body.password, salt);
-
-    // 4. Xóa mã token cũ đi (để không dùng lại được nữa)
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpire = undefined;
-
-    await user.save();
+    const password = await bcrypt.hash(req.body.password, salt);
+    // Consume exactly this still-valid token in the same write as the password.
+    const updated = await User.findOneAndUpdate(
+      { _id: user._id, isVerified: true, resetPasswordToken, resetPasswordExpire: { $gt: new Date() } },
+      { $set: { password }, $unset: { resetPasswordToken: 1, resetPasswordExpire: 1 } },
+      { new: true }
+    );
+    if (!updated) return res.status(409).json({ success: false, message: 'Mã đặt lại đã được sử dụng, thay đổi hoặc hết hạn.' });
 
     res.status(200).json({ success: true, message: 'Đổi mật khẩu thành công! Bạn có thể đăng nhập ngay.' });
 
@@ -666,12 +681,13 @@ export const googleLogin = async (req, res) => {
   try {
     const { accessToken } = req.body;
 
-    if (!accessToken) {
+    if (typeof accessToken !== 'string' || !accessToken.trim() || accessToken.length > 4096) {
       return res.status(400).json({ success: false, message: 'Thiếu accessToken Google!' });
     }
 
     // Gọi API của Google để lấy thông tin user
     const response = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+      signal: AbortSignal.timeout(10000),
       headers: {
         Authorization: `Bearer ${accessToken}`
       }
@@ -682,9 +698,9 @@ export const googleLogin = async (req, res) => {
     }
 
     const googleUser = await response.json();
-    const { email, email_verified: emailVerified, name, picture } = googleUser;
+    const { email, email_verified: emailVerified, name } = googleUser;
 
-    if (!email || !emailVerified) {
+    if (typeof email !== 'string' || !email.trim() || emailVerified !== true) {
       return res.status(400).json({ success: false, message: 'Không thể lấy email từ tài khoản Google này!' });
     }
 
@@ -710,12 +726,21 @@ export const googleLogin = async (req, res) => {
       await user.save();
       console.log(`✅ Đã tạo tài khoản mới bằng Google cho: ${normalizedEmail}`);
     } else {
-      // Nếu user đã tồn tại nhưng chưa verified
+      // A pre-registered email can contain a password chosen by someone else.
+      // Verified Google ownership must invalidate every pending credential.
       if (!user.isVerified) {
-        user.isVerified = true;
-        user.verifyOtp = undefined;
-        user.otpExpires = undefined;
-        await user.save();
+        const password = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10);
+        const verified = await User.findOneAndUpdate(
+          { _id: user._id, isVerified: false },
+          {
+            $set: { isVerified: true, password, role: 'customer', name: name || 'Google User' },
+            $unset: { verifyOtp: 1, otpExpires: 1, resetPasswordToken: 1, resetPasswordExpire: 1 }
+          },
+          { new: true, runValidators: true }
+        );
+        // Do not undo credentials if another verification finished first.
+        user = verified || await User.findById(user._id);
+        if (!user?.isVerified) return res.status(409).json({ success: false, message: 'Tài khoản vừa thay đổi. Vui lòng đăng nhập lại.' });
         console.log(`✅ Đã xác thực tài khoản qua Google cho: ${normalizedEmail}`);
       }
     }

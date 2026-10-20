@@ -1,6 +1,7 @@
 import Product from '../models/productsModel.js';
 import Category from '../models/categoryModel.js';
 import mongoose from 'mongoose';
+import { productInput, badRequest, enumFilter, queryText, pagination } from '../utils/adminQuery.js';
 
 const escapeRegex = (value = '') => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -13,164 +14,67 @@ const buildProductSort = (sort) => {
 
 // 🟢 HÀM THÊM SẢN PHẨM MỚI
 export const createProduct = async (req, res) => {
-    try {
-        const { name, price, description, category_id, stock, brand, specs, isTrending } = req.body;
+  try {
+    const data = productInput(req.body);
+    if (!await Category.exists({ _id: data.category_id })) throw badRequest('Danh mục không tồn tại.');
+    const images = (req.files || []).map(file => file.path);
+    const product = await Product.create({ ...data, images, imageUrl: images[0] || '' });
+    return res.status(201).json({ success: true, data: product, message: 'Đã thêm sản phẩm.' });
+  } catch (error) {
+    return res.status(error.status || 500).json({ success: false, message: error.status ? error.message : 'Không thể tạo sản phẩm.' });
+  }
+};
 
-        // 1. Xử lý nhiều ảnh từ Cloudinary (Sử dụng req.files thay vì req.file)
-        let imageUrl = '';
-        let images = [];
-
-        if (req.files && req.files.length > 0) {
-            // Lấy tất cả các đường dẫn ảnh trả về từ Cloudinary
-            images = req.files.map(file => file.path);
-            // Mặc định lấy ảnh đầu tiên làm ảnh đại diện hiển thị ở ngoài danh sách
-            imageUrl = images[0];
-        }
-
-        // 2. Kiểm tra các trường bắt buộc
-        if (!name || !price || !category_id) {
-            return res.status(400).json({
-                success: false,
-                message: 'Vui lòng nhập tên, giá và chọn danh mục!'
-            });
-        }
-
-        // 3. Kiểm tra ký tự đặc biệt trong tên
-        const specialChars = /[@#$^&*_+=\[\]{};'|<>?]+/;
-        if (specialChars.test(name)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Tên sản phẩm không được chứa ký tự đặc biệt!'
-            });
-        }
-
-        // 4. Kiểm tra logic giá và tồn kho
-        const numPrice = Number(price);
-        if (Number.isNaN(numPrice) || numPrice <= 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'Giá tiền phải là số lớn hơn 0!'
-            });
-        }
-
-        const numStock = Number(stock || 0);
-        if (Number.isNaN(numStock) || numStock < 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'Số lượng kho không hợp lệ!'
-            });
-        }
-
-        // 5. Kiểm tra ID danh mục hợp lệ
-        if (!mongoose.Types.ObjectId.isValid(category_id)) {
-            return res.status(400).json({
-                success: false,
-                message: 'ID danh mục không đúng định dạng!'
-            });
-        }
-
-        const categoryExists = await Category.findById(category_id);
-        if (!categoryExists) {
-            return res.status(404).json({
-                success: false,
-                message: 'Danh mục không tồn tại!'
-            });
-        }
-
-        // 6. Lưu vào Database
-        const newProduct = new Product({
-            name,
-            price: numPrice,
-            description,
-            specs, // Nhận văn bản từ Textarea (đã sửa ở Model thành String)
-            category_id,
-            stock: numStock,
-            imageUrl,
-            images, // Lưu mảng ảnh bổ sung
-            brand,
-            isTrending: isTrending === 'true' || isTrending === true
-        });
-
-        const savedProduct = await newProduct.save();
-
-        return res.status(201).json({
-            success: true,
-            message: 'Thêm sản phẩm thành công!',
-            data: savedProduct
-        });
-    } catch (error) {
-        console.error("❌ Lỗi createProduct:", error);
-        return res.status(500).json({
-            success: false,
-            message: 'Lỗi Server!',
-            error: error.message
-        });
-    }
-}
-
-// 🟢 HÀM CẬP NHẬT SẢN PHẨM
 export const updateProduct = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const updateData = { ...req.body };
-
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({
-                success: false,
-                message: 'ID Sản phẩm không hợp lệ!'
-            });
-        }
-
-        // 1. Kiểm tra nếu có tải lên bộ ảnh mới
-        if (req.files && req.files.length > 0) {
-            const newImages = req.files.map(file => file.path);
-            updateData.images = newImages; // Thay thế mảng ảnh cũ bằng mảng mới
-            updateData.imageUrl = newImages[0]; // Cập nhật ảnh đại diện mới
-        }
-
-        // 2. Xử lý logic Trending
-        if (updateData.isTrending !== undefined) {
-            updateData.isTrending = updateData.isTrending === 'true' || updateData.isTrending === true;
-        }
-
-        // 3. Loại bỏ dữ liệu rác
-        Object.keys(updateData).forEach(key => updateData[key] === undefined && delete updateData[key]);
-
-        // 4. Tiến hành cập nhật
-        const updatedProduct = await Product.findByIdAndUpdate(
-            id, 
-            { $set: updateData }, 
-            { new: true, runValidators: true }
-        );
-
-        if (!updatedProduct) {
-            return res.status(404).json({
-                success: false,
-                message: 'Không tìm thấy sản phẩm để cập nhật!'
-            });
-        }
-
-        return res.status(200).json({
-            success: true,
-            message: 'Cập nhật sản phẩm thành công!',
-            data: updatedProduct
-        });
-
-    } catch (error) {
-        console.error('❌ Lỗi updateProduct:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Lỗi Server!',
-            error: error.message
-        });
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) throw badRequest('Mã sản phẩm không hợp lệ.');
+    const data = productInput(req.body, true);
+    const filter = { _id: req.params.id };
+    if (data.stock !== undefined) {
+      // Compare-and-set in the write itself: checkout can change stock after the read.
+      const expected = req.body.expectedStock;
+      if (expected === undefined) return res.status(409).json({ success: false, message: 'Vui lòng tải lại sản phẩm trước khi thay đổi tồn kho.' });
+      const parsed = productInput({ stock: expected }, true);
+      filter.stock = parsed.stock;
     }
-}
-
+    if (data.category_id && !await Category.exists({ _id: data.category_id })) throw badRequest('Danh mục không tồn tại.');
+    const current = await Product.findById(req.params.id);
+    if (!current) return res.status(404).json({ success: false, message: 'Sản phẩm không còn tồn tại.' });
+    if (req.body.existingImages !== undefined) {
+      let retained;
+      try { retained = JSON.parse(req.body.existingImages); } catch { throw badRequest('Danh sách ảnh không hợp lệ.'); }
+      const previous = current.images?.length ? current.images : (current.imageUrl ? [current.imageUrl] : []);
+      if (!Array.isArray(retained) || retained.some(url => typeof url !== 'string' || !previous.includes(url))) throw badRequest('Ảnh giữ lại phải thuộc sản phẩm này.');
+      data.images = [...new Set(retained), ...(req.files || []).map(file => file.path)];
+    } else if (req.files?.length) {
+      data.images = req.files.map(file => file.path);
+    }
+    if (data.images) {
+      if (data.images.length > 5) throw badRequest('Mỗi sản phẩm có tối đa 5 ảnh.');
+      data.imageUrl = data.images[0] || '';
+    }
+    const product = await Product.findOneAndUpdate(filter, { $set: data }, { new: true, runValidators: true });
+    if (!product) return res.status(409).json({ success: false, message: 'Sản phẩm hoặc tồn kho vừa thay đổi. Hãy đóng form, làm mới danh sách và kiểm tra lại trước khi lưu.' });
+    return res.json({ success: true, data: product, message: 'Đã cập nhật sản phẩm.' });
+  } catch (error) {
+    return res.status(error.status || 500).json({ success: false, message: error.status ? error.message : 'Không thể cập nhật sản phẩm.' });
+  }
+};
 
 export const getAllProduct = async (req, res) => {
     try {
         const { category, page, limit, search, sort } = req.query;
         let filter = {};
+        const stockFilter = enumFilter(req.query.stock, ['in', 'low', 'out']);
+        if (stockFilter === 'in') filter.stock = { $gt: 0 };
+        if (stockFilter === 'low') filter.stock = { $gt: 0, $lte: 5 };
+        if (stockFilter === 'out') filter.stock = { $lte: 0 };
+        queryText(search);
+        const categoryId = queryText(req.query.categoryId, 24);
+        if (categoryId) {
+            if (!mongoose.Types.ObjectId.isValid(categoryId)) throw badRequest('Danh mục không hợp lệ.');
+            filter.category_id = categoryId;
+        }
 
         if (category) {
             const foundCategory = await Category.findOne({ slug: category });
@@ -202,9 +106,10 @@ export const getAllProduct = async (req, res) => {
         // Nếu Frontend truyền lên số 'page', ta mới phân trang (Giữ an toàn lùi cho các trang Cũ)
         let totalItems = 0;
         if (page) {
-            currentPage = Math.max(parseInt(page) || 1, 1);
-            const parsedLimit = Math.min(Math.max(parseInt(limit) || 10, 1), 50);
-            const skip = (currentPage - 1) * parsedLimit;
+            const paging = pagination({ page, limit });
+            currentPage = paging.page;
+            const parsedLimit = paging.limit;
+            const skip = paging.skip;
             
             totalItems = await Product.countDocuments(filter);
             totalPages = Math.ceil(totalItems / parsedLimit) || 1;
@@ -226,7 +131,7 @@ export const getAllProduct = async (req, res) => {
         });
     } catch (error) {
         console.error("Lỗi getAllProduct:", error);
-        return res.status(500).json({ success: false, message: 'Lỗi Server!' });
+        return res.status(error.status || 500).json({ success: false, message: error.status ? error.message : 'Lỗi Server!' });
     }
 }
 

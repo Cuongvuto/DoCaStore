@@ -8,17 +8,17 @@ const CategoryManager = () => {
   const [flatCategories, setFlatCategories] = useState([]);
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({ 
-    name: '', 
+  const [formData, setFormData] = useState({
+    name: '',
     parentId: '',
     description: '',
     isActive: true,
     sortOrder: 0
   });
-  
+
   // State quản lý UI
   const [expandedCategoryId, setExpandedCategoryId] = useState(null); // Quản lý đóng/mở Bảng Sản Phẩm
   const [expandedTreeIds, setExpandedTreeIds] = useState([]); // 🟢 Quản lý đóng/mở Cây Danh Mục Con
@@ -59,17 +59,17 @@ const CategoryManager = () => {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData({ 
-      ...formData, 
-      [name]: type === 'checkbox' ? checked : value 
+    setFormData({
+      ...formData,
+      [name]: type === 'checkbox' ? checked : value
     });
   };
 
   const openModal = (category = null) => {
     if (category) {
       setEditingId(category._id);
-      setFormData({ 
-        name: category.name, 
+      setFormData({
+        name: category.name,
         parentId: category.parentId?._id || category.parentId || '',
         description: category.description || '',
         isActive: category.isActive !== false,
@@ -77,8 +77,8 @@ const CategoryManager = () => {
       });
     } else {
       setEditingId(null);
-      setFormData({ 
-        name: '', 
+      setFormData({
+        name: '',
         parentId: '',
         description: '',
         isActive: true,
@@ -117,14 +117,14 @@ const CategoryManager = () => {
         toast.success('Thêm danh mục thành công!');
       }
       closeModal();
-      fetchCategories(); 
+      fetchCategories();
     } catch (error) {
       toast.error('Lỗi: ' + (error.response?.data?.message || error.message));
     }
   };
 
   const handleDeleteCategory = async (id) => {
-    if (window.confirm('Sếp có chắc chắn muốn xóa danh mục này?')) {
+    if (window.confirm('Bạn có chắc chắn muốn xóa danh mục này?')) {
       try {
         await axiosClient.delete(`/category/${id}`);
         toast.success('Đã xóa danh mục!');
@@ -152,15 +152,15 @@ const CategoryManager = () => {
       setExpandedCategoryId(null);
     } else {
       setExpandedCategoryId(categoryId);
-      setCurrentPage(1); 
+      setCurrentPage(1);
     }
   };
 
   // 🟢 1. Hàm đóng mở Cây Danh Mục (Drop down)
   const toggleTreeExpand = (categoryId) => {
-    setExpandedTreeIds(prev => 
-      prev.includes(categoryId) 
-        ? prev.filter(id => id !== categoryId) 
+    setExpandedTreeIds(prev =>
+      prev.includes(categoryId)
+        ? prev.filter(id => id !== categoryId)
         : [...prev, categoryId]
     );
   };
@@ -185,10 +185,10 @@ const CategoryManager = () => {
 
   const renderCategories = (categories, level = 0) => {
     return categories.map((cat) => {
-      
+
       // Lấy toàn bộ ID (Cha + Con)
       const allRelevantCatIds = getCategoryIdsAndChildren(cat);
-      
+
       // Lọc Sản phẩm dựa trên mảng ID vừa lấy (Tổng sản phẩm)
       const categoryProducts = products.filter(p => {
         if (!p) return false;
@@ -199,22 +199,22 @@ const CategoryManager = () => {
       const hasChildren = cat.children && cat.children.length > 0;
       const isTreeExpanded = expandedTreeIds.includes(cat._id);
       const isProductExpanded = expandedCategoryId === cat._id;
-      
+
       const totalPages = Math.ceil(categoryProducts.length / itemsPerPage);
       const currentProducts = categoryProducts.slice(
-        (currentPage - 1) * itemsPerPage, 
+        (currentPage - 1) * itemsPerPage,
         currentPage * itemsPerPage
       );
 
       return (
         <React.Fragment key={cat._id}>
-          <div 
-            className={`bg-[#202028] rounded-xl shadow-sm border ${!cat.isActive ? 'border-dashed border-gray-700 opacity-70' : 'border-gray-700'} overflow-hidden transition-all duration-200 hover:shadow-md mb-3`}
+          <div
+            className={`bg-[#19211f] rounded-xl shadow-sm border ${!cat.isActive ? 'border-dashed border-gray-700 opacity-70' : 'border-gray-700'} overflow-hidden transition-all duration-200 hover:shadow-md mb-3`}
             style={{ marginLeft: `${Math.min(level, 3) * 1.5}rem` }}
           >
-            <div className={`flex flex-col sm:flex-row sm:justify-between sm:items-center p-4 transition-colors ${isTreeExpanded || isProductExpanded ? 'bg-slate-50 border-b border-gray-700' : 'hover:bg-[#151419]'}`}>
-              
-              <div 
+            <div className={`flex flex-col sm:flex-row sm:justify-between sm:items-center p-4 transition-colors ${isTreeExpanded || isProductExpanded ? 'bg-slate-50 border-b border-gray-700' : 'hover:bg-[#101514]'}`}>
+
+              <div
                 className={`flex items-center gap-3 select-none flex-1 mb-3 sm:mb-0 ${hasChildren ? 'cursor-pointer' : ''}`}
                 onClick={() => hasChildren ? toggleTreeExpand(cat._id) : toggleExpandProducts(cat._id)}
               >
@@ -229,7 +229,7 @@ const CategoryManager = () => {
 
                 <div className="flex flex-col">
                   <h3 className="text-lg font-bold text-white m-0 flex items-center gap-2">
-                    {level > 0 && <span className="text-gray-400 font-normal">|_</span>} 
+                    {level > 0 && <span className="text-gray-400 font-normal">|_</span>}
                     {cat.name}
                     {!cat.isActive && <span className="text-[10px] bg-gray-700 text-gray-300 px-2 py-0.5 rounded uppercase font-semibold">Đang Ẩn</span>}
                   </h3>
@@ -237,7 +237,7 @@ const CategoryManager = () => {
                      <span className="text-xs text-gray-400 mt-1 line-clamp-1">{cat.description}</span>
                   )}
                 </div>
-                
+
                 {/* Badge hiển thị TỔNG SỐ LƯỢNG SP */}
                 <span className="flex items-center gap-1 text-xs font-medium bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full border border-blue-100 ml-2">
                   <Package className="w-3.5 h-3.5" />
@@ -246,20 +246,20 @@ const CategoryManager = () => {
               </div>
 
               <div className="flex items-center flex-wrap gap-2 shrink-0">
-                <button 
-                  onClick={() => toggleExpandProducts(cat._id)} 
-                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors border ${isProductExpanded ? 'bg-[#2a2a35] text-white border-gray-600' : 'text-gray-400 bg-[#2a2a35]/50 hover:bg-[#2a2a35] border-transparent'}`}
+                <button
+                  onClick={() => toggleExpandProducts(cat._id)}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors border ${isProductExpanded ? 'bg-[#202c28] text-white border-gray-600' : 'text-gray-400 bg-[#202c28]/50 hover:bg-[#202c28] border-transparent'}`}
                 >
                   {isProductExpanded ? 'Đóng DS' : 'Xem SP'}
                 </button>
-                <button 
-                  onClick={() => openModal(cat)} 
+                <button
+                  onClick={() => openModal(cat)}
                   className="flex items-center px-3 py-1.5 text-xs font-bold text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 rounded-lg transition-colors border border-amber-500/20"
                 >
                   <Edit className="w-3.5 h-3.5 mr-1" /> Sửa
                 </button>
-                <button 
-                  onClick={() => handleDeleteCategory(cat._id)} 
+                <button
+                  onClick={() => handleDeleteCategory(cat._id)}
                   className="flex items-center px-3 py-1.5 text-xs font-bold text-red-400 bg-red-500/10 hover:bg-red-500/20 rounded-lg transition-colors border border-red-500/20"
                 >
                   <Trash2 className="w-3.5 h-3.5 mr-1" /> Xóa
@@ -271,10 +271,10 @@ const CategoryManager = () => {
             {isProductExpanded && (
               <div className="p-4 bg-slate-50/50 animate-in fade-in slide-in-from-top-2 duration-200">
                 {categoryProducts.length > 0 ? (
-                  <div className="overflow-x-auto rounded-lg border border-gray-700 bg-[#202028] shadow-sm">
+                  <div className="overflow-x-auto rounded-lg border border-gray-700 bg-[#19211f] shadow-sm">
                     <table className="w-full text-left border-collapse text-sm">
                       <thead>
-                        <tr className="bg-[#151419] border-b border-gray-700 font-medium text-gray-400">
+                        <tr className="bg-[#101514] border-b border-gray-700 font-medium text-gray-400">
                           <th className="p-3 w-16">Ảnh</th>
                           <th className="p-3">Tên Sản Phẩm</th>
                           <th className="p-3 text-right">Giá bán</th>
@@ -284,12 +284,12 @@ const CategoryManager = () => {
                       </thead>
                       <tbody className="divide-y divide-gray-100">
                         {currentProducts.map(prod => (
-                          <tr key={prod._id} className="hover:bg-[#151419]/80">
+                          <tr key={prod._id} className="hover:bg-[#101514]/80">
                             <td className="p-3">
-                              <img 
+                              <img
                                 src={(Array.isArray(prod.images) && prod.images.length > 0) ? prod.images[0] : (prod.imageUrl || 'https://picsum.photos/40')}
-                                alt={prod?.name || 'Sản phẩm'} 
-                                className="w-10 h-10 object-cover rounded shadow-sm border border-gray-100" 
+                                alt={prod?.name || 'Sản phẩm'}
+                                className="w-10 h-10 object-cover rounded shadow-sm border border-gray-100"
                               />
                             </td>
                             <td className="p-3">
@@ -310,7 +310,7 @@ const CategoryManager = () => {
                               </span>
                             </td>
                             <td className="p-3 text-center">
-                              <button 
+                              <button
                                 onClick={() => handleDeleteProduct(prod._id)}
                                 className="p-1.5 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-md transition-colors"
                                 title="Xóa sản phẩm này"
@@ -324,7 +324,7 @@ const CategoryManager = () => {
                     </table>
 
                     {totalPages > 1 && (
-                      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-700 bg-[#151419]">
+                      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-700 bg-[#101514]">
                         <span className="text-sm text-gray-300">
                           Đang xem <span className="font-semibold">{currentProducts.length}</span> sp / Tổng số <span className="font-semibold">{categoryProducts.length}</span>
                         </span>
@@ -332,7 +332,7 @@ const CategoryManager = () => {
                           <button
                             disabled={currentPage === 1}
                             onClick={() => setCurrentPage(p => p - 1)}
-                            className="p-1.5 rounded border border-gray-700 bg-[#202028] text-gray-300 disabled:opacity-50 hover:bg-gray-800"
+                            className="p-1.5 rounded border border-gray-700 bg-[#19211f] text-gray-300 disabled:opacity-50 hover:bg-gray-800"
                           >
                             <ChevronLeft className="w-4 h-4" />
                           </button>
@@ -342,7 +342,7 @@ const CategoryManager = () => {
                           <button
                             disabled={currentPage === totalPages}
                             onClick={() => setCurrentPage(p => p + 1)}
-                            className="p-1.5 rounded border border-gray-700 bg-[#202028] text-gray-300 disabled:opacity-50 hover:bg-gray-800"
+                            className="p-1.5 rounded border border-gray-700 bg-[#19211f] text-gray-300 disabled:opacity-50 hover:bg-gray-800"
                           >
                             <ChevronRightIcon className="w-4 h-4" />
                           </button>
@@ -351,7 +351,7 @@ const CategoryManager = () => {
                     )}
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center p-6 text-gray-400 bg-[#202028] rounded-lg border border-dashed border-gray-700">
+                  <div className="flex flex-col items-center justify-center p-6 text-gray-400 bg-[#19211f] rounded-lg border border-dashed border-gray-700">
                     <Package className="w-8 h-8 text-gray-300 mb-2" />
                     <p className="text-sm">Chưa có sản phẩm nào thuộc khu vực này.</p>
                   </div>
@@ -359,7 +359,7 @@ const CategoryManager = () => {
               </div>
             )}
           </div>
-          
+
           {/* 🟢 HIỂN THỊ CÁC DANH MỤC CON (Khi bấm mũi tên Dropdown) */}
           {hasChildren && isTreeExpanded && (
              <div className="animate-in fade-in slide-in-from-top-2 duration-300">
@@ -378,7 +378,7 @@ const CategoryManager = () => {
           <FolderTree className="w-6 h-6 text-[#5a8c76]" />
           Quản lý Danh Mục
         </h1>
-        <button 
+        <button
           onClick={() => openModal()}
           className="w-full sm:w-auto flex items-center justify-center px-4 py-2.5 bg-[#5a8c76] text-white rounded-xl hover:bg-[#4a7562] transition-all shadow-lg shadow-[#5a8c76]/20 font-bold text-sm"
         >
@@ -388,22 +388,22 @@ const CategoryManager = () => {
 
       <div className="space-y-4">
         {isLoading ? (
-          <div className="p-12 text-center text-gray-500 bg-[#202028] rounded-2xl shadow-sm border border-gray-700 font-medium">
+          <div className="p-12 text-center text-gray-500 bg-[#19211f] rounded-2xl shadow-sm border border-gray-700 font-medium">
             Đang tải dữ liệu...
           </div>
         ) : categoriesTree.length === 0 ? (
-          <div className="p-12 text-center text-gray-500 bg-[#202028] rounded-2xl shadow-sm border border-dashed border-gray-700 font-medium">
+          <div className="p-12 text-center text-gray-500 bg-[#19211f] rounded-2xl shadow-sm border border-dashed border-gray-700 font-medium">
             Chưa có danh mục nào. Hãy thêm mới nhé!
           </div>
         ) : (
-          renderCategories(categoriesTree, 0) 
+          renderCategories(categoriesTree, 0)
         )}
       </div>
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-[#202028] rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col border border-gray-700 transform transition-all">
-            <div className="flex justify-between items-center p-5 border-b border-gray-700 bg-[#202028]">
+          <div className="bg-[#19211f] rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col border border-gray-700 transform transition-all">
+            <div className="flex justify-between items-center p-5 border-b border-gray-700 bg-[#19211f]">
               <h2 className="text-lg md:text-xl font-bold text-white tracking-wide">
                 {editingId ? 'Cập Nhật Danh Mục' : 'Thêm Danh Mục Mới'}
               </h2>
@@ -411,20 +411,20 @@ const CategoryManager = () => {
                 <X className="w-6 h-6" />
               </button>
             </div>
-            
+
             <form onSubmit={handleSubmit} className="p-5 md:p-6 max-h-[80vh] overflow-y-auto custom-scrollbar space-y-5">
-              
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5">
                 <div className="sm:col-span-2">
                   <label className="block text-xs font-bold text-gray-400 mb-1.5 uppercase tracking-tight">Tên danh mục <span className="text-red-500">*</span></label>
-                  <input 
-                    type="text" 
-                    name="name" 
-                    value={formData.name} 
-                    onChange={handleInputChange} 
-                    required 
-                    className="w-full p-2.5 bg-[#151419] border border-gray-700 rounded-xl focus:ring-2 focus:ring-[#5a8c76] outline-none text-white text-sm transition-all" 
-                    placeholder="VD: Phụ Kiện Câu" 
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full p-2.5 bg-[#101514] border border-gray-700 rounded-xl focus:ring-2 focus:ring-[#5a8c76] outline-none text-white text-sm transition-all"
+                    placeholder="VD: Phụ Kiện Câu"
                     autoFocus
                   />
                 </div>
@@ -435,7 +435,7 @@ const CategoryManager = () => {
                     name="parentId"
                     value={formData.parentId}
                     onChange={handleInputChange}
-                    className="w-full p-2.5 bg-[#151419] border border-gray-700 rounded-xl focus:ring-2 focus:ring-[#5a8c76] outline-none text-white text-sm transition-all"
+                    className="w-full p-2.5 bg-[#101514] border border-gray-700 rounded-xl focus:ring-2 focus:ring-[#5a8c76] outline-none text-white text-sm transition-all"
                   >
                     <option value="">-- Không có (Làm danh mục gốc) --</option>
                     {flatCategories
@@ -455,31 +455,31 @@ const CategoryManager = () => {
                     value={formData.description}
                     onChange={handleInputChange}
                     rows="2"
-                    className="w-full p-2.5 bg-[#151419] border border-gray-700 rounded-xl focus:ring-2 focus:ring-[#5a8c76] outline-none text-white text-sm transition-all resize-none"
+                    className="w-full p-2.5 bg-[#101514] border border-gray-700 rounded-xl focus:ring-2 focus:ring-[#5a8c76] outline-none text-white text-sm transition-all resize-none"
                     placeholder="Mô tả công dụng hoặc thông tin phụ..."
                   ></textarea>
                 </div>
 
                 <div className="sm:col-span-1">
                   <label className="block text-xs font-bold text-gray-400 mb-1.5 uppercase tracking-tight">Thứ tự hiển thị</label>
-                  <input 
-                    type="number" 
-                    name="sortOrder" 
-                    value={formData.sortOrder} 
-                    onChange={handleInputChange} 
+                  <input
+                    type="number"
+                    name="sortOrder"
+                    value={formData.sortOrder}
+                    onChange={handleInputChange}
                     min="0"
-                    className="w-full p-2.5 bg-[#151419] border border-gray-700 rounded-xl focus:ring-2 focus:ring-[#5a8c76] outline-none text-white text-sm transition-all" 
+                    className="w-full p-2.5 bg-[#101514] border border-gray-700 rounded-xl focus:ring-2 focus:ring-[#5a8c76] outline-none text-white text-sm transition-all"
                   />
                   <p className="text-[10px] text-gray-500 mt-1 italic">Số nhỏ xếp trước (0, 1, 2...)</p>
                 </div>
 
                 <div className="sm:col-span-1 flex items-center sm:pt-6">
                   <label className="flex items-center cursor-pointer gap-3 group">
-                    <input 
-                      type="checkbox" 
-                      name="isActive" 
-                      checked={formData.isActive} 
-                      onChange={handleInputChange} 
+                    <input
+                      type="checkbox"
+                      name="isActive"
+                      checked={formData.isActive}
+                      onChange={handleInputChange}
                       className="w-5 h-5 accent-[#5a8c76] border-gray-700 rounded cursor-pointer"
                     />
                     <span className="text-sm font-bold text-gray-300 group-hover:text-[#5a8c76] transition-colors select-none uppercase tracking-tighter">
@@ -490,7 +490,7 @@ const CategoryManager = () => {
               </div>
 
               <div className="flex flex-col sm:flex-row justify-end gap-3 pt-6 border-t border-gray-700">
-                <button type="button" onClick={closeModal} className="w-full sm:w-auto px-6 py-2.5 text-gray-300 bg-[#151419] border border-gray-700 hover:bg-gray-800 rounded-xl transition-all font-bold text-sm">
+                <button type="button" onClick={closeModal} className="w-full sm:w-auto px-6 py-2.5 text-gray-300 bg-[#101514] border border-gray-700 hover:bg-gray-800 rounded-xl transition-all font-bold text-sm">
                   Hủy bỏ
                 </button>
                 <button type="submit" className="w-full sm:w-auto px-8 py-2.5 text-white bg-[#5a8c76] hover:bg-[#4a7562] rounded-xl transition-all font-bold shadow-lg shadow-[#5a8c76]/20 text-sm">

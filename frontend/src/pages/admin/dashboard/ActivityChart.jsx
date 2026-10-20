@@ -1,129 +1,44 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import axiosClient from '../../../api/axiosClient';
+import { LoadingState, ErrorState, EmptyState } from '../components/AdminUI';
+import { money } from '../adminConfig';
 
-const PERIODS = [
-  { key: 'daily',   label: 'Hàng ngày' },
-  { key: 'weekly',  label: 'Hàng tuần' },
-  { key: 'monthly', label: 'Hàng tháng' },
-];
-
-const ActivityChart = () => {
-  const [period, setPeriod]       = useState('weekly');
-  const [chartData, setChartData] = useState([]);
-  const [loading, setLoading]     = useState(true);
-  const [open, setOpen]           = useState(false);
-  const dropdownRef               = useRef(null);
-
-  // Close dropdown when clicking outside
+export default function ActivityChart() {
+  const [basis, setBasis] = useState('completedAt');
+  const [period, setPeriod] = useState('daily');
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [version, setVersion] = useState(0);
   useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  // Fetch chart data whenever period changes
-  useEffect(() => {
-    const fetchChartData = async () => {
-      setLoading(true);
+    const controller = new AbortController();
+    const load = async () => {
+      setLoading(true); setError('');
       try {
-        const res = await axiosClient.get(`/dashboard/activity?period=${period}`);
-        if (res.data?.success) {
-          setChartData(res.data.data);
-        }
-      } catch (err) {
-        console.error('Error fetching activity chart data:', err);
-      } finally {
-        setLoading(false);
-      }
+        const response = await axiosClient.get('/dashboard/activity', { params: { period, basis }, signal: controller.signal });
+        if (!controller.signal.aborted) setData(response.data.data);
+      } catch (error) {
+        if (!controller.signal.aborted) setError(error.response?.data?.message || 'Không thể tải biểu đồ.');
+      } finally { if (!controller.signal.aborted) setLoading(false); }
     };
-    fetchChartData();
-  }, [period]);
-
-  const currentLabel = PERIODS.find(p => p.key === period)?.label;
-
-  return (
-    <div className="bg-[#202028] rounded-xl p-5 h-full">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold text-white">Hoạt động</h2>
-
-        {/* Period Dropdown */}
-        <div className="relative" ref={dropdownRef}>
-          <button
-            onClick={() => setOpen(prev => !prev)}
-            className="bg-gray-700/50 text-gray-300 text-sm px-4 py-1.5 rounded-full flex items-center gap-2 cursor-pointer hover:bg-gray-700 transition-colors select-none"
-          >
-            {currentLabel}
-            <svg
-              className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
-              fill="none" stroke="currentColor" viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-
-          {open && (
-            <div className="absolute right-0 mt-2 w-36 bg-[#2a2a35] border border-gray-700 rounded-xl shadow-xl z-50 overflow-hidden">
-              {PERIODS.map((p) => (
-                <button
-                  key={p.key}
-                  onClick={() => { setPeriod(p.key); setOpen(false); }}
-                  className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
-                    period === p.key
-                      ? 'bg-[#7294ff]/20 text-[#7294ff] font-semibold'
-                      : 'text-gray-300 hover:bg-gray-700/60'
-                  }`}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Chart area */}
-      <div className="h-[250px] w-full">
-        {loading ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="w-8 h-8 border-4 border-[#7294ff] border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" />
-              <XAxis
-                dataKey="name"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: '#9ca3af', fontSize: 12 }}
-                dy={10}
-              />
-              <YAxis
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: '#9ca3af', fontSize: 12 }}
-                tickFormatter={(value) => `${value / 1000000}M`}
-              />
-              <Tooltip
-                cursor={{ fill: '#374151', opacity: 0.4 }}
-                contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#fff' }}
-                itemStyle={{ color: '#7294ff' }}
-                formatter={(value) => [`${new Intl.NumberFormat('vi-VN').format(value)} ₫`, 'Doanh thu']}
-                labelStyle={{ color: '#9ca3af', marginBottom: '4px' }}
-              />
-              <Bar dataKey="value" fill="#7294ff" radius={[4, 4, 4, 4]} barSize={30} />
-            </BarChart>
-          </ResponsiveContainer>
-        )}
-      </div>
+    void load();
+    return () => controller.abort();
+  }, [period, basis, version]);
+  return <section className="admin-panel h-full">
+    <div className="admin-panel-header flex-wrap"><div><h2>Doanh thu theo kỳ</h2><p className="admin-muted text-xs mt-1">Giờ Việt Nam · Theo ngày hoàn tất/thu tiền chỉ gồm đơn có ghi nhận thời điểm</p></div>
+      <select aria-label="Cơ sở thống kê" value={basis} onChange={e => setBasis(e.target.value)}><option value="completedAt">Ngày hoàn tất</option><option value="paidAt">Ngày thu tiền (trừ đơn hủy)</option><option value="createdAt">Ngày đặt đơn đã giao</option></select>
+      <select aria-label="Kỳ thống kê doanh thu" value={period} onChange={e => setPeriod(e.target.value)}><option value="daily">7 ngày gần đây</option><option value="weekly">8 tuần gần đây</option><option value="monthly">12 tháng gần đây</option></select>
     </div>
-  );
-};
-
-export default ActivityChart;
-
+    <div className="p-5 h-[320px]">
+      {error ? <ErrorState message={error} onRetry={() => setVersion(value => value + 1)} /> : loading ? <LoadingState /> : !data.some(row => row.value > 0) ? <EmptyState title="Chưa có doanh thu trong kỳ" message="Thử chọn khoảng thời gian khác." /> :
+      <ResponsiveContainer width="100%" height="100%"><BarChart data={data} margin={{ top: 10, right: 0, left: 0, bottom: 5 }} accessibilityLayer>
+        <CartesianGrid vertical={false} stroke="#31413b" strokeDasharray="3 5" />
+        <XAxis dataKey="name" tick={{ fill: '#a6b7af', fontSize: 11 }} axisLine={false} tickLine={false} />
+        <YAxis width={58} tick={{ fill: '#a6b7af', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={value => new Intl.NumberFormat('vi-VN', { notation: 'compact' }).format(value)} />
+        <Tooltip contentStyle={{ backgroundColor: '#19211f', border: '1px solid #476453', borderRadius: 10, color: '#eef4f0' }} itemStyle={{ color: '#88d7ae' }} cursor={{ fill: '#ffffff08' }} formatter={value => [money(value), 'Doanh thu']} />
+        <Bar dataKey="value" fill="#88d7ae" radius={[5, 5, 0, 0]} maxBarSize={32} />
+      </BarChart></ResponsiveContainer>}
+    </div>
+  </section>;
+}

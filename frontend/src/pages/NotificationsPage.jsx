@@ -1,251 +1,106 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, Tag, Info, CheckCheck, BellOff, Circle, X } from 'lucide-react';
-import axiosClient from '../api/axiosClient';
-import { useNotification } from '../context/NotificationContext';
-import { toast } from 'sonner';
+import { ArrowRight, Bell, BellOff, Check, CheckCheck, ChevronRight, Clock3, Info, LifeBuoy, LoaderCircle, Package, RefreshCw, Tag, User, X } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { PurchaseAlert } from '../components/purchase/PurchaseUI';
+import { dateTime } from '../components/purchase/purchaseFormat';
+import useNotificationsFeed from '../components/notifications/useNotificationsFeed';
 import { toInternalPath } from '../utils/navigation';
+import './NotificationsPage.css';
 
-const Notifications = () => {
-  const [notifications, setNotifications] = useState([]);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [loading, setLoading] = useState(false);
-  
-  const [selectedNoti, setSelectedNoti] = useState(null);
-  
-  const { socket, decreaseUnreadCount, clearUnreadCount } = useNotification();
-
-  const fetchNotifications = async (pageNum = 1) => {
-    setLoading(true);
-    try {
-      const res = await axiosClient.get(`/notifications?page=${pageNum}&limit=10`);
-      if (res.data.success) {
-        if (pageNum === 1) {
-          setNotifications(res.data.data);
-        } else {
-          setNotifications(prev => [...prev, ...res.data.data]);
-        }
-        setTotalPages(res.data.totalPages);
-      }
-    } catch (error) {
-      console.error("Lỗi lấy thông báo:", error);
-      toast.error('Không thể tải thông báo!');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchNotifications(1);
-  }, []);
-
-  // Lắng nghe sự kiện cắm cờ Socket.io để Push Real-time
-  useEffect(() => {
-    if (!socket) return;
-
-    const handleNewNotification = (data) => {
-      if (data.noti) {
-        // Đẩy thẳng thông báo mới vào đầu danh sách UI không cần tải lại trang
-        setNotifications((prev) => [data.noti, ...prev]);
-      } else {
-        fetchNotifications(1);
-      }
-    };
-
-    socket.on('NEW_NOTIFICATION', handleNewNotification);
-    return () => socket.off('NEW_NOTIFICATION', handleNewNotification);
-  }, [socket]);
-
-  //  3. Viết lại hàm Click: Vừa mở Popup, vừa đánh dấu đã đọc
-  const handleNotificationClick = async (noti) => {
-    // Bước 1: Mở popup hiển thị thông tin ngay lập tức cho nóng
-    setSelectedNoti(noti);
-
-    // Bước 2: Nếu đọc rồi thì thôi, chưa đọc thì gọi API trừ số
-    if (noti.isRead) return; 
-
-    try {
-      await axiosClient.put(`/notifications/${noti._id}/read`);
-      setNotifications(prev => prev.map(n => n._id === noti._id ? { ...n, isRead: true } : n));
-      decreaseUnreadCount();
-    } catch (error) {
-      console.error("Lỗi đánh dấu đọc:", error);
-    }
-  };
-
-  const handleMarkAllAsRead = async () => {
-    try {
-      await axiosClient.put('/notifications/read-all');
-      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-      clearUnreadCount();
-      toast.success('Đã đánh dấu đọc tất cả!');
-    } catch {
-      toast.error('Có lỗi xảy ra!');
-    }
-  };
-
-  const formatTime = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-  };
-
-  const getIcon = (type) => {
-    switch (type) {
-      case 'order': return <Package size={24} className="text-blue-500" />;
-      case 'promotion': return <Tag size={24} className="text-yellow-500" />;
-      default: return <Info size={24} className="text-[#5a8c76]" />;
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-gray-50 py-10 relative">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        {/* -- HEADER TRANG -- */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-          <h1 className="text-2xl font-black text-gray-800 uppercase tracking-tight">
-            Thông báo của bạn
-          </h1>
-          <button 
-            onClick={handleMarkAllAsRead}
-            className="flex items-center gap-2 text-sm font-bold text-[#5a8c76] hover:text-green-800 transition-colors bg-white px-4 py-2 rounded-lg shadow-sm"
-          >
-            <CheckCheck size={18} />
-            Đánh dấu tất cả đã đọc
-          </button>
-        </div>
-
-        {/* -- DANH SÁCH THÔNG BÁO -- */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          {notifications.length === 0 && !loading ? (
-            <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-              <BellOff size={48} className="mb-4 opacity-50" />
-              <p className="font-semibold text-lg">Chưa có thông báo nào!</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-gray-50">
-              {notifications.map((noti) => (
-                <div 
-                  key={noti._id}
-                  onClick={() => handleNotificationClick(noti)} //  Gọi hàm mới truyền cả Object vào
-                  className={`relative p-5 cursor-pointer transition-colors flex gap-4 ${
-                    noti.isRead ? 'bg-white hover:bg-gray-50' : 'bg-[#5a8c76]/5 hover:bg-[#5a8c76]/10'
-                  }`}
-                >
-                  {!noti.isRead && (
-                    <div className="absolute top-1/2 -translate-y-1/2 left-2">
-                      <Circle size={10} className="fill-red-500 text-red-500" />
-                    </div>
-                  )}
-
-                  <div className={`p-3 rounded-xl h-fit flex-shrink-0 ml-3 sm:ml-0 ${noti.isRead ? 'bg-gray-50' : 'bg-white shadow-sm'}`}>
-                    {getIcon(noti.type)}
-                  </div>
-
-                  <div className="flex-1">
-                    <h3 className={`text-base mb-1 truncate ${noti.isRead ? 'text-gray-600 font-semibold' : 'text-gray-900 font-black'}`}>
-                      {noti.title}
-                    </h3>
-                    <p className={`text-sm mb-2 line-clamp-1 ${noti.isRead ? 'text-gray-500' : 'text-gray-700 font-medium'}`}>
-                      {noti.message}
-                    </p>
-                    <span className="text-[11px] text-gray-400 font-bold uppercase tracking-wider">
-                      {formatTime(noti.createdAt)}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* -- NÚT TẢI THÊM -- */}
-        {page < totalPages && (
-          <div className="mt-8 flex justify-center">
-            <button 
-              onClick={() => {
-                const nextPage = page + 1;
-                setPage(nextPage);
-                fetchNotifications(nextPage);
-              }}
-              disabled={loading}
-              className="px-6 py-2.5 bg-white border border-gray-200 text-gray-700 font-bold text-sm rounded-xl hover:bg-gray-50 transition-all shadow-sm disabled:opacity-50"
-            >
-              {loading ? 'Đang tải...' : 'Xem thêm thông báo'}
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/*  4. KHU VỰC MODAL (POPUP) HIỂN THỊ CHI TIẾT THÔNG BÁO */}
-      {selectedNoti && (
-        <div 
-          className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm transition-all" 
-          onClick={() => setSelectedNoti(null)} // Bấm ra ngoài rìa đen thì đóng Popup
-        >
-          <div 
-            className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden relative animate-in fade-in zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()} // Bấm vào trong khung trắng thì KHÔNG đóng
-          >
-            {/* Thanh Header của Popup */}
-            <div className="flex justify-between items-center p-5 border-b border-gray-50 bg-gray-50/50">
-              <div className="flex items-center gap-2 text-[#5a8c76] font-black uppercase text-sm">
-                {getIcon(selectedNoti.type)}
-                <span>Chi tiết thông báo</span>
-              </div>
-              <button 
-                onClick={() => setSelectedNoti(null)} 
-                className="p-1.5 hover:bg-red-50 hover:text-red-500 rounded-full transition-colors text-gray-400"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            
-            {/* Nội dung chính */}
-            <div className="p-6">
-              <h2 className="text-xl font-black text-gray-900 mb-2 leading-tight">
-                {selectedNoti.title}
-              </h2>
-              
-              <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-5 flex items-center gap-2">
-                <Circle size={6} className="fill-[#5a8c76] text-[#5a8c76]" /> 
-                {formatTime(selectedNoti.createdAt)}
-              </div>
-              
-              <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
-                <p className="text-gray-700 leading-relaxed text-sm whitespace-pre-wrap font-medium">
-                  {selectedNoti.message}
-                </p>
-              </div>
-              
-              {/* Nút hành động nếu có link đi kèm */}
-              {selectedNoti.linkUrl && (
-                <div className="mt-6">
-                  <Link 
-                    to={toInternalPath(selectedNoti.linkUrl)}
-                    className="flex justify-center items-center w-full py-3 bg-[#5a8c76] text-white rounded-xl font-black hover:bg-[#487360] transition-colors shadow-md active:scale-95"
-                    onClick={() => setSelectedNoti(null)} // Bấm link thì đóng popup luôn
-                  >
-                    XEM NGAY
-                  </Link>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Animation cho CSS */}
-      <style>{`
-        @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes zoom-in-95 { from { transform: scale(0.95); } to { transform: scale(1); } }
-        .animate-in { animation-duration: 200ms; animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1); animation-fill-mode: forwards; }
-        .fade-in { animation-name: fade-in; }
-        .zoom-in-95 { animation-name: zoom-in-95; }
-      `}</style>
-    </div>
-  );
+const types = {
+  order: { label: 'Đơn hàng', icon: Package, action: 'Xem đơn hàng' },
+  promotion: { label: 'Ưu đãi', icon: Tag, action: 'Khám phá ưu đãi' },
+  system: { label: 'Cửa hàng', icon: Info, action: 'Xem nội dung liên quan' },
 };
 
-export default Notifications;
+function NotificationIcon({ type, large = false }) {
+  const { icon: Icon } = types[type] || types.system;
+  return <span className={'notifications-icon notifications-icon-' + (types[type] ? type : 'system') + (large ? ' notifications-icon-large' : '')}><Icon size={large ? 27 : 21} aria-hidden="true" /></span>;
+}
+
+function NotificationDetails({ item, onClose, reading, readError, onRetry }) {
+  const dialog = useRef(null);
+  const opener = useRef(null);
+  const type = types[item.type] || types.system;
+  const path = toInternalPath(item.linkUrl, '');
+  useEffect(() => {
+    if (!opener.current) opener.current = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    if (!dialog.current.open) dialog.current.showModal();
+    return () => { document.body.style.overflow = previousOverflow; opener.current?.focus(); };
+  }, []);
+  const closeOnBackdrop = event => {
+    if (event.target !== event.currentTarget) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) onClose();
+  };
+  return <dialog ref={dialog} className="notifications-dialog" aria-labelledby="notification-title" onClose={onClose} onClick={closeOnBackdrop}>
+    <header className="notifications-dialog-header"><span>THÔNG BÁO TỪ DOCA STORE</span><button type="button" className="notifications-close" onClick={onClose} aria-label="Đóng thông báo" autoFocus><X size={19} /></button></header>
+    <div className="notifications-dialog-body"><NotificationIcon type={item.type} large /><span className="notifications-dialog-type">{type.label}</span><h2 id="notification-title">{item.title}</h2><time dateTime={item.createdAt}><Clock3 size={13} />{dateTime(item.createdAt)}</time>
+      <div className="notifications-message"><p>{item.message}</p></div>
+      {readError && <PurchaseAlert onRetry={onRetry} busy={reading}>{readError}</PurchaseAlert>}
+      <p className="notifications-read-state" role="status">{reading ? <><LoaderCircle size={14} className="animate-spin" />Đang đánh dấu đã đọc…</> : item.isRead ? <><CheckCheck size={14} />Đã đọc</> : <>Chưa đánh dấu đã đọc</>}</p>
+      <div className="notifications-dialog-actions">{path && <Link className="cart-button cart-button-primary" to={path} onClick={onClose}>{type.action}<ArrowRight size={16} /></Link>}<button type="button" className="cart-button cart-button-outline" onClick={onClose}>Đóng</button></div>
+    </div>
+  </dialog>;
+}
+
+function NotificationSkeleton() {
+  return <div className="notifications-skeleton" role="status" aria-label="Đang tải thông báo">{[1, 2, 3, 4].map(index => <div key={index}><span /><div><i /><i /><i /></div></div>)}<span className="sr-only">Đang tải thông báo…</span></div>;
+}
+
+function groupByDate(items, today) {
+  const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+  const groups = new Map();
+  for (const item of items) {
+    const date = new Date(item.createdAt);
+    const valid = Number.isFinite(date.getTime());
+    const day = valid ? date.toLocaleDateString('vi-VN') : 'Thông báo khác';
+    const label = valid && date.toDateString() === today.toDateString() ? 'Hôm nay' : valid && date.toDateString() === yesterday.toDateString() ? 'Hôm qua' : day;
+    if (!groups.has(day)) groups.set(day, { label, items: [] });
+    groups.get(day).items.push(item);
+  }
+  return [...groups.values()];
+}
+
+function NotificationsContent() {
+  const feed = useNotificationsFeed();
+  const [selectedId, setSelectedId] = useState(null);
+  const [today] = useState(() => new Date());
+  const selected = feed.items.find(item => item._id === selectedId);
+  const working = feed.loading || feed.loadingMore || feed.markingAll || feed.readingIds.length > 0;
+  const hasUnread = feed.unreadCount > 0 || feed.items.some(item => !item.isRead);
+  const groups = groupByDate(feed.items, today);
+  const open = item => { setSelectedId(item._id); void feed.markRead(item); };
+
+  return <div className="cart-page purchase-page notifications-page"><div className="cart-container">
+    <nav className="cart-breadcrumb" aria-label="Đường dẫn"><Link to="/">Trang chủ</Link><ChevronRight size={12} /><span aria-current="page">Thông báo</span></nav>
+    <header className="cart-heading notifications-heading"><div><p className="cart-eyebrow">DOCA STORE · LUÔN KẾT NỐI</p><h1>Thông báo của bạn<span className="cart-heading-dot">.</span></h1><p>Cập nhật đơn hàng, ưu đãi và những thông tin mới từ cửa hàng.</p></div><Link to="/profile" className="cart-back"><User size={16} />Tài khoản của tôi <ArrowRight size={15} /></Link></header>
+    <div className="notifications-layout">
+      <section className="notifications-feed" aria-label="Danh sách thông báo">
+        <div className="notifications-toolbar"><div><Bell size={18} /><h2>Thông báo gần đây</h2></div><button type="button" className="notifications-refresh" onClick={feed.refresh} disabled={working}><RefreshCw size={15} className={feed.loading ? 'animate-spin' : ''} />Làm mới</button></div>
+        {feed.hasUpdates && <button type="button" className="notifications-new" disabled={working} onClick={feed.refresh}><span><Bell size={15} />Có cập nhật mới</span><span>Xem ngay <ArrowRight size={14} /></span></button>}
+        {feed.loading ? <NotificationSkeleton /> : feed.error ? <div className="notifications-feedback"><PurchaseAlert onRetry={feed.refresh}>{feed.error}</PurchaseAlert></div> : !feed.items.length ? <div className="notifications-empty"><div><BellOff size={35} strokeWidth={1.4} /></div><h2>Hộp thư đang yên tĩnh</h2><p>Khi có cập nhật đơn hàng hoặc ưu đãi mới, bạn sẽ tìm thấy tại đây.</p><Link to="/products" className="cart-button cart-button-primary">Khám phá sản phẩm <ArrowRight size={16} /></Link></div> : <>
+          {groups.map(group => <section className="notifications-day" key={group.label} aria-label={group.label}><h3>{group.label}<span>{group.items.length}</span></h3><ul>{group.items.map(item => <li className={'notifications-row' + (!item.isRead ? ' notifications-unread' : '')} key={item._id}><button type="button" className="notifications-open" onClick={() => open(item)} aria-haspopup="dialog"><NotificationIcon type={item.type} /><span className="notifications-row-content"><span className="notifications-row-meta"><span>{(types[item.type] || types.system).label}</span><time dateTime={item.createdAt}>{dateTime(item.createdAt)}</time></span><strong>{item.title}</strong><span className="notifications-preview">{item.message}</span><span className="notifications-row-state">{item.isRead ? <><Check size={12} />Đã đọc</> : <><span className="notifications-unread-dot" />Chưa đọc</>}</span></span><ChevronRight size={16} className="notifications-row-arrow" /></button></li>)}</ul></section>)}
+          <footer className="notifications-feed-footer">
+            {feed.moreError && <PurchaseAlert onRetry={feed.loadMore} busy={feed.loadingMore}>{feed.moreError}</PurchaseAlert>}
+            {feed.page < feed.totalPages ? <button type="button" className="cart-button cart-button-outline" disabled={working} onClick={feed.loadMore}>{feed.loadingMore ? <><LoaderCircle size={15} className="animate-spin" />Đang tải…</> : <>Xem thêm thông báo <ArrowRight size={15} /></>}</button> : <p><CheckCheck size={15} />Bạn đã xem hết danh sách thông báo.</p>}
+          </footer>
+        </>}
+      </section>
+      <aside className="notifications-sidebar">
+        <section className="notifications-inbox"><div className="notifications-inbox-top"><span>HỘP THƯ CỦA BẠN</span><Bell size={21} strokeWidth={1.5} /></div><strong>{feed.unreadCount}</strong><h2>thông báo chưa đọc</h2><p>Đừng bỏ lỡ những cập nhật về đơn hàng và ưu đãi dành cho bạn.</p><button type="button" className="cart-button cart-checkout" disabled={!hasUnread || working} onClick={feed.markAll}><CheckCheck size={16} />{feed.markingAll ? 'Đang đánh dấu…' : 'Đánh dấu tất cả đã đọc'}</button></section>
+        <section className="notifications-shortcuts"><h2>Đến nơi bạn cần</h2><Link to="/profile?tab=orders"><span className="notifications-shortcut-icon"><Package size={18} /></span><span><strong>Đơn hàng của tôi</strong><span>Theo dõi trạng thái giao hàng</span></span><ChevronRight size={15} /></Link><Link to="/profile?tab=chat"><span className="notifications-shortcut-icon"><LifeBuoy size={18} /></span><span><strong>Lịch sử hỗ trợ</strong><span>Xem lại trao đổi với cửa hàng</span></span><ChevronRight size={15} /></Link></section>
+        <div className="notifications-note"><Info size={16} /><p>Thông báo được lưu trong khoảng 30 ngày. Bạn luôn có thể xem lại đơn hàng trong hồ sơ.</p></div>
+      </aside>
+    </div>
+    {selected && <NotificationDetails key={selected._id} item={selected} onClose={() => setSelectedId(null)} reading={feed.readingIds.includes(selected._id) || feed.markingAll} readError={feed.readError?.id === selected._id ? feed.readError.message : ''} onRetry={() => feed.markRead(selected)} />}
+  </div></div>;
+}
+
+export default function Notifications() {
+  const { user } = useAuth();
+  return <NotificationsContent key={user?._id || user?.id || 'guest'} />;
+}

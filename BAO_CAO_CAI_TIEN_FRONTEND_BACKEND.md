@@ -2,6 +2,8 @@
 
 **Dự án:** DocaStore
 
+**Cập nhật chuẩn bị triển khai 19/10/2026:** xem [sửa lỗi ưu tiên, kiểm thử và điều kiện deploy lại](docs/DEPLOY_READINESS.md). Nội dung phía dưới ghi nhận đợt cải tiến trước đó.
+
 **Ngày hoàn thành:** 31/07/2026
 
 **Phạm vi:** Frontend React/Vite và các phần backend ảnh hưởng trực tiếp đến giao diện, xác thực, phân quyền, dữ liệu và realtime.

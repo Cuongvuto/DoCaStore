@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, User as UserIcon, MessageCircle, Search, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Send, User as UserIcon, MessageCircle, Search, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
 import axiosClient from '../../api/axiosClient';
 import { useNotification } from '../../context/NotificationContext';
 import { useAuth } from '../../context/AuthContext'; // Lấy thông tin Admin thật từ Context
+import { Pagination, ErrorState, LoadingState } from './components/AdminUI';
+import useDebouncedValue from '../../hooks/useDebouncedValue';
 import { toast } from 'sonner';
 
 const MessageManager = () => {
@@ -12,6 +14,19 @@ const MessageManager = () => {
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [page, setPage] = useState(1);
+  const [paging, setPaging] = useState({ totalPages: 1, totalCount: 0 });
+  const [listLoading, setListLoading] = useState(true);
+  const [listError, setListError] = useState('');
+  const [version, setVersion] = useState(0);
+  const [historyError, setHistoryError] = useState('');
+  const [historyVersion, setHistoryVersion] = useState(0);
+  const [before, setBefore] = useState(null);
+  const [olderLoading, setOlderLoading] = useState(false);
+  const activeTicket = useRef(null);
+  const olderScroll = useRef(false);
+  const search = useDebouncedValue(searchTerm, 300);
+  const [sending, setSending] = useState(false);
   const messagesEndRef = useRef(null);
   const { socket } = useNotification();
 
@@ -20,45 +35,56 @@ const MessageManager = () => {
   };
 
   useEffect(() => {
+    if (olderScroll.current) { olderScroll.current = false; return; }
     scrollToBottom();
   }, [messages]);
 
-  // Fetch all Tickets on mount
   useEffect(() => {
-    const fetchConversations = async () => {
-      try {
-        const res = await axiosClient.get('/messages/conversations');
-        if (res.data.success) {
-          setConversations(res.data.conversations);
-        }
-      } catch (error) {
-        console.error("Error fetching conversations:", error);
-        toast.error("Không thể tải danh sách cuộc trò chuyện!");
-      }
-    };
-    fetchConversations();
-  }, []);
+    const controller = new AbortController();
+    setListLoading(true); setListError('');
+    axiosClient.get('/messages/conversations', { params: { page, limit: 10, search }, signal: controller.signal })
+      .then(res => { if (!controller.signal.aborted) { setConversations(res.data.conversations); setPaging(res.data); } })
+      .catch(error => { if (!controller.signal.aborted) setListError(error.response?.data?.message || 'Không thể tải hội thoại.'); })
+      .finally(() => { if (!controller.signal.aborted) setListLoading(false); });
+    return () => controller.abort();
+  }, [page, search, version]);
+
+  const loadOlder = async () => {
+    if (!before || olderLoading) return;
+    const ticket = selectedTicket._id; setOlderLoading(true);
+    try {
+      const res = await axiosClient.get('/messages/' + ticket, { params: { before } });
+      if (activeTicket.current !== ticket) return;
+      olderScroll.current = true;
+      setMessages(previous => Array.from(new Map([...res.data.messages, ...previous].map(message => [message._id, message])).values()));
+      setBefore(res.data.nextBefore);
+    } catch { toast.error('Không thể tải tin nhắn cũ.'); }
+    finally { setOlderLoading(false); }
+  };
 
   // KHẮC PHỤC LỖI MẤT TIN NHẮN: Chỉ fetch lại khi ID Ticket thay đổi
   useEffect(() => {
     if (!selectedTicket?._id) return;
 
+    activeTicket.current = selectedTicket._id;
+    setBefore(null); setHistoryError('');
+    const controller = new AbortController();
     const fetchHistory = async () => {
       try {
-        const res = await axiosClient.get(`/messages/${selectedTicket._id}`);
-        if (res.data.success) {
-          setMessages(res.data.messages);
+        const res = await axiosClient.get(`/messages/${selectedTicket._id}`, { signal: controller.signal });
+        if (res.data.success && !controller.signal.aborted) {
+          setBefore(res.data.nextBefore);
+          setMessages(previous => Array.from(new Map([...res.data.messages, ...previous.filter(message => message.conversationId === selectedTicket._id)].map(message => [message._id, message])).values()).sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt)));
           // Đánh dấu đã đọc ở UI Local
-          setConversations(prev => prev.map(c => 
-            c._id === selectedTicket._id ? { ...c, unreadCount: 0 } : c
-          ));
+          setVersion(value => value + 1);
         }
-      } catch (error) {
-        console.error("Error fetching history:", error);
+      } catch {
+        if (!controller.signal.aborted) setHistoryError('Không thể tải lịch sử trò chuyện.');
       }
     };
     fetchHistory();
-  }, [selectedTicket?._id]); 
+    return () => { activeTicket.current = null; controller.abort(); };
+  }, [selectedTicket?._id, historyVersion]);
 
   // Listen to Socket Events
   useEffect(() => {
@@ -68,14 +94,14 @@ const MessageManager = () => {
     const handleReceiveMessage = (newMessage) => {
       // 1. Cập nhật vào khung chat nếu đang mở đúng Ticket
       if (selectedTicket && newMessage.conversationId === selectedTicket._id) {
-        setMessages(prev => [...prev, newMessage]);
+        setMessages(prev => prev.some(message => message._id === newMessage._id) ? prev : [...prev, newMessage]);
       }
-      
+
       // 2. Cập nhật list bên trái (nổi lên đầu, tăng unread)
       setConversations(prev => {
         let updated = [...prev];
         const idx = updated.findIndex(c => c._id === newMessage.conversationId);
-        
+
         if (idx > -1) {
           updated[idx].lastMessage = newMessage;
           updated[idx].updatedAt = new Date().toISOString();
@@ -94,18 +120,16 @@ const MessageManager = () => {
 
     // Khi có Khách hàng mới gửi tin nhắn lần đầu -> Sinh Ticket mới
     const handleNewTicket = (newTicket) => {
-        axiosClient.get('/messages/conversations').then(res => {
-            if (res.data.success) setConversations(res.data.conversations);
-        });
+        setVersion(value => value + 1);
         toast.info(`Có một yêu cầu hỗ trợ mới: ${newTicket.ticketId}`);
     };
 
     // Khi một Ticket bị đổi trạng thái (Admin nhận / Đóng) -> Hiển thị tên Admin
     const handleTicketUpdated = (updatedTicket) => {
-        setConversations(prev => prev.map(c => 
+        setConversations(prev => prev.map(c =>
             c._id === updatedTicket._id ? { ...c, status: updatedTicket.status, assignedAdminId: updatedTicket.assignedAdminId } : c
         ));
-        
+
         // Cập nhật lại UI của selectedTicket mà không làm mất object cũ
         setSelectedTicket(prev => {
             if (prev && prev._id === updatedTicket._id) {
@@ -128,32 +152,39 @@ const MessageManager = () => {
 
   // --- HÀM XỬ LÝ SỰ KIỆN CHÍNH ---
 
+  const canReply = selectedTicket?.status === 'active' && (user?.role === 'superadmin' || selectedTicket?.assignedAdminId?._id === user?._id);
+
   const handleSendMessage = (e) => {
     e.preventDefault();
-    if (!inputText.trim() || !selectedTicket || !socket || !user) return;
+    if (!inputText.trim() || !selectedTicket || !socket || !user || !canReply || sending) return;
+    if (!socket.connected) return toast.error('Mất kết nối hỗ trợ. Vui lòng thử lại.');
+    setSending(true);
 
     const messageData = {
       conversationId: selectedTicket._id,
-      customerId: selectedTicket.customer._id,
+      customerId: selectedTicket.customer?._id,
       adminId: user._id,
       sender: 'admin',
       text: inputText.trim()
     };
 
-    socket.emit('send_message', messageData, (response) => {
+    socket.timeout(10000).emit('send_message', messageData, (error, response) => {
+      setSending(false);
+      if (error) return toast.error('Chưa nhận được xác nhận gửi. Hãy kiểm tra hội thoại trước khi gửi lại.');
       if (response && !response.success) {
         toast.error(response.message);
       } else {
-        setInputText(''); 
+        setInputText('');
       }
     });
   };
 
   const handleClaimSession = () => {
-    if (!window.confirm("Bạn có chắc chắn muốn tham gia hỗ trợ khách hàng này?")) return;
+    if (!socket?.connected) return toast.error("Mất kết nối hỗ trợ. Vui lòng thử lại.");
+    if (!window.confirm("Nhận xử lý yêu cầu hỗ trợ này?")) return;
     socket.emit('claim_session', {
       conversationId: selectedTicket._id,
-      customerId: selectedTicket.customer._id,
+      customerId: selectedTicket.customer?._id,
       adminId: user._id,
       adminName: user.name || "Admin"
     }, (res) => {
@@ -166,22 +197,22 @@ const MessageManager = () => {
   };
 
   const handleEndSession = () => {
+    if (!socket?.connected) return toast.error('Mất kết nối hỗ trợ. Vui lòng thử lại.');
     if (window.confirm("Xác nhận kết thúc phiên hỗ trợ?")) {
-      socket.emit('end_session', { 
+      socket.emit('end_session', {
           conversationId: selectedTicket._id,
-          customerId: selectedTicket.customer._id 
+          customerId: selectedTicket.customer._id
+      }, response => {
+        if (response?.success) toast.info('Đã kết thúc phiên hỗ trợ.');
+        else toast.error(response?.message || 'Không thể kết thúc phiên hỗ trợ.');
       });
-      toast.info(`Đã đóng phiên trò chuyện ${selectedTicket.ticketId}.`);
     }
   };
 
   // --- RENDER HELPERS ---
 
   // Lọc Ticket theo thanh tìm kiếm
-  const filteredConversations = conversations.filter(c => 
-    c.ticketId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.customer?.name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredConversations = conversations;
 
   const getStatusBadge = (status) => {
       switch(status) {
@@ -193,34 +224,37 @@ const MessageManager = () => {
   };
 
   return (
-    <div className="flex h-[calc(100vh-100px)] bg-[#14141b] rounded-2xl overflow-hidden border border-gray-800 shadow-2xl">
-      
+    <div className="flex h-[calc(100dvh-150px)] min-h-[450px] bg-[#101514] rounded-2xl overflow-hidden border border-gray-800 shadow-2xl">
+
       {/* Left Sidebar: Conversations List */}
-      <div className="w-[350px] border-r border-gray-800 flex flex-col bg-[#1a1a24]">
+      <div className={(selectedTicket ? "hidden md:flex " : "flex ") + "w-full md:w-80 shrink-0 border-r border-gray-800 flex-col bg-[#19211f]"}>
         <div className="p-5 border-b border-gray-800">
           <h2 className="text-xl font-bold text-white mb-4">Hỗ trợ khách hàng</h2>
           {/* Thanh tìm kiếm */}
           <div className="relative">
-            <input 
-              type="text" 
-              placeholder="Tìm mã vé, tên khách hàng..." 
+            <input
+              type="text"
+              placeholder="Tìm mã vé, tên khách hàng..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-[#2a2a35] text-sm text-gray-200 rounded-lg pl-10 pr-4 py-2.5 outline-none focus:border-[#7294ff] border border-gray-700 transition-colors placeholder-gray-500"
+              onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
+              className="w-full bg-[#202c28] text-sm text-gray-200 rounded-lg pl-10 pr-4 py-2.5 outline-none focus:border-[#88d7ae] border border-gray-700 transition-colors placeholder-gray-500"
             />
             <Search className="w-4 h-4 text-gray-500 absolute left-3 top-3" />
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-2 space-y-1">
-          {filteredConversations.length === 0 ? (
+          {listError ? <ErrorState message={listError} onRetry={() => setVersion(value => value + 1)} /> : listLoading ? <LoadingState /> : filteredConversations.length === 0 ? (
              <p className="text-gray-500 text-center mt-10 text-sm">Không tìm thấy cuộc trò chuyện nào.</p>
           ) : (
             filteredConversations.map((conv) => (
-              <div 
+              <div
                 key={conv._id}
-                onClick={() => setSelectedTicket(conv)}
-                className={`flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 ${selectedTicket?._id === conv._id ? 'bg-[#7294ff]/10 border border-[#7294ff]/30' : 'hover:bg-[#2a2a35] border border-transparent'}`}
+                role="button"
+                tabIndex={0}
+                onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setMessages([]); setSelectedTicket(conv); } }}
+                onClick={() => { setMessages([]); setSelectedTicket(conv); }}
+                className={`flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 ${selectedTicket?._id === conv._id ? 'bg-[#88d7ae]/10 border border-[#88d7ae]/30' : 'hover:bg-[#202c28] border border-transparent'}`}
               >
                 <div className="relative shrink-0">
                   {conv.customer?.avatar ? (
@@ -231,7 +265,7 @@ const MessageManager = () => {
                     </div>
                   )}
                   {conv.unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-[#1a1a24]">
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-[#19211f]">
                       {conv.unreadCount}
                     </span>
                   )}
@@ -244,7 +278,7 @@ const MessageManager = () => {
                     </span>
                   </div>
                   <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-mono text-[#7294ff]">{conv.ticketId}</span>
+                      <span className="text-xs font-mono text-[#88d7ae]">{conv.ticketId}</span>
                       {getStatusBadge(conv.status)}
                   </div>
                   <p className="text-xs text-gray-400 truncate">
@@ -259,14 +293,16 @@ const MessageManager = () => {
             ))
           )}
         </div>
+        <Pagination page={page} pages={paging.totalPages} total={paging.totalCount} loading={listLoading} onChange={setPage} />
       </div>
 
       {/* Right Content: Chat Area */}
-      <div className="flex-1 flex flex-col bg-[#14141b]">
+      <div className={(selectedTicket ? "flex " : "hidden md:flex ") + "flex-1 min-w-0 flex-col bg-[#101514]"}>
         {selectedTicket ? (
           <>
             {/* Header Chat */}
-            <div className="h-[76px] px-6 border-b border-gray-800 flex justify-between items-center bg-[#1a1a24]">
+            <button className="admin-button admin-chat-back m-3 self-start" onClick={() => setSelectedTicket(null)}><ArrowLeft size={16} />Danh sách yêu cầu</button>
+            <div className="min-h-[76px] px-3 py-3 border-b border-gray-800 flex flex-wrap gap-3 justify-between items-center bg-[#19211f]">
               <div className="flex items-center gap-4">
                 {selectedTicket.customer?.avatar ? (
                   <img src={selectedTicket.customer.avatar} alt="Avatar" className="w-10 h-10 rounded-full object-cover" />
@@ -288,14 +324,14 @@ const MessageManager = () => {
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex gap-2">
                 {selectedTicket.status === 'pending' && (
                   <button onClick={handleClaimSession} className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
                     Nhận hỗ trợ
                   </button>
                 )}
-                {selectedTicket.status === 'active' && (
+                {canReply && (
                   <button onClick={handleEndSession} className="bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
                     Kết thúc phiên
                   </button>
@@ -305,18 +341,20 @@ const MessageManager = () => {
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {historyError && <ErrorState message={historyError} onRetry={() => setHistoryVersion(value => value + 1)} />}
+              {before && <button className="admin-button" disabled={olderLoading} onClick={loadOlder}>{olderLoading ? 'Đang tải…' : 'Tải tin nhắn cũ'}</button>}
               {messages.map((msg, index) => (
                 <div key={index} className={`flex ${msg.sender === 'customer' ? 'justify-start' : 'justify-end'}`}>
                   {msg.sender === 'system' ? (
                     <div className="w-full text-center">
-                      <span className="bg-[#2a2a35] text-gray-400 text-xs py-1.5 px-4 rounded-full inline-block border border-gray-800">
+                      <span className="bg-[#202c28] text-gray-400 text-xs py-1.5 px-4 rounded-full inline-block border border-gray-800">
                         {msg.text}
                       </span>
                     </div>
                   ) : (
-                    <div className={`max-w-[70%] ${msg.sender === 'customer' ? 'bg-[#2a2a35] text-gray-200 rounded-2xl rounded-tl-sm' : 'bg-[#7294ff] text-white rounded-2xl rounded-tr-sm'} p-4 shadow-md`}>
-                      <p className="text-sm leading-relaxed">{msg.text}</p>
-                      <span className={`text-[10px] mt-2 block ${msg.sender === 'customer' ? 'text-gray-500' : 'text-blue-200'}`}>
+                    <div className={`max-w-[70%] ${msg.sender === 'customer' ? 'bg-[#202c28] text-gray-200 rounded-2xl rounded-tl-sm' : 'bg-[#88d7ae] text-[#10251a] rounded-2xl rounded-tr-sm'} p-4 shadow-md`}>
+                      <p className="text-sm leading-relaxed break-words">{msg.text}</p>
+                      <span className={`text-[10px] mt-2 block ${msg.sender === 'customer' ? 'text-gray-500' : 'text-emerald-900'}`}>
                         {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
@@ -327,20 +365,23 @@ const MessageManager = () => {
             </div>
 
             {/* Input Area */}
-            <div className="p-4 bg-[#1a1a24] border-t border-gray-800">
+            <div className="p-4 bg-[#19211f] border-t border-gray-800">
               <form onSubmit={handleSendMessage} className="flex gap-2 relative">
                 <input
                   type="text"
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
-                  placeholder={selectedTicket.status === 'resolved' ? "Phiên này đã đóng..." : `Nhắn tin cho ${selectedTicket.customer?.name}...`}
-                  disabled={selectedTicket.status === 'resolved'}
-                  className="flex-1 bg-[#2a2a35] text-white rounded-xl px-5 py-3 pr-12 focus:outline-none focus:ring-1 focus:ring-[#7294ff] border border-gray-700 transition-shadow placeholder-gray-500 disabled:opacity-50"
+                  placeholder={selectedTicket.status === 'resolved' ? "Phiên này đã đóng..." : !canReply ? "Nhận yêu cầu để trả lời khách hàng" : `Nhắn tin cho ${selectedTicket.customer?.name}...`}
+                  disabled={!canReply || sending}
+                  maxLength={2000}
+                  aria-label="Nội dung trả lời khách hàng"
+                  className="flex-1 bg-[#202c28] text-white rounded-xl px-5 py-3 pr-12 focus:outline-none focus:ring-1 focus:ring-[#88d7ae] border border-gray-700 transition-shadow placeholder-gray-500 disabled:opacity-50"
                 />
-                <button 
+                <button
                   type="submit"
-                  disabled={!inputText.trim() || selectedTicket.status === 'resolved'}
-                  className={`absolute right-4 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-lg transition-colors ${inputText.trim() && selectedTicket.status !== 'resolved' ? 'bg-[#7294ff] text-white hover:bg-[#5a7bed]' : 'bg-transparent text-gray-500'}`}
+                  aria-label="Gửi tin nhắn"
+                  disabled={!inputText.trim() || !canReply || sending}
+                  className={`absolute right-4 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-lg transition-colors ${inputText.trim() && selectedTicket.status !== 'resolved' ? 'bg-[#88d7ae] text-[#10251a] hover:bg-[#5a7bed]' : 'bg-transparent text-gray-500'}`}
                 >
                   <Send className="w-4 h-4" />
                 </button>

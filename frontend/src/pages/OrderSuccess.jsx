@@ -1,190 +1,55 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { CheckCircle, Package, ArrowRight, ShoppingBag, Truck, MapPin, Receipt } from 'lucide-react';
-import axiosClient from '../api/axiosClient'; 
+import { Link, useParams } from 'react-router-dom';
+import { ArrowRight, CheckCircle2, CircleAlert, Clock3, MapPin, Package, RefreshCw, XCircle } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { PurchaseAlert, PurchaseCard, PurchaseLoading, PurchaseProducts, PurchaseShell, PurchaseSummary } from '../components/purchase/PurchaseUI';
+import usePurchaseOrder from '../components/purchase/usePurchaseOrder';
+import { addressText, dateTime, orderLabels, paymentLabels } from '../components/purchase/purchaseFormat';
 
-const OrderSuccess = () => {
+function OrderResult({ orderId }) {
+  const { order, error, loading, refreshing, refresh } = usePurchaseOrder(orderId);
+  const review = order?.paymentReview && order.paymentReview !== 'none';
+  const cancelled = order?.status === 'cancelled';
+  const paid = order?.paymentStatus === 'paid';
+  const cod = order?.paymentMethod === 'COD';
+  const canPay = !review && order?.status === 'pending' && !paid && order?.paymentMethod === 'VietQR';
+  const Icon = review ? CircleAlert : cancelled ? XCircle : paid || cod ? CheckCircle2 : Clock3;
+  const title = review ? 'Giao dịch cần được kiểm tra' : cancelled ? 'Đơn hàng đã hủy' : paid ? 'Thanh toán thành công' : cod ? 'Đặt hàng thành công' : 'Đơn hàng đang chờ thanh toán';
+  const description = review
+    ? order.paymentReview === 'refund_required' ? 'Cửa hàng cần đối soát giao dịch và xử lý hoàn tiền. Vui lòng liên hệ hỗ trợ kèm mã đơn.' : 'Giao dịch đang cần đối soát. Vui lòng liên hệ cửa hàng trước khi thực hiện thêm thanh toán.'
+    : cancelled ? paid ? 'Đơn đã hủy nhưng có ghi nhận thanh toán. Vui lòng liên hệ cửa hàng để kiểm tra giao dịch.' : 'Đơn này không tiếp tục được xử lý. Bạn có thể chọn lại sản phẩm để đặt đơn mới.'
+      : paid ? 'Hệ thống đã ghi nhận thanh toán. Bạn có thể theo dõi tiến trình xử lý đơn bên dưới.'
+        : cod ? 'Đơn hàng đã được ghi nhận. Bạn sẽ thanh toán cho người giao hàng khi nhận đơn.'
+          : 'Đơn đã được tạo. Hoàn tất chuyển khoản VietQR để hệ thống ghi nhận thanh toán.';
+  const address = order?.shippingAddress || {};
+  return <PurchaseShell title="Thông tin đơn hàng" description="Mọi thông tin về đơn hàng của bạn, ngay tại đây." step={3}>
+    {loading ? <PurchaseLoading /> : !order ? <PurchaseAlert onRetry={refresh} busy={refreshing}>{error || 'Không tìm thấy đơn hàng.'}</PurchaseAlert> : <>
+      {error && <PurchaseAlert onRetry={refresh} busy={refreshing}>{error} Thông tin bên dưới là lần cập nhật gần nhất.</PurchaseAlert>}
+      <section className={'purchase-status' + (review || (!cancelled && !paid && !cod) ? ' purchase-status-warning' : cancelled ? ' purchase-status-cancelled' : '')} aria-label="Kết quả đơn hàng"><div className="purchase-status-icon"><Icon size={28} aria-hidden="true" /></div><div><h2>{title}</h2><p>{description}</p></div></section>
+      <div className="cart-layout">
+        <div className="purchase-stack">
+          <PurchaseCard title="Đơn hàng của bạn" icon={Package} action={<span className="purchase-badge">{orderLabels[order.status] || 'Đang cập nhật'}</span>}>
+            <PurchaseProducts items={order.products || []} />
+            <div className="purchase-order-meta"><p>Mã đơn: <strong>{order.payosOrderCode || order._id}</strong></p><p>Ngày đặt: {dateTime(order.createdAt)}</p></div>
+          </PurchaseCard>
+          <PurchaseCard title="Thông tin giao hàng" icon={MapPin}>
+            <div className="purchase-address"><strong>{address.receiverName}</strong><p>{address.phone}</p><p>{addressText(address)}</p>{order.note && <div className="purchase-note"><span className="purchase-muted">Ghi chú đơn hàng</span><p>{order.note}</p></div>}</div>
+          </PurchaseCard>
+          {order.statusHistory?.length > 0 && <PurchaseCard title="Tiến trình đơn hàng" icon={Clock3}><ol className="purchase-timeline">{order.statusHistory.map((event, index) => <li key={event._id || index}><strong>{orderLabels[event.to] || event.to}</strong><time dateTime={event.at}>{dateTime(event.at)}</time>{event.reason && <p>{event.reason}</p>}</li>)}</ol></PurchaseCard>}
+          <div className="purchase-actions"><Link className="cart-button cart-button-outline" to="/products">Tiếp tục mua sắm <ArrowRight size={16} /></Link><button type="button" className="purchase-text-button" disabled={refreshing} onClick={refresh}><RefreshCw size={14} className={'inline mr-2 ' + (refreshing ? 'animate-spin' : '')} />{refreshing ? 'Đang cập nhật…' : 'Cập nhật trạng thái'}</button></div>
+        </div>
+        <PurchaseSummary subtotal={order.pricing?.originalPrice ?? order.totalPrice} discount={order.pricing?.totalDiscount} total={order.totalPrice} messages={order.pricing?.messages} totalLabel={paid ? 'Tổng đã thanh toán' : cancelled ? 'Giá trị đơn hàng' : 'Tổng thanh toán'}>
+          <dl className="purchase-summary-meta"><div><dt>Phương thức</dt><dd>{cod ? 'Khi nhận hàng (COD)' : order.paymentMethod}</dd></div><div><dt>Thanh toán</dt><dd>{paymentLabels[order.paymentStatus] || 'Đang cập nhật'}</dd></div><div><dt>Đơn hàng</dt><dd>{orderLabels[order.status] || 'Đang cập nhật'}</dd></div></dl>
+          {canPay ? <Link className="cart-button cart-checkout" to={'/payment/' + order._id}>Tiếp tục thanh toán <ArrowRight size={16} /></Link> : review || (cancelled && paid) ? <Link className="cart-button cart-checkout" to="/contact">Liên hệ hỗ trợ <ArrowRight size={16} /></Link> : <Link className="cart-button cart-checkout" to="/profile">Theo dõi đơn hàng <ArrowRight size={16} /></Link>}
+          <Link className="purchase-summary-link" to="/profile">Xem lịch sử đơn hàng</Link>
+          <p className="purchase-muted">{review ? 'Cung cấp mã đơn khi liên hệ để cửa hàng kiểm tra giao dịch của bạn.' : cod && !paid && !cancelled ? 'Bạn chưa cần chuyển khoản cho đơn hàng này.' : 'Trạng thái thanh toán được cập nhật từ hệ thống của cửa hàng.'}</p>
+        </PurchaseSummary>
+      </div>
+    </>}
+  </PurchaseShell>;
+}
+
+export default function OrderSuccess() {
   const { orderId } = useParams();
-  
-  // State để lưu thông tin chi tiết đơn hàng gọi từ Backend về
-  const [orderData, setOrderData] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  // --- GỌI API LẤY CHI TIẾT ĐƠN HÀNG ---
-  useEffect(() => {
-    const fetchOrderDetails = async () => {
-      try {
-        
-        const res = await axiosClient.get(`/orders/${orderId}`);
-        setOrderData(res.data?.data || res.data); // 
-      } catch (error) {
-        console.error("Lỗi lấy thông tin chi tiết đơn hàng:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (orderId) {
-      fetchOrderDetails();
-    }
-  }, [orderId]);
-
-  // Giả lập thời gian giao hàng dự kiến
-  const getExpectedDate = () => {
-    const date = new Date();
-    date.setDate(date.getDate() + 3); 
-    return date.toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  };
-
-  // Màn hình chờ khi đang fetch data
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center text-gray-500 gap-3">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-red-500"></div>
-        <p>Đang tải thông tin đơn hàng...</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 md:p-8">
-      
-      {/* BỐ CỤC NGANG: Dùng md:flex-row để chia 2 cột trên PC, mobile vẫn xếp chồng */}
-      <div className="max-w-6xl w-full flex flex-col md:flex-row gap-6 lg:gap-8">
-
-        {/* ================= CỘT TRÁI: THÔNG BÁO THÀNH CÔNG ================= */}
-        <div className="flex-[4] bg-white p-8 md:p-10 rounded-3xl shadow-sm border border-gray-100 flex flex-col justify-center h-fit">
-          
-          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 mb-8 text-center sm:text-left">
-            <div className="bg-green-100 p-4 rounded-full animate-bounce-short shrink-0">
-              <CheckCircle className="h-12 w-12 text-green-500" strokeWidth={2} />
-            </div>
-            <div className="mt-2">
-              <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight mb-2">
-                Đặt hàng thành công!
-              </h1>
-              <p className="text-gray-600 text-lg">
-                Cảm ơn bạn đã mua sắm tại <span className="font-semibold text-red-600">DocaStore</span>.
-              </p>
-            </div>
-          </div>
-
-          {/* Box Mã Đơn & Ngày Giao */}
-          <div className="bg-gray-50 border border-gray-100 rounded-2xl p-5 mb-8 flex flex-col sm:flex-row gap-6 relative overflow-hidden">
-            <Truck className="absolute -right-4 -bottom-4 h-24 w-24 text-gray-100 transform -rotate-12" />
-            
-            <div className="relative z-10 flex items-center gap-4 flex-1 border-b sm:border-b-0 sm:border-r border-gray-200 pb-4 sm:pb-0 sm:pr-4">
-               <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 shrink-0">
-                  <Package className="h-6 w-6 text-red-500" />
-               </div>
-               <div className="min-w-0">
-                 <p className="text-sm font-medium text-gray-500 mb-0.5">Mã đơn hàng</p>
-                 <p className="text-base font-bold text-gray-800 break-all">{orderId}</p>
-               </div>
-            </div>
-
-            <div className="relative z-10 flex items-center gap-4 flex-1">
-               <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 shrink-0">
-                  <Truck className="h-6 w-6 text-blue-500" />
-               </div>
-               <div>
-                 <p className="text-sm font-medium text-gray-500 mb-0.5">Giao dự kiến vào</p>
-                 <p className="text-base font-semibold text-gray-800">{getExpectedDate()}</p>
-               </div>
-            </div>
-          </div>
-
-          <div className="space-y-3 mb-10 text-gray-600 text-sm md:text-base px-2">
-            <p className="flex items-start gap-2">📧 <span>Chúng tôi đã gửi email xác nhận chi tiết đơn hàng cho bạn.</span></p>
-            <p className="flex items-start gap-2">📞 <span>Shipper sẽ gọi cho bạn qua số điện thoại trước khi giao hàng.</span></p>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-4 mt-auto">
-            <Link to="/" className="flex-1 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 px-6 rounded-xl transition-all shadow-md">
-              <ShoppingBag className="h-5 w-5" /> Tiếp tục mua sắm
-            </Link>
-            <Link to="/profile" className="flex-1 flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-gray-800 font-semibold py-3.5 px-6 rounded-xl transition-all border border-gray-200 shadow-sm">
-              Lịch sử đơn hàng <ArrowRight className="h-5 w-5" />
-            </Link>
-          </div>
-        </div>
-
-        {/* ================= CỘT PHẢI: CHI TIẾT ĐƠN HÀNG ================= */}
-        <div className="flex-[3] bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100 flex flex-col h-fit">
-          <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2 pb-4 border-b">
-            <Receipt className="h-5 w-5 text-gray-500" /> Tóm tắt đơn hàng
-          </h2>
-
-          {orderData ? (
-            <>
-              {/* 1. Danh sách sản phẩm (có thanh cuộn nếu quá nhiều SP) */}
-              <div className="space-y-4 mb-6 max-h-[300px] overflow-y-auto pr-2">
-                {orderData.items?.map((item, index) => (
-                  <div key={index} className="flex justify-between items-center gap-3">
-                    <div className="flex items-center gap-3">
-                      <img 
-                        src={item.product_id?.imageUrl || item.image || "https://dummyimage.com/50x50/cccccc/ffffff&text=Img"} 
-                        alt="Product" 
-                        className="w-14 h-14 object-cover rounded-md border border-gray-200" 
-                      />
-                      <div>
-                        {/* Tên SP */}
-                        <p className="font-medium text-gray-800 text-sm line-clamp-2 max-w-[200px]">
-                          {item.product_id?.name || item.name || "Sản phẩm"}
-                        </p>
-                        {/* SL x Đơn giá */}
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          SL: {item.quantity} x {(item.price || item.product_id?.price || 0).toLocaleString()}đ
-                        </p>
-                      </div>
-                    </div>
-                    {/* Thành tiền 1 SP */}
-                    <p className="font-semibold text-gray-800 whitespace-nowrap">
-                      {((item.price || item.product_id?.price || 0) * item.quantity).toLocaleString()}đ
-                    </p>
-                  </div>
-                ))}
-              </div>
-
-              {/* 2. Thông tin người nhận */}
-              <div className="bg-gray-50 p-4 rounded-xl mb-6">
-                <p className="font-semibold text-gray-700 mb-2 flex items-center gap-2 text-sm">
-                  <MapPin className="h-4 w-4 text-red-500"/> Địa chỉ nhận hàng
-                </p>
-                <div className="text-sm text-gray-600 space-y-1">
-                  <p className="font-medium text-gray-800">{orderData.shippingAddress?.receiverName} - {orderData.shippingAddress?.phone}</p>
-                  <p className="leading-relaxed">
-                    {orderData.shippingAddress?.street}, {orderData.shippingAddress?.ward}, {orderData.shippingAddress?.district}, {orderData.shippingAddress?.city}
-                  </p>
-                </div>
-              </div>
-
-              {/* 3. Tổng kết tiền */}
-              <div className="border-t pt-5 space-y-3 mt-auto">
-                <div className="flex justify-between text-sm text-gray-600">
-                  <span>Phương thức thanh toán</span>
-                  <span className="font-medium text-gray-800">
-                    {orderData.paymentMethod === 'COD' ? 'Thanh toán khi nhận hàng' : orderData.paymentMethod}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center pt-2">
-                  <span className="text-gray-800 font-bold text-lg">TỔNG CỘNG</span>
-                  <span className="text-red-600 text-2xl font-bold">
-                    {(orderData.totalPrice || 0).toLocaleString()}đ
-                  </span>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="text-center py-10 text-gray-500">
-              <p>Không tìm thấy thông tin chi tiết đơn hàng.</p>
-            </div>
-          )}
-        </div>
-
-      </div>
-    </div>
-  );
-};
-
-export default OrderSuccess;
+  const { user } = useAuth();
+  return <OrderResult key={(user?._id || user?.id || '') + orderId} orderId={orderId} />;
+}

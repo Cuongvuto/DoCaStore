@@ -1,5 +1,7 @@
 # 🎣 DoCaStore - Nền Tảng Thương Mại Điện Tử Cửa Hàng Đồ Câu
 
+**Triển khai lại Vercel + Render:** xem [hướng dẫn và điều kiện nghiệm thu](docs/DEPLOY_READINESS.md) trước khi push nhánh tự động deploy. Đơn lịch sử thiếu thông tin giữ kho cần được đối chiếu; không chạy cập nhật dữ liệu hàng loạt theo suy đoán.
+
 ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
 ![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white)
 ![MongoDB](https://img.shields.io/badge/MongoDB-4EA94B?style=for-the-badge&logo=mongodb&logoColor=white)
@@ -92,14 +94,14 @@ DoCaStore_Project/
 ## 🚀 Hướng Dẫn Cài Đặt
 
 ### 1. Yêu cầu hệ thống
-- Node.js (>= v16)
-- MongoDB chạy local hoặc có chuỗi kết nối MongoDB Atlas URI.
+- Node.js 22.x, tối thiểu 22.12.0 (theo `engines` của hai ứng dụng).
+- MongoDB >= 5.0 với replica set hoặc MongoDB Atlas; checkout mới cần transaction.
 - Tài khoản SMTP (như Gmail App Password) để gửi email.
 
 ### 2. Cài đặt Backend
 ```bash
 cd Backend
-npm install
+npm ci --legacy-peer-deps
 
 # Khởi chạy server ở chế độ development
 npm run dev
@@ -108,7 +110,7 @@ npm run dev
 ### 3. Cài đặt Frontend
 ```bash
 cd frontend
-npm install
+npm ci
 
 # Khởi chạy ứng dụng React
 npm run dev
@@ -122,12 +124,16 @@ npm run dev
 Bạn cần tạo file `.env` trong thư mục `Backend/` với các cấu hình tối thiểu sau:
 ```env
 # Thiết lập Server
-PORT=5000
-MONGO_URI=mongodb://localhost:27017/docastore # Hoặc URL MongoDB Atlas
+PORT=5001
+MONGODB_CONNECTIONSTRING=mongodb://localhost:27017/docastore?replicaSet=rs0
+CLIENT_URL=http://localhost:5173
+FRONTEND_URL=http://localhost:5173
+# Chỉ bật sau khi đã kiểm tra DB/PayOS đúng môi trường
+ENABLE_MAINTENANCE_JOBS=false
 
 # Authentication
 JWT_SECRET=your_jwt_secret_key
-JWT_EXPIRE=7d
+JWT_EXPIRES_IN=7d
 
 # NodeMailer (Dịch vụ gửi email)
 SMTP_HOST=smtp.gmail.com
@@ -136,15 +142,24 @@ SMTP_USER=your_email@gmail.com
 SMTP_PASS=your_app_password
 
 # VietQR Payment
-VIETQR_CLIENT_ID=your_vietqr_client_id
-VIETQR_API_KEY=your_vietqr_api_key
-WEBHOOK_SECRET=your_webhook_signature_secret
+PAYOS_CLIENT_ID=your_payos_client_id
+PAYOS_API_KEY=your_payos_api_key
+PAYOS_CHECKSUM_KEY=your_payos_checksum_key
+
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_cloudinary_api_key
+CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+FROM_EMAIL=your_verified_sender@example.com
+FROM_NAME=DoCaStore
 ```
 
 ### Frontend `.env`
 Tạo file `.env` trong thư mục `frontend/`:
 ```env
-VITE_API_URL=http://localhost:5000/api
+VITE_API_BASE_URL=http://localhost:5001/api
+VITE_SOCKET_URL=http://localhost:5001
+# Bật Google Login khi có OAuth Client ID và origin hợp lệ
+VITE_GOOGLE_CLIENT_ID=your_google_client_id
 ```
 
 ---

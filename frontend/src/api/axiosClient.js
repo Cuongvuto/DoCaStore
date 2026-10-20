@@ -3,9 +3,7 @@ import axios from 'axios';
 // Khởi tạo một đối tượng axios với cấu hình mặc định (Lấy từ biến môi trường của Vite)
 const axiosClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api', 
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  // Axios tự chọn JSON hoặc multipart theo dữ liệu; không ép FormData thành JSON.
 });
 
 // Interceptors: Tự động nhét Token vào mỗi lần gửi Request

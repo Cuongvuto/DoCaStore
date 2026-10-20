@@ -2,13 +2,21 @@ import React, { useState, useEffect, useRef } from 'react';
 import { MessageCircle, X, Send, XCircle, RotateCcw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
+import { toast } from 'sonner';
 import axiosClient from '../api/axiosClient';
 
-const CustomerChatWidget = () => {
+const CustomerChatWidget = ({ triggerClassName = '' }) => {
   const { user } = useAuth();
   const { socket } = useNotification();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([]);
+  const [sending, setSending] = useState(false);
+  const [startingNew, setStartingNew] = useState(false);
+  const sendPending = useRef(false);
+  const [before, setBefore] = useState(null);
+  const [olderLoading, setOlderLoading] = useState(false);
+  const skipScroll = useRef(false);
+  const activeConversation = useRef(null);
   const [inputText, setInputText] = useState('');
   const [unreadCount, setUnreadCount] = useState(0);
   
@@ -34,10 +42,25 @@ const CustomerChatWidget = () => {
   };
 
   useEffect(() => {
+    if (skipScroll.current) { skipScroll.current = false; return; }
     if (isOpen) {
       scrollToBottom();
     }
   }, [messages, isOpen]);
+
+  const loadOlder = async () => {
+    if (!before || !currentTicket || olderLoading) return;
+    const ticket = currentTicket._id;
+    setOlderLoading(true);
+    try {
+      const res = await axiosClient.get('/messages/' + ticket, { params: { before } });
+      if (activeConversation.current !== ticket) return;
+      skipScroll.current = true;
+      setMessages(previous => Array.from(new Map([...res.data.messages, ...previous].map(message => [message._id, message])).values()));
+      setBefore(res.data.nextBefore);
+    } catch { toast.error('Không thể tải tin nhắn cũ. Vui lòng thử lại.'); }
+    finally { setOlderLoading(false); }
+  };
 
   const toggleChat = () => {
     const nextOpen = !isOpen;
@@ -45,24 +68,24 @@ const CustomerChatWidget = () => {
     if (nextOpen) setUnreadCount(0);
   };
 
-  // FETCH LỊCH SỬ CHAT THEO API TICKET MỚI
   useEffect(() => {
-    if (user && isOpen && messages.length === 0) {
-      const fetchHistory = async () => {
-        try {
-          // Sử dụng endpoint dành riêng cho Khách hàng đã viết ở Backend
-          const res = await axiosClient.get(`/messages/customer/${user._id}`);
-          if (res.data.success) {
-            setMessages(res.data.messages || []);
-            setCurrentTicket(res.data.conversation || null);
-          }
-        } catch (error) {
-          console.error('Lỗi tải lịch sử chat:', error);
-        }
-      };
-      fetchHistory();
-    }
-  }, [user, isOpen, messages.length]);
+    setMessages([]); setCurrentTicket(null); setStartingNew(false); setBefore(null);
+    activeConversation.current = null;
+  }, [user?._id]);
+
+  useEffect(() => {
+    if (!user || !isOpen || startingNew) return;
+    const controller = new AbortController();
+    axiosClient.get('/messages/customer/' + user._id, { signal: controller.signal })
+      .then(res => {
+        if (controller.signal.aborted) return;
+        setMessages(previous => Array.from(new Map([...(res.data.messages || []), ...previous.filter(message => message.conversationId === res.data.conversation?._id)].map(message => [message._id, message])).values()).sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt)));
+        setBefore(res.data.nextBefore);
+        activeConversation.current = res.data.conversation?._id;
+        setCurrentTicket(res.data.conversation || null);
+      }).catch(() => { if (!controller.signal.aborted) toast.error('Không thể tải hội thoại. Hãy đóng rồi mở lại cửa sổ hỗ trợ.'); });
+    return () => controller.abort();
+  }, [user, isOpen, startingNew]);
 
   useEffect(() => {
     if (!socket) return;
@@ -70,7 +93,7 @@ const CustomerChatWidget = () => {
     const handleReceiveMessage = (newMessage) => {
       // Đảm bảo tin nhắn thuộc về khách hàng này
       if (newMessage.customerId === user?._id) {
-        setMessages((prev) => [...prev, newMessage]);
+        setMessages((prev) => prev.some(message => message._id === newMessage._id) ? prev : [...prev, newMessage]);
         // Báo noti nếu có tin nhắn từ admin hoặc hệ thống khi đang đóng popup
         if (!isOpen && newMessage.sender !== 'customer') {
           setUnreadCount(prev => prev + 1);
@@ -107,7 +130,9 @@ const CustomerChatWidget = () => {
   // ==================================================
   const handleSendMessage = (e) => {
     e.preventDefault();
-    if (!inputText.trim() || !user || !socket) return;
+    if (!inputText.trim() || !user || !socket || sendPending.current) return;
+    if (!socket.connected) return toast.error('Mất kết nối hỗ trợ. Vui lòng thử lại.');
+    sendPending.current = true; setSending(true);
 
     const messageData = {
       customerId: user._id,
@@ -117,18 +142,22 @@ const CustomerChatWidget = () => {
     };
 
     // Lắng nghe callback từ server để lấy ID Ticket nếu vừa tạo mới
-    socket.emit('send_message', messageData, (res) => {
+    socket.timeout(10000).emit('send_message', messageData, (error, res) => {
+      sendPending.current = false; setSending(false);
+      if (error || !res?.success) return toast.error(res?.message || 'Chưa nhận được xác nhận gửi. Vui lòng kiểm tra hội thoại trước khi gửi lại.');
+      setInputText('');
       if (res && res.success && res.conversationId) {
         if (!currentTicket || currentTicket._id !== res.conversationId) {
-          setCurrentTicket({ _id: res.conversationId, status: 'active' });
+          setCurrentTicket({ _id: res.conversationId, status: 'pending' });
+          activeConversation.current = res.conversationId;
         }
       }
     });
-    
-    setInputText('');
+
   };
 
   const handleEndSession = () => {
+    if (!socket?.connected) return toast.error('Mất kết nối hỗ trợ.');
     if (window.confirm("Bạn muốn kết thúc phiên hỗ trợ này?")) {
       socket.emit('end_session', { 
         conversationId: currentTicket?._id, // Truyền đúng ID Ticket cần đóng
@@ -138,6 +167,7 @@ const CustomerChatWidget = () => {
   };
 
   const handleStartNewSession = () => {
+    setStartingNew(true); setBefore(null); activeConversation.current = null;
     setMessages([]); // Làm rỗng màn hình -> Bắt đầu vòng lặp mới
     setCurrentTicket(null); // Reset Ticket ID -> Tin nhắn tiếp theo sẽ tạo Bìa hồ sơ mới
   };
@@ -148,11 +178,11 @@ const CustomerChatWidget = () => {
     <>
       <button
         onClick={toggleChat}
-        className="p-1.5 sm:p-2.5 hover:bg-white/10 rounded-full transition-all relative group"
+        className={triggerClassName || 'p-1.5 sm:p-2.5 hover:bg-white/10 rounded-full transition-all relative group'}
         aria-label={isOpen ? 'Đóng hỗ trợ khách hàng' : 'Mở hỗ trợ khách hàng'}
         aria-expanded={isOpen}
       >
-        <MessageCircle size={20} className="text-white group-hover:scale-110 transition-transform" />
+        <MessageCircle size={20} className={triggerClassName ? '' : 'text-white group-hover:scale-110 transition-transform'} />
         {unreadCount > 0 && (
           <span className="absolute top-0 right-0 bg-red-500 text-white text-[9px] sm:text-[10px] font-black rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center border sm:border-2 border-[#5a8c76] shadow-sm">
             {unreadCount > 9 ? '9+' : unreadCount}
@@ -180,6 +210,7 @@ const CustomerChatWidget = () => {
           </div>
 
           <div className="flex-1 p-4 overflow-y-auto bg-gray-50 flex flex-col gap-3 custom-scrollbar text-left">
+            {before && <button className="text-sm underline p-2" disabled={olderLoading} onClick={loadOlder}>{olderLoading ? 'Đang tải…' : 'Tải tin nhắn cũ'}</button>}
             {!user ? (
               <div className="text-center text-gray-500 my-auto">
                 <p className="mb-2">Vui lòng đăng nhập để chat.</p>
@@ -231,11 +262,14 @@ const CustomerChatWidget = () => {
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
                   placeholder="Nhập tin nhắn..."
+                  maxLength={2000}
+                  disabled={sending}
+                  aria-label="Tin nhắn hỗ trợ"
                   className="flex-1 bg-gray-100 rounded-full px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#5a8c76]/30 transition-all text-gray-900"
                 />
                 <button 
                   type="submit" 
-                  disabled={!inputText.trim()}
+                  disabled={sending || !inputText.trim()}
                   aria-label="Gửi tin nhắn"
                   className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${inputText.trim() ? 'bg-[#5a8c76] text-white hover:bg-[#46705d]' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
                 >

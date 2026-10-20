@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { ErrorState } from './components/AdminUI';
 import axiosClient from '../../api/axiosClient';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
@@ -7,6 +8,8 @@ import { Plus, Trash2, X, ImagePlus, Edit, ChevronLeft, ChevronRight } from 'luc
 
 const NewsManager = () => {
   const [newsList, setNewsList] = useState([]);
+  const [listLoading, setListLoading] = useState(true);
+  const [listError, setListError] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
@@ -33,13 +36,17 @@ const NewsManager = () => {
 
   // 1. Hàm lấy danh sách bài viết
   const fetchNews = async (page = 1) => {
+    setListLoading(true);
+    setListError('');
     try {
       const response = await axiosClient.get(`/news?page=${page}&limit=${itemsPerPage}`);
       setNewsList(response.data.data || []); 
       if (response.data.totalPages) setTotalPages(response.data.totalPages);
       if (response.data.totalCount !== undefined) setTotalCount(response.data.totalCount);
     } catch (error) {
-      console.error("Lỗi khi tải danh sách tin tức:", error);
+      setListError(error.response?.data?.message || "Không thể tải danh sách bài viết.");
+    } finally {
+      setListLoading(false);
     }
   };
 
@@ -144,7 +151,7 @@ const NewsManager = () => {
 
   // 5. Hàm xóa bài viết
   const handleDelete = async (id) => {
-    if (window.confirm("Sếp có chắc chắn muốn xóa bài viết này không? Ảnh trên mây cũng sẽ bị xóa!")) {
+    if (window.confirm("Bạn có chắc chắn muốn xóa bài viết này không? Ảnh trên mây cũng sẽ bị xóa!")) {
       try {
         await axiosClient.delete(`/news/${id}`);
         fetchNews(currentPage);
@@ -165,7 +172,7 @@ const NewsManager = () => {
   };
 
   return (
-    <div className="p-4 md:p-6 bg-[#151419] min-h-screen">
+    <div className="p-4 md:p-6 bg-[#101514] min-h-screen">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <h1 className="text-xl md:text-3xl font-black text-[#5a8c76] uppercase tracking-tighter">Quản lý Tin Tức</h1>
         <button 
@@ -176,11 +183,12 @@ const NewsManager = () => {
         </button>
       </div>
 
+      {listError && <ErrorState message={listError} onRetry={() => fetchNews(currentPage)} />}
       {/* DANH SÁCH BÀI VIẾT */}
-      <div className="bg-[#202028] rounded-3xl shadow-xl border border-gray-700 overflow-hidden">
+      <div className="bg-[#19211f] rounded-3xl shadow-xl border border-gray-700 overflow-hidden">
         <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-left min-w-[700px]">
-            <thead className="bg-[#151419] text-gray-500 font-bold text-xs uppercase tracking-widest border-b border-gray-700">
+            <thead className="bg-[#101514] text-gray-500 font-bold text-xs uppercase tracking-widest border-b border-gray-700">
               <tr>
                 <th className="p-5 w-24">Ảnh bìa</th>
                 <th className="p-5">Tiêu đề bài viết</th>
@@ -189,7 +197,7 @@ const NewsManager = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-800">
-              {newsList.length === 0 ? (
+              {listLoading ? <tr><td colSpan="4" className="p-10 text-center admin-muted">Đang tải bài viết…</td></tr> : newsList.length === 0 ? (
                 <tr><td colSpan="4" className="text-center py-16 text-gray-500 font-medium italic">Chưa có bài viết nào!</td></tr>
               ) : (
                 newsList.map((item) => (
@@ -233,7 +241,7 @@ const NewsManager = () => {
 
         {/* PHÂN TRANG */}
         {totalPages > 1 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-5 border-t border-gray-700 bg-[#151419]/50 gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-5 border-t border-gray-700 bg-[#101514]/50 gap-4">
             <span className="text-xs md:text-sm text-gray-500">
               Trang <span className="text-white font-bold">{currentPage}</span> / <span className="text-white font-bold">{totalPages}</span> 
               <span className="hidden sm:inline"> (Tổng: {totalCount} bài)</span>
@@ -242,14 +250,14 @@ const NewsManager = () => {
               <button 
                 disabled={currentPage === 1} 
                 onClick={() => setCurrentPage(p => p - 1)} 
-                className="p-2.5 border border-gray-700 rounded-xl bg-[#202028] text-gray-400 disabled:opacity-30 hover:bg-gray-800 transition-all"
+                className="p-2.5 border border-gray-700 rounded-xl bg-[#19211f] text-gray-400 disabled:opacity-30 hover:bg-gray-800 transition-all"
               >
                 <ChevronLeft size={18}/>
               </button>
               <button 
                 disabled={currentPage === totalPages} 
                 onClick={() => setCurrentPage(p => p + 1)} 
-                className="p-2.5 border border-gray-700 rounded-xl bg-[#202028] text-gray-400 disabled:opacity-30 hover:bg-gray-800 transition-all"
+                className="p-2.5 border border-gray-700 rounded-xl bg-[#19211f] text-gray-400 disabled:opacity-30 hover:bg-gray-800 transition-all"
               >
                 <ChevronRight size={18}/>
               </button>
@@ -261,9 +269,9 @@ const NewsManager = () => {
       {/* MODAL THÊM/SỬA BÀI VIẾT (POPUP) */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto custom-scrollbar">
-          <div className="bg-[#202028] w-full max-w-5xl rounded-3xl shadow-2xl my-auto overflow-hidden border border-gray-700 transform transition-all">
+          <div className="bg-[#19211f] w-full max-w-5xl rounded-3xl shadow-2xl my-auto overflow-hidden border border-gray-700 transform transition-all">
             
-            <div className="flex justify-between items-center p-5 md:p-6 border-b border-gray-700 bg-[#202028]">
+            <div className="flex justify-between items-center p-5 md:p-6 border-b border-gray-700 bg-[#19211f]">
               <h2 className="text-lg md:text-xl font-black text-[#5a8c76] uppercase tracking-tight">
                 {editingId ? "Cập nhật bài viết" : "Soạn bài viết mới"}
               </h2>
@@ -279,13 +287,13 @@ const NewsManager = () => {
                   <div>
                     <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">Tiêu đề bài viết <span className="text-red-500">*</span></label>
                     <input type="text" required value={formData.title} onChange={handleTitleChange} 
-                      className="w-full bg-[#151419] px-4 py-3 rounded-2xl border border-gray-700 focus:ring-2 focus:ring-[#5a8c76] outline-none text-white transition-all font-bold text-sm md:text-base"
+                      className="w-full bg-[#101514] px-4 py-3 rounded-2xl border border-gray-700 focus:ring-2 focus:ring-[#5a8c76] outline-none text-white transition-all font-bold text-sm md:text-base"
                       placeholder="VD: Kinh nghiệm chọn máy câu..." />
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">Đường dẫn SEO (Tự động)</label>
                     <input type="text" required value={formData.slug} readOnly
-                      className="w-full bg-[#151419]/50 px-4 py-3 rounded-2xl border border-gray-800 text-gray-500 outline-none font-mono text-[10px] md:text-xs cursor-not-allowed" />
+                      className="w-full bg-[#101514]/50 px-4 py-3 rounded-2xl border border-gray-800 text-gray-500 outline-none font-mono text-[10px] md:text-xs cursor-not-allowed" />
                   </div>
                   
                   {/* UPLOAD FILE SECTION */}
@@ -302,7 +310,7 @@ const NewsManager = () => {
                            </button>
                         </div>
                       ) : (
-                        <label className="w-full sm:w-40 h-28 flex flex-col items-center justify-center border-2 border-dashed border-gray-700 rounded-2xl cursor-pointer hover:bg-[#151419] hover:border-[#5a8c76] transition-all group">
+                        <label className="w-full sm:w-40 h-28 flex flex-col items-center justify-center border-2 border-dashed border-gray-700 rounded-2xl cursor-pointer hover:bg-[#101514] hover:border-[#5a8c76] transition-all group">
                           <ImagePlus className="text-gray-500 group-hover:text-[#5a8c76] mb-1.5 transition-colors" size={28} />
                           <span className="text-[10px] text-gray-500 font-bold uppercase tracking-tighter group-hover:text-[#5a8c76]">Chọn ảnh bìa</span>
                           <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
@@ -318,7 +326,7 @@ const NewsManager = () => {
                   <div>
                     <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">Mô tả ngắn <span className="text-red-500">*</span></label>
                     <textarea required value={formData.shortDescription} onChange={(e) => setFormData({...formData, shortDescription: e.target.value})}
-                      className="w-full bg-[#151419] px-4 py-3 rounded-2xl border border-gray-700 focus:ring-2 focus:ring-[#5a8c76] outline-none text-white transition-all min-h-[120px] text-sm md:text-base leading-relaxed"
+                      className="w-full bg-[#101514] px-4 py-3 rounded-2xl border border-gray-700 focus:ring-2 focus:ring-[#5a8c76] outline-none text-white transition-all min-h-[120px] text-sm md:text-base leading-relaxed"
                       placeholder="Viết 1-2 câu tóm tắt để thu hút người đọc..." />
                   </div>
                 </div>
@@ -326,7 +334,7 @@ const NewsManager = () => {
                 {/* Cột Phải - ReactQuill */}
                 <div className="flex flex-col min-h-[400px] md:min-h-[500px]">
                   <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">Nội dung bài viết <span className="text-red-500">*</span></label>
-                  <div className="flex-1 border border-gray-700 rounded-2xl overflow-hidden bg-[#151419] transition-all focus-within:ring-2 focus-within:ring-[#5a8c76]">
+                  <div className="flex-1 border border-gray-700 rounded-2xl overflow-hidden bg-[#101514] transition-all focus-within:ring-2 focus-within:ring-[#5a8c76]">
                     <ReactQuill 
                       theme="snow" 
                       value={formData.content} 

@@ -31,3 +31,6 @@ router.put('/:id/status', verifyToken, manageOrders, updateOrderStatus);
 router.put('/:id/cancel', verifyToken, cancelOrder);
 
 export default router;
+
+// Keep the deployed webhook/older browser URLs working during the cutover.
+export const mountOrderRoutes = app => app.use(['/api/orders', '/api/order'], router);

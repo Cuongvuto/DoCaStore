@@ -1,68 +1,55 @@
-import mongoose from 'mongoose';
 import Banner from '../models/bannerModel.js';
+import { failure } from '../services/commercePolicy.js';
+import { textField, safeLink, integerField, booleanField, contentError } from '../utils/contentValidation.js';
+import { pagination, queryText, escapeRegex, enumFilter } from '../utils/adminQuery.js';
 
-// Khách hàng: Lấy danh sách Banner đang bật để hiện lên trang chủ
-export const getActiveBanners = async (req, res) => {
-  try {
-    const banners = await Banner.find({ isActive: true }).sort({ sortOrder: 1, createdAt: -1 });
-    return res.status(200).json({ success: true, data: banners });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: 'Lỗi Server!', error: error.message });
-  }
+export const getActiveBanners = async (_req, res) => {
+  try { return res.json({ success: true, data: await Banner.find({ isActive: true }).sort({ sortOrder: 1, createdAt: -1 }) }); }
+  catch (error) { return contentError(res, error); }
 };
-
-// Admin: Lấy TẤT CẢ banner (cả bật và tắt) để quản lý
 export const getAllBanners = async (req, res) => {
   try {
-    const banners = await Banner.find().sort({ sortOrder: 1, createdAt: -1 });
-    return res.status(200).json({ success: true, data: banners });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: 'Lỗi Server!' });
-  }
+    const { page, limit, skip } = pagination(req.query);
+    const filter = {};
+    const search = queryText(req.query.search);
+    if (search) filter.title = { $regex: escapeRegex(search), $options: 'i' };
+    const active = enumFilter(req.query.active, ['true', 'false']);
+    if (active) filter.isActive = active === 'true';
+    const [data, totalCount] = await Promise.all([Banner.find(filter).sort({ sortOrder: 1, createdAt: -1, _id: -1 }).skip(skip).limit(limit), Banner.countDocuments(filter)]);
+    return res.json({ success: true, data, totalCount, currentPage: page, totalPages: Math.max(1, Math.ceil(totalCount / limit)) });
+  } catch (error) { return contentError(res, error); }
 };
-
-// Admin: Tạo banner mới
+function input(body) {
+  const data = {};
+  if (body.title !== undefined) data.title = textField(body.title, 'Tiêu đề', 150, false);
+  if (body.linkUrl !== undefined) data.linkUrl = safeLink(body.linkUrl);
+  if (body.sortOrder !== undefined) data.sortOrder = integerField(body.sortOrder, 'Thứ tự', 0, 10000);
+  if (body.isActive !== undefined) data.isActive = booleanField(body.isActive);
+  if (body.position !== undefined) {
+    if (!['home_main', 'home_sidebar', 'category_top'].includes(body.position)) throw failure(400, 'Vị trí banner không hợp lệ.');
+    data.position = body.position;
+  }
+  return data;
+}
 export const createBanner = async (req, res) => {
   try {
-    const bannerData = { ...req.body };
-    if (req.file) {
-      bannerData.imageUrl = req.file.path; 
-    }
-
-    const newBanner = new Banner(bannerData);
-    await newBanner.save();
-    return res.status(201).json({ success: true, message: 'Tạo Banner thành công!', data: newBanner });
-  } catch (error) {
-    console.error("Lỗi tạo banner:", error); // Bật còi báo động ra Terminal
-    return res.status(500).json({ success: false, message: 'Lỗi Server!', error: error.message });
-  }
+    const data = input(req.body);
+    if (!req.file) throw failure(400, 'Vui lòng chọn ảnh banner.');
+    return res.status(201).json({ success: true, data: await Banner.create({ ...data, imageUrl: req.file.path }) });
+  } catch (error) { return contentError(res, error); }
 };
-
-// Admin: Cập nhật banner (đổi ảnh, đổi link, bật/tắt)
 export const updateBanner = async (req, res) => {
   try {
-    const { id } = req.params;
-    const updateData = { ...req.body };
-
-    // 🟢 Nếu sếp có upload ảnh mới khi sửa banner
-    if (req.file) {
-      updateData.imageUrl = req.file.path;
-    }
-
-    const updatedBanner = await Banner.findByIdAndUpdate(id, updateData, { new: true });
-    return res.status(200).json({ success: true, message: 'Cập nhật thành công!', data: updatedBanner });
-  } catch (error) {
-    console.error("Lỗi cập nhật banner:", error);
-    return res.status(500).json({ success: false, message: 'Lỗi Server!' });
-  }
+    const data = input(req.body);
+    if (req.file) data.imageUrl = req.file.path;
+    const banner = await Banner.findByIdAndUpdate(req.params.id, { $set: data }, { new: true, runValidators: true });
+    if (!banner) throw failure(404, 'Banner không còn tồn tại.');
+    return res.json({ success: true, data: banner });
+  } catch (error) { return contentError(res, error); }
 };
-
-// Admin: Xóa banner
 export const deleteBanner = async (req, res) => {
   try {
-    await Banner.findByIdAndDelete(req.params.id);
-    return res.status(200).json({ success: true, message: 'Đã xóa Banner!' });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: 'Lỗi Server!' });
-  }
+    if (!await Banner.findByIdAndDelete(req.params.id)) throw failure(404, 'Banner không còn tồn tại.');
+    return res.json({ success: true, message: 'Đã xóa banner.' });
+  } catch (error) { return contentError(res, error); }
 };

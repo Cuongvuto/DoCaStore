@@ -1,577 +1,74 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
-import { 
-  User, MapPin, ShoppingBag, 
-  ChevronDown, ChevronUp, Package, 
-  Trash2, Edit, Plus, X, CheckCircle,
-  MessageSquare, LifeBuoy
-} from 'lucide-react';
-import { toast } from 'sonner';
-import { useAuth } from '../context/AuthContext'; 
-import axiosClient from '../api/axiosClient';
-import TierBadge from '../components/TierBadge'; 
+import { useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { ArrowRight, BadgeCheck, ChevronRight, Clock3, Leaf, LifeBuoy, MapPin, PackageCheck, ShoppingBag, User, Wallet } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { PurchaseAlert, PurchaseCard, PurchaseLoading } from '../components/purchase/PurchaseUI';
+import { addressText, dateTime, money, orderLabels } from '../components/purchase/purchaseFormat';
+import ProfileAddresses from '../components/profile/ProfileAddresses';
+import ProfileOrders from '../components/profile/ProfileOrders';
+import ProfileSupport from '../components/profile/ProfileSupport';
+import { ProfileEmpty } from '../components/profile/ProfileUI';
+import useProfileResource from '../components/profile/useProfileResource';
+import './Profile.css';
 
-const Profile = () => {
-  const { user, token, refreshUser } = useAuth();
-  const [activeTab, setActiveTab] = useState('info'); 
+const tabs = [
+  { id: 'info', label: 'Tổng quan tài khoản', icon: User },
+  { id: 'orders', label: 'Đơn hàng của tôi', icon: ShoppingBag },
+  { id: 'addresses', label: 'Sổ địa chỉ', icon: MapPin },
+  { id: 'chat', label: 'Lịch sử hỗ trợ', icon: LifeBuoy },
+];
+const tierLabels = { newbie: 'Thành viên mới', normal: 'Thành viên chuẩn', silver: 'Thành viên Bạc', gold: 'Thành viên Vàng', vip: 'Khách hàng VIP' };
 
-  // ================= STATE ĐỊA CHỈ =================
-  const [addresses, setAddresses] = useState([]);
-  const [provinces, setProvinces] = useState([]);
-  const [districts, setDistricts] = useState([]);
-  const [wards, setWards] = useState([]);
-  const [showAddressForm, setShowAddressForm] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [addressForm, setAddressForm] = useState({
-    receiverName: '', phone: '', street: '',
-    provinceCode: '', provinceName: '',
-    districtCode: '', districtName: '',
-    wardCode: '', wardName: '',
-    isDefault: false
-  });
+function ProfileOverview({ user, ordersResource, addressesResource }) {
+  const orders = ordersResource.data?.data || [];
+  const addresses = addressesResource.data?.data || [];
+  const defaultAddress = addresses.find(address => address.isDefault) || addresses[0];
+  const pending = orders.filter(order => order.status === 'pending').length;
+  const count = ordersResource.loading || ordersResource.error ? '—' : orders.length;
+  return <div className="purchase-stack">
+    <section className="profile-welcome"><div><p className="profile-welcome-kicker">GÓC NHỎ CỦA BẠN</p><h2>Rất vui được gặp lại bạn.</h2><p>Thông tin tài khoản và hành trình mua sắm,<br className="profile-desktop-break" /> tất cả ở cùng một nơi.</p><Link to="/products">Khám phá sản phẩm <ArrowRight size={16} /></Link></div><div className="profile-welcome-art" aria-hidden="true"><Leaf size={72} strokeWidth={1} /><span>DOCA</span></div></section>
+    <div className="profile-stats"><Link to="/profile?tab=orders"><span className="profile-stat-icon"><ShoppingBag size={20} /></span><div><strong>{count}</strong><span>Đơn đã đặt</span></div><ArrowRight size={15} /></Link><Link to="/profile?tab=orders&status=pending"><span className="profile-stat-icon"><Clock3 size={20} /></span><div><strong>{ordersResource.loading || ordersResource.error ? '—' : pending}</strong><span>Chờ xác nhận</span></div><div className="profile-stat-dot" /></Link><div><span className="profile-stat-icon"><Wallet size={20} /></span><div><strong>{money(user.totalSpent)}</strong><span>Chi tiêu từ đơn hoàn tất</span></div></div></div>
+    <PurchaseCard title="Thông tin tài khoản" icon={User} action={user.isVerified && <span className="purchase-badge"><BadgeCheck size={13} /> Đã xác thực</span>}>
+      <dl className="profile-details"><div><dt>Họ và tên</dt><dd>{user.name}</dd></div><div><dt>Địa chỉ email</dt><dd>{user.email}</dd></div><div><dt>Hạng thành viên</dt><dd>{tierLabels[user.tier] || tierLabels.newbie}</dd></div><div><dt>Ngày tham gia</dt><dd>{user.createdAt ? new Date(user.createdAt).toLocaleDateString('vi-VN') : 'Chưa có thông tin'}</dd></div></dl>
+    </PurchaseCard>
+    <PurchaseCard title="Đơn hàng gần đây" icon={PackageCheck} action={<Link className="purchase-text-button" to="/profile?tab=orders">Xem tất cả</Link>}>
+      {ordersResource.loading ? <PurchaseLoading /> : ordersResource.error ? <PurchaseAlert onRetry={ordersResource.refresh}>{ordersResource.error}</PurchaseAlert> : !orders.length ? <ProfileEmpty icon={ShoppingBag} title="Bạn chưa có đơn hàng nào" description="Những món đồ bạn chọn sẽ được lưu lại ở đây." /> : <div className="profile-recent-orders">{orders.slice(0, 3).map(order => <Link key={order._id} to={'/order-success/' + order._id}><span className="profile-recent-icon"><ShoppingBag size={19} /></span><div><strong>Đơn #{String(order._id).slice(-6).toUpperCase()}</strong><span>{dateTime(order.createdAt)}</span></div><span className={'profile-status profile-status-' + order.status}>{orderLabels[order.status] || 'Đang cập nhật'}</span><strong>{money(order.totalPrice)}</strong><ChevronRight size={16} /></Link>)}</div>}
+    </PurchaseCard>
+    <PurchaseCard title="Địa chỉ nhận hàng" icon={MapPin} action={<Link className="purchase-text-button" to="/profile?tab=addresses">Quản lý địa chỉ</Link>}>
+      {addressesResource.loading ? <PurchaseLoading /> : addressesResource.error ? <PurchaseAlert onRetry={addressesResource.refresh}>{addressesResource.error}</PurchaseAlert> : defaultAddress ? <div className="profile-default-address"><div><strong>{defaultAddress.receiverName}</strong>{defaultAddress.isDefault && <span className="purchase-badge">Mặc định</span>}</div><p>{defaultAddress.phone}</p><p>{addressText(defaultAddress)}</p></div> : <p className="purchase-muted">Bạn chưa lưu địa chỉ. Thêm một địa chỉ để thanh toán thuận tiện hơn.</p>}
+    </PurchaseCard>
+  </div>;
+}
 
-  // ================= STATE ĐƠN HÀNG =================
-  const [orders, setOrders] = useState([]);
-  const [expandedOrderId, setExpandedOrderId] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  // ================= STATE LỊCH SỬ CHAT (MỚI TỐI ƯU) =================
-  const [supportTickets, setSupportTickets] = useState([]);
-  const [expandedTicketId, setExpandedTicketId] = useState(null);
-  const [ticketMessages, setTicketMessages] = useState({}); // Lưu cache tin nhắn theo từng vé
-  const [loadingTickets, setLoadingTickets] = useState(false);
-  const [loadingMessages, setLoadingMessages] = useState(false);
-
-  // === STATE PHÂN TRANG ĐƠN HÀNG ===
-  const [currentPage, setCurrentPage] = useState(1);
-  const ordersPerPage = 6; 
-
-  const fetchAddresses = useCallback(async () => {
-    try {
-      const res = await axiosClient.get('/address');
-      if (res.data.success) setAddresses(res.data.data);
-    } catch (err) { console.error("Lỗi lấy địa chỉ:", err); }
-  }, []);
-
-  const fetchOrders = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await axiosClient.get("/orders/my-orders"); 
-      
-      if (res.data && res.data.success) {
-        setOrders(res.data.data);
-      } else {
-        toast.error("Không thể lấy danh sách đơn hàng!");
-      }
-    } catch (error) {
-      console.error("Lỗi lấy thông tin đơn hàng:", error);
-      toast.error("Lỗi kết nối server!");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // --- HÀM CHO TAB LỊCH SỬ HỖ TRỢ ---
-  const fetchSupportTickets = useCallback(async () => {
-    if (!user?._id) return;
-    try {
-      setLoadingTickets(true);
-      const res = await axiosClient.get(`/messages/customer-tickets/${user._id}`);
-      if (res.data.success) {
-        setSupportTickets(res.data.conversations || []);
-      }
-    } catch (error) {
-      console.error("Lỗi tải danh sách hỗ trợ:", error);
-      toast.error("Không thể tải danh sách hỗ trợ!");
-    } finally {
-      setLoadingTickets(false);
-    }
-  }, [user?._id]);
-
-  // 1. Khởi tạo dữ liệu
-  useEffect(() => {
-    if (user?._id && token) {
-      void refreshUser();
-      void fetchAddresses();
-      void fetchOrders();
-      axios.get("https://provinces.open-api.vn/api/p/").then((res) => setProvinces(res.data));
-    }
-  }, [user?._id, token, refreshUser, fetchAddresses, fetchOrders]);
-
-  useEffect(() => {
-    if (activeTab === 'chat' && user?._id) {
-      void fetchSupportTickets();
-    }
-  }, [activeTab, user?._id, fetchSupportTickets]);
-
-  const handleToggleTicket = async (ticketId) => {
-    // Nếu bấm đóng
-    if (expandedTicketId === ticketId) {
-      setExpandedTicketId(null);
-      return;
-    }
-    
-    // Nếu bấm mở
-    setExpandedTicketId(ticketId);
-    
-    // Chỉ gọi API nếu chưa cache tin nhắn của vé này
-    if (!ticketMessages[ticketId]) {
-      try {
-        setLoadingMessages(true);
-        const res = await axiosClient.get(`/messages/${ticketId}`);
-        if (res.data.success) {
-          setTicketMessages(prev => ({ ...prev, [ticketId]: res.data.messages }));
-        }
-      } catch (error) {
-        console.error("Lỗi tải tin nhắn:", error);
-        toast.error("Lỗi khi tải chi tiết tin nhắn");
-      } finally {
-        setLoadingMessages(false);
-      }
-    }
-  };
-
-
-  // ================= LOGIC PHÂN TRANG =================
-  const indexOfLastOrder = currentPage * ordersPerPage;
-  const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
-  const currentOrders = orders.slice(indexOfFirstOrder, indexOfLastOrder);
-  const totalPages = Math.ceil(orders.length / ordersPerPage);
-
-  useEffect(() => {
-    if (totalPages > 0 && currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [orders.length, totalPages, currentPage]);
-
-
-  const handleCancelOrder = (orderId) => {
-    toast.warning("Xác nhận hủy đơn hàng", {
-      description: "Bạn có chắc chắn muốn hủy đơn hàng này không? Thao tác này không thể hoàn tác.",
-      duration: 6000,
-      action: {
-        label: "Xác nhận hủy",
-        onClick: async () => {
-          try {
-            await axiosClient.put(`/orders/${orderId}/cancel`);
-            toast.success("Đã hủy đơn hàng thành công!");
-            fetchOrders(); 
-          } catch (error) {
-            console.error("Lỗi hủy đơn:", error);
-            toast.error(error.response?.data?.message || "Không thể hủy đơn hàng lúc này.");
-          }
-        }
-      },
-      cancel: { label: "Đóng" }
-    });
-  };
-
-  const handleProvinceChange = (e) => {
-    const code = e.target.value;
-    const name = e.target.options[e.target.selectedIndex].text;
-    setAddressForm({ ...addressForm, provinceCode: code, provinceName: name, districtCode: "", districtName: "", wardCode: "", wardName: "" });
-    if (code) axios.get(`https://provinces.open-api.vn/api/p/${code}?depth=2`).then((res) => setDistricts(res.data.districts));
-    else setDistricts([]);
-  };
-
-  const handleDistrictChange = (e) => {
-    const code = e.target.value;
-    const name = e.target.options[e.target.selectedIndex].text;
-    setAddressForm({ ...addressForm, districtCode: code, districtName: name, wardCode: "", wardName: "" });
-    if (code) axios.get(`https://provinces.open-api.vn/api/d/${code}?depth=2`).then((res) => setWards(res.data.wards));
-    else setWards([]);
-  };
-
-  const saveAddress = async (e) => {
-    e.preventDefault();
-    const payload = {
-      receiverName: addressForm.receiverName,
-      phone: addressForm.phone,
-      street: addressForm.street,
-      ward: addressForm.wardName,
-      district: addressForm.districtName,
-      city: addressForm.provinceName,
-      isDefault: addressForm.isDefault
-    };
-
-    try {
-      if (editingId) {
-        await axiosClient.put(`/address/${editingId}`, payload);
-        toast.success("Cập nhật địa chỉ thành công!");
-      } else {
-        await axiosClient.post('/address', payload);
-        toast.success("Thêm địa chỉ mới thành công!");
-      }
-      setShowAddressForm(false);
-      setEditingId(null);
-      fetchAddresses();
-    } catch { toast.error("Lỗi thao tác địa chỉ!"); }
-  };
-
-  const deleteAddress = async (id) => {
-    if (!window.confirm("Xóa địa chỉ này?")) return;
-    try {
-      await axiosClient.delete(`/address/${id}`);
-      toast.success("Đã xóa!");
-      fetchAddresses();
-    } catch { toast.error("Không thể xóa!"); }
-  };
-
-  const renderStatus = (status) => {
-    switch (status) {
-      case 'pending': return <span className="text-yellow-600 bg-yellow-50 border border-yellow-200 px-2 py-1 rounded-md text-[10px] font-bold uppercase">Chờ xử lý</span>;
-      case 'processing': return <span className="text-blue-600 bg-blue-50 border border-blue-200 px-2 py-1 rounded-md text-[10px] font-bold uppercase">Đang chuẩn bị</span>;
-      case 'shipped': return <span className="text-purple-600 bg-purple-50 border border-purple-200 px-2 py-1 rounded-md text-[10px] font-bold uppercase">Đang giao</span>;
-      case 'completed': return <span className="text-green-600 bg-green-50 border border-green-200 px-2 py-1 rounded-md text-[10px] font-bold uppercase">Hoàn thành</span>;
-      case 'cancelled': return <span className="text-red-600 bg-red-50 border border-red-200 px-2 py-1 rounded-md text-[10px] font-bold uppercase">Đã hủy</span>;
-      default: return <span className="text-gray-600 bg-gray-50 border px-2 py-1 rounded-md text-[10px] font-bold uppercase">{status}</span>;
-    }
-  };
-
-  const renderTicketStatus = (status) => {
-    switch(status) {
-        case 'pending': return <span className="bg-yellow-50 text-yellow-600 border border-yellow-200 px-2 py-1 rounded-md text-[10px] font-bold uppercase">Đang chờ</span>;
-        case 'active': return <span className="bg-blue-50 text-blue-600 border border-blue-200 px-2 py-1 rounded-md text-[10px] font-bold uppercase">Đang xử lý</span>;
-        case 'resolved': return <span className="bg-gray-100 text-gray-500 border border-gray-200 px-2 py-1 rounded-md text-[10px] font-bold uppercase">Đã đóng</span>;
-        default: return null;
-    }
-  };
-
-  if (!user) return <div className="text-center py-20 font-bold">Vui lòng đăng nhập...</div>;
-
-  return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4 md:px-8">
-      <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-6">
-        
-        {/* SIDEBAR */}
-        <div className="md:col-span-1 space-y-4">
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center">
-            <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mb-3">
-              <User className="w-10 h-10 text-red-600" />
-            </div>
-            <h2 className="font-bold text-gray-800">{user.name}</h2>
-            <p className="text-xs text-gray-500 mb-4">{user.email}</p>
-            
-            <TierBadge points={user?.points || 0} tier={user?.tier || 'normal'} />
-
-          </div>
-
-          <nav className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <button 
-              onClick={() => setActiveTab('info')} 
-              className={`w-full flex items-center gap-3 p-4 transition-colors ${activeTab === 'info' ? 'bg-red-50 text-red-600 border-l-4 border-red-600' : 'text-gray-600 hover:bg-gray-50 border-l-4 border-transparent'}`}
-            >
-              <User size={18} /> <span className="font-medium">Hồ sơ cá nhân</span>
-            </button>
-            <button 
-              onClick={() => { setActiveTab('orders'); setCurrentPage(1); }}
-              className={`w-full flex items-center gap-3 p-4 transition-colors ${activeTab === 'orders' ? 'bg-red-50 text-red-600 border-l-4 border-red-600' : 'text-gray-600 hover:bg-gray-50 border-l-4 border-transparent'}`}
-            >
-              <ShoppingBag size={18} /> <span className="font-medium">Đơn hàng đã đặt</span>
-            </button>
-            {/* TAB LỊCH SỬ CHAT */}
-            <button 
-              onClick={() => setActiveTab('chat')}
-              className={`w-full flex items-center gap-3 p-4 transition-colors ${activeTab === 'chat' ? 'bg-red-50 text-red-600 border-l-4 border-red-600' : 'text-gray-600 hover:bg-gray-50 border-l-4 border-transparent'}`}
-            >
-              <LifeBuoy size={18} /> <span className="font-medium">Lịch sử hỗ trợ</span>
-            </button>
-          </nav>
-        </div>
-
-        {/* CONTENT */}
-        <div className="md:col-span-3">
-          
-          {/* TAB 1: THÔNG TIN CÁ NHÂN */}
-          {activeTab === 'info' && (
-            <div className="space-y-6 animate-in fade-in zoom-in-95 duration-200">
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                <h3 className="text-lg font-bold mb-4 flex items-center gap-2 italic">
-                    <CheckCircle className="text-green-500" size={20}/> Thông tin tài khoản
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs text-gray-500 font-bold uppercase">Họ và tên</label>
-                    <div className="p-3 bg-gray-50 rounded-lg border mt-1 font-medium">{user.name}</div>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-bold uppercase">Email</label>
-                    <div className="p-3 bg-gray-50 rounded-lg border mt-1 font-medium italic text-gray-400">{user.email}</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-lg font-bold flex items-center gap-2 italic">
-                    <MapPin className="text-red-500" size={20}/> Sổ địa chỉ
-                  </h3>
-                  <button 
-                    onClick={() => { setShowAddressForm(true); setEditingId(null); }}
-                    className="text-sm bg-red-600 text-white px-4 py-2 rounded-full flex items-center gap-1 hover:bg-red-700 transition"
-                  >
-                    <Plus size={16}/> Thêm địa chỉ
-                  </button>
-                </div>
-
-                <div className="space-y-4">
-                  {addresses.map((addr) => (
-                    <div key={addr._id} className={`p-4 rounded-xl border relative ${addr.isDefault ? 'border-red-200 bg-red-50/30' : 'border-gray-100'}`}>
-                      {addr.isDefault && <span className="absolute top-4 right-4 bg-red-600 text-white text-[10px] px-2 py-0.5 rounded-full uppercase font-bold tracking-tighter">Mặc định</span>}
-                      <p className="font-bold text-gray-800">{addr.receiverName} <span className="font-normal text-gray-400 ml-2">| {addr.phone}</span></p>
-                      <p className="text-sm text-gray-600 mt-1">{addr.street}, {addr.ward}, {addr.district}, {addr.city}</p>
-                      <div className="mt-3 flex gap-4">
-                        <button onClick={() => deleteAddress(addr._id)} className="text-xs text-gray-400 hover:text-red-600 flex items-center gap-1"><Trash2 size={14}/> Xóa</button>
-                        <button className="text-xs text-gray-400 hover:text-blue-600 flex items-center gap-1"><Edit size={14}/> Sửa</button>
-                      </div>
-                    </div>
-                  ))}
-                  {addresses.length === 0 && <p className="text-center text-gray-400 py-4 italic">Bạn chưa lưu địa chỉ nào.</p>}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 2: ĐƠN HÀNG ĐÃ ĐẶT */}
-          {activeTab === 'orders' && (
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
-              <h3 className="text-lg font-bold mb-6 flex items-center gap-2 italic">
-                <Package className="text-orange-500" size={20}/> Lịch sử mua hàng
-              </h3>
-              
-              {loading ? (
-                <div className="text-center py-10 text-gray-500">Đang tải danh sách đơn hàng...</div>
-              ) : (
-                <>
-                  <div className="space-y-3">
-                    {currentOrders.map((order) => (
-                      <div key={order._id} className="border border-gray-100 rounded-xl overflow-hidden">
-                        <div 
-                          onClick={() => setExpandedOrderId(expandedOrderId === order._id ? null : order._id)}
-                          className="p-4 bg-gray-50 flex justify-between items-center cursor-pointer hover:bg-gray-100 transition"
-                        >
-                          <div>
-                            <p className="font-bold text-sm">Đơn hàng: #{order._id.slice(-6).toUpperCase()}</p>
-                            <p className="text-xs text-gray-500">{new Date(order.createdAt).toLocaleDateString('vi-VN')} - {new Date(order.createdAt).toLocaleTimeString('vi-VN')}</p>
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <div className="text-right">
-                              <p className="font-bold text-red-600 text-sm mb-1">{order.totalPrice?.toLocaleString()}đ</p>
-                              {renderStatus(order.status)}
-                            </div>
-                            {expandedOrderId === order._id ? <ChevronUp size={18} className="text-gray-400"/> : <ChevronDown size={18} className="text-gray-400"/>}
-                          </div>
-                        </div>
-
-                        {expandedOrderId === order._id && (
-                          <div className="p-4 border-t border-gray-100 bg-white space-y-3">
-                            {order.products.map((item, idx) => {
-                              const productInfo = item.productId || item.product_id || {};
-                              return (
-                                <div key={idx} className="flex gap-3 items-center">
-                                  <img src={productInfo.imageUrl || 'https://via.placeholder.com/50'} className="w-12 h-12 object-cover rounded border" alt="product" />
-                                  <div className="flex-1">
-                                    <p className="text-sm font-medium line-clamp-1">{productInfo.name || 'Sản phẩm không xác định'}</p>
-                                    <p className="text-xs text-gray-400">SL: {item.quantity} x {item.priceAtPurchase?.toLocaleString()}đ</p>
-                                  </div>
-                                </div>
-                              )
-                            })}
-                            
-                            {order.shippingAddress && (
-                              <div className="pt-3 border-t text-xs text-gray-500">
-                                <p>📍 <strong>Giao đến:</strong> {order.shippingAddress.receiverName} - {order.shippingAddress.phone}</p>
-                                <p className="mt-1">{order.shippingAddress.street}, {order.shippingAddress.ward}, {order.shippingAddress.district}, {order.shippingAddress.city}</p>
-                              </div>
-                            )}
-
-                            {(order.status === 'pending' || order.status === 'processing') && (
-                              <div className="pt-4 border-t flex justify-end">
-                                <button 
-                                  onClick={() => handleCancelOrder(order._id)}
-                                  className="px-4 py-2 text-sm font-semibold text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-600 hover:text-white transition-colors"
-                                >
-                                  Hủy đơn hàng
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                    {orders.length === 0 && <p className="text-center text-gray-400 py-10 italic">Chưa có đơn hàng nào được đặt.</p>}
-                  </div>
-
-                  {totalPages > 1 && (
-                    <div className="flex justify-center items-center gap-2 mt-8">
-                      <button
-                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                        disabled={currentPage === 1}
-                        className="px-3 py-1 text-sm border rounded-md hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
-                      >
-                        Trước
-                      </button>
-                      
-                      {[...Array(totalPages)].map((_, index) => (
-                        <button
-                          key={index}
-                          onClick={() => setCurrentPage(index + 1)}
-                          className={`w-8 h-8 flex justify-center items-center text-sm rounded-md transition ${
-                            currentPage === index + 1 
-                              ? 'bg-red-600 text-white font-bold border-red-600' 
-                              : 'border hover:bg-gray-100 text-gray-600'
-                          }`}
-                        >
-                          {index + 1}
-                        </button>
-                      ))}
-
-                      <button
-                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                        disabled={currentPage === totalPages}
-                        className="px-3 py-1 text-sm border rounded-md hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
-                      >
-                        Sau
-                      </button>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          )}
-
-          {/* TAB 3: LỊCH SỬ CHAT VỚI DROPDOWN THEO TICKET (MỚI) */}
-          {activeTab === 'chat' && (
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
-              <h3 className="text-lg font-bold mb-6 flex items-center gap-2 italic">
-                <LifeBuoy className="text-blue-500" size={20}/> Các phiên yêu cầu hỗ trợ
-              </h3>
-              
-              {loadingTickets ? (
-                <div className="text-center py-10 text-gray-500">Đang tải danh sách...</div>
-              ) : supportTickets.length === 0 ? (
-                <div className="text-center py-10 flex flex-col items-center">
-                  <MessageSquare className="w-12 h-12 text-gray-300 mb-3" />
-                  <p className="text-gray-400 italic">Bạn chưa tạo yêu cầu hỗ trợ nào.</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {supportTickets.map((ticket) => (
-                    <div key={ticket._id} className="border border-gray-100 rounded-xl overflow-hidden">
-                      
-                      {/* Tiêu đề Ticket - Click để mở/đóng */}
-                      <div 
-                        onClick={() => handleToggleTicket(ticket._id)}
-                        className="p-4 bg-gray-50 flex justify-between items-center cursor-pointer hover:bg-gray-100 transition"
-                      >
-                        <div>
-                          <p className="font-bold text-sm text-blue-600">Vé hỗ trợ: {ticket.ticketId}</p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            Mở lúc: {new Date(ticket.createdAt).toLocaleTimeString('vi-VN')} - {new Date(ticket.createdAt).toLocaleDateString('vi-VN')}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <div className="text-right">
-                            {renderTicketStatus(ticket.status)}
-                          </div>
-                          {expandedTicketId === ticket._id ? <ChevronUp size={18} className="text-gray-400"/> : <ChevronDown size={18} className="text-gray-400"/>}
-                        </div>
-                      </div>
-
-                      {/* Nội dung Ticket (Dropdown) */}
-                      {expandedTicketId === ticket._id && (
-                        <div className="bg-white border-t border-gray-100 flex flex-col max-h-[400px]">
-                          {loadingMessages ? (
-                            <div className="p-8 text-center text-sm text-gray-400">Đang tải nội dung...</div>
-                          ) : ticketMessages[ticket._id]?.length > 0 ? (
-                            <div className="p-4 space-y-4 overflow-y-auto custom-scrollbar">
-                              {ticketMessages[ticket._id].map((msg, idx) => {
-                                // TIN NHẮN HỆ THỐNG
-                                if (msg.sender === 'system') {
-                                  return (
-                                    <div key={msg._id || idx} className="flex justify-center my-3">
-                                      <span className={`text-[11px] px-3 py-1.5 rounded-full font-medium text-center ${msg.action === 'join_support' ? 'bg-[#5a8c76]/10 text-[#5a8c76] border border-[#5a8c76]/20' : msg.action === 'end_support' ? 'bg-red-50 text-red-500 border border-red-100' : 'bg-gray-100 text-gray-500 border border-gray-200'}`}>
-                                        {msg.action === 'join_support' ? '👩‍💼' : msg.action === 'end_support' ? '🔒' : '🤖'} {msg.text}
-                                      </span>
-                                    </div>
-                                  );
-                                }
-
-                                // TIN NHẮN KHÁCH HÀNG & ADMIN
-                                const isCustomer = msg.sender === 'customer';
-                                return (
-                                  <div key={msg._id || idx} className={`flex ${isCustomer ? 'justify-end' : 'justify-start'}`}>
-                                    <div className={`max-w-[80%] p-3 shadow-sm ${isCustomer ? 'bg-[#5a8c76] text-white rounded-2xl rounded-tr-sm' : 'bg-gray-100 text-gray-800 rounded-2xl rounded-tl-sm border border-gray-200'}`}>
-                                      <p className="text-sm leading-relaxed">{msg.text}</p>
-                                      <span className={`text-[10px] mt-1.5 block ${isCustomer ? 'text-gray-200' : 'text-gray-500'}`}>
-                                        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                      </span>
-                                    </div>
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          ) : (
-                            <div className="p-8 text-center text-sm text-gray-400">Chưa có nội dung trò chuyện.</div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-        </div>
+function ProfileContent() {
+  const { user, refreshUser } = useAuth();
+  const [searchParams] = useSearchParams();
+  const requestedTab = searchParams.get('tab');
+  const activeTab = tabs.some(tab => tab.id === requestedTab) ? requestedTab : 'info';
+  const ordersResource = useProfileResource('/orders/my-orders');
+  const addressesResource = useProfileResource('/address');
+  useEffect(() => { void refreshUser(); }, [refreshUser]);
+  const initials = (user.name || 'Bạn').trim().split(/\s+/).slice(-2).map(part => part[0]).join('').toLocaleUpperCase('vi-VN');
+  return <div className="cart-page purchase-page profile-page"><div className="cart-container">
+    <nav className="cart-breadcrumb" aria-label="Đường dẫn"><Link to="/">Trang chủ</Link><ChevronRight size={12} /><span aria-current="page">Tài khoản của tôi</span></nav>
+    <header className="cart-heading profile-heading"><div><p className="cart-eyebrow">DOCA STORE · ĐỒNG HÀNH CÙNG BẠN</p><h1>Tài khoản của tôi<span className="cart-heading-dot">.</span></h1><p>Quản lý thông tin và theo dõi những món đồ bạn yêu thích.</p></div><Link className="cart-back" to="/products">Tiếp tục mua sắm <ArrowRight size={16} /></Link></header>
+    <div className="profile-layout">
+      <aside className="profile-sidebar"><div className="profile-identity"><div className="profile-avatar" aria-hidden="true">{initials}</div><h2>{user.name}</h2><p>{user.email}</p><span className="profile-tier"><Leaf size={14} />{tierLabels[user.tier] || tierLabels.newbie}</span></div>
+        <nav className="profile-nav" aria-label="Quản lý tài khoản">{tabs.map(({ id, label, icon: Icon }) => <Link key={id} to={'/profile?tab=' + id} aria-current={activeTab === id ? 'page' : undefined}>{Icon && <Icon size={18} />}<span>{label}</span><ChevronRight size={15} /></Link>)}</nav>
+        <div className="profile-sidebar-help"><LifeBuoy size={22} /><h3>Bạn cần hỗ trợ?</h3><p>Cửa hàng sẵn sàng giúp bạn với đơn hàng và sản phẩm.</p><Link to="/contact">Liên hệ cửa hàng <ArrowRight size={14} /></Link></div>
+      </aside>
+      <div className="profile-content">
+        {activeTab === 'info' && <ProfileOverview user={user} ordersResource={ordersResource} addressesResource={addressesResource} />}
+        {activeTab === 'orders' && <ProfileOrders key={searchParams.get('status') || 'all'} resource={ordersResource} initialStatus={searchParams.get('status')} />}
+        {activeTab === 'addresses' && <ProfileAddresses resource={addressesResource} />}
+        {activeTab === 'chat' && <ProfileSupport userId={user._id || user.id} />}
       </div>
-
-      {/* MODAL THÊM ĐỊA CHỈ */}
-      {showAddressForm && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-lg rounded-2xl p-6 shadow-2xl relative overflow-y-auto max-h-[90vh]">
-            <button onClick={() => setShowAddressForm(false)} className="absolute top-4 right-4 text-gray-400 hover:text-black"><X/></button>
-            <h2 className="text-xl font-bold mb-6">Thêm địa chỉ mới</h2>
-            <form onSubmit={saveAddress} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <input required type="text" placeholder="Người nhận" className="border p-2.5 rounded-lg w-full outline-none focus:border-red-500" 
-                  onChange={(e) => setAddressForm({...addressForm, receiverName: e.target.value})} />
-                <input required type="text" placeholder="Số điện thoại" className="border p-2.5 rounded-lg w-full outline-none focus:border-red-500"
-                  onChange={(e) => setAddressForm({...addressForm, phone: e.target.value})} />
-              </div>
-              
-              <select required className="border p-2.5 rounded-lg w-full outline-none" onChange={handleProvinceChange}>
-                <option value="">Chọn Tỉnh/Thành</option>
-                {provinces.map(p => <option key={p.code} value={p.code}>{p.name}</option>)}
-              </select>
-
-              <div className="grid grid-cols-2 gap-4">
-                <select required className="border p-2.5 rounded-lg w-full outline-none" disabled={!addressForm.provinceCode} onChange={handleDistrictChange}>
-                  <option value="">Quận/Huyện</option>
-                  {districts.map(d => <option key={d.code} value={d.code}>{d.name}</option>)}
-                </select>
-                <select required className="border p-2.5 rounded-lg w-full outline-none" disabled={!addressForm.districtCode} 
-                  onChange={(e) => setAddressForm({...addressForm, wardCode: e.target.value, wardName: e.target.options[e.target.selectedIndex].text})}>
-                  <option value="">Phường/Xã</option>
-                  {wards.map(w => <option key={w.code} value={w.code}>{w.name}</option>)}
-                </select>
-              </div>
-
-              <input required type="text" placeholder="Số nhà, tên đường..." className="border p-2.5 rounded-lg w-full outline-none focus:border-red-500"
-                onChange={(e) => setAddressForm({...addressForm, street: e.target.value})} />
-
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={addressForm.isDefault} onChange={(e) => setAddressForm({...addressForm, isDefault: e.target.checked})} />
-                <span className="text-sm font-medium">Đặt làm mặc định</span>
-              </label>
-
-              <button type="submit" className="w-full bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700 transition">LƯU ĐỊA CHỈ</button>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
-  );
-};
+  </div></div>;
+}
 
-export default Profile;
+export default function Profile() {
+  const { user } = useAuth();
+  if (!user) return <div className="cart-page purchase-page"><div className="cart-container"><PurchaseLoading /></div></div>;
+  return <ProfileContent key={user._id || user.id} />;
+}

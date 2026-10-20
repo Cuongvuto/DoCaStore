@@ -1,5 +1,19 @@
 import Category from '../models/categoryModel.js';
 import mongoose from 'mongoose';
+import Product from '../models/productsModel.js';
+import { badRequest } from '../utils/adminQuery.js';
+
+const validateParent = async (parentId, categoryId) => {
+  const visited = new Set(categoryId ? [String(categoryId)] : []);
+  let cursor = parentId;
+  while (cursor) {
+    if (!mongoose.Types.ObjectId.isValid(cursor) || visited.has(String(cursor))) throw badRequest('Danh mục cha không hợp lệ hoặc tạo vòng lặp.');
+    visited.add(String(cursor));
+    const parent = await Category.findById(cursor).select('parentId');
+    if (!parent) throw badRequest('Danh mục cha không tồn tại.');
+    cursor = parent.parentId;
+  }
+};
 
 // Hàm hỗ trợ: Biến đổi tiếng Việt có dấu thành chuỗi không dấu
 const generateSlug = (text) => {
@@ -33,7 +47,7 @@ export const createCategory = async (req, res) => {
     // Lấy thêm các trường mới từ req.body
     const { name, parentId, image, description, isActive, sortOrder } = req.body;
     
-    if (!name) {
+    if (typeof name !== 'string' || !name.trim()) {
       return res.status(400).json({
         success: false,
         message: 'Vui lòng nhập tên danh mục!'
@@ -52,6 +66,7 @@ export const createCategory = async (req, res) => {
 
     // Nếu parentId truyền lên là rỗng, set về null
     const validParentId = parentId ? parentId : null;
+    await validateParent(validParentId, req.params.id);
 
     const newCategory = new Category({ 
       name, 
@@ -73,7 +88,7 @@ export const createCategory = async (req, res) => {
 
   } catch (error) {
     console.error("❌ Lỗi khi tạo danh mục:", error);
-    return res.status(500).json({ success: false, message: 'Lỗi server', error: error.message });
+    return res.status(error.status || (error.code === 11000 ? 409 : 500)).json({ success: false, message: error.status ? error.message : error.code === 11000 ? 'Tên danh mục đã tồn tại.' : 'Không thể xử lý danh mục.' });
   }
 }
 
@@ -94,7 +109,7 @@ export const getAllCategory = async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Lỗi khi lấy danh mục:", error);
-    return res.status(500).json({ success: false, message: 'Lỗi server', error: error.message });
+    return res.status(error.status || (error.code === 11000 ? 409 : 500)).json({ success: false, message: error.status ? error.message : error.code === 11000 ? 'Tên danh mục đã tồn tại.' : 'Không thể xử lý danh mục.' });
   }
 }
 
@@ -107,7 +122,7 @@ export const updateCategory = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(categoryId)) {
        return res.status(400).json({ success: false, message: 'ID danh mục không hợp lệ!' });
     }
-    if (!name) {
+    if (typeof name !== 'string' || !name.trim()) {
        return res.status(400).json({ success: false, message: 'Vui lòng nhập tên mới cho danh mục!' });
     }
 
@@ -118,6 +133,7 @@ export const updateCategory = async (req, res) => {
 
     const newSlug = generateSlug(name);
     const validParentId = parentId ? parentId : null;
+    await validateParent(validParentId, req.params.id);
 
     const updatedCategory = await Category.findByIdAndUpdate(
       categoryId, 
@@ -130,7 +146,7 @@ export const updateCategory = async (req, res) => {
         isActive,
         sortOrder
       }, 
-      { new: true }
+      { new: true, runValidators: true }
     );
 
     if (!updatedCategory) {
@@ -144,7 +160,7 @@ export const updateCategory = async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Lỗi khi sửa danh mục:", error);
-    return res.status(500).json({ success: false, message: 'Lỗi server', error: error.message });
+    return res.status(error.status || (error.code === 11000 ? 409 : 500)).json({ success: false, message: error.status ? error.message : error.code === 11000 ? 'Tên danh mục đã tồn tại.' : 'Không thể xử lý danh mục.' });
   }
 }
 
@@ -166,6 +182,9 @@ export const deleteCategory = async (req, res) => {
       });
     }
 
+    if (await Product.exists({ category_id: categoryId })) {
+      return res.status(409).json({ success: false, message: 'Danh mục còn sản phẩm. Hãy chuyển sản phẩm sang danh mục khác trước khi xóa.' });
+    }
     const deletedCategory = await Category.findByIdAndDelete(categoryId);
 
     if (!deletedCategory) {
@@ -179,7 +198,7 @@ export const deleteCategory = async (req, res) => {
 
   } catch (error) {
     console.error("❌ Lỗi khi xóa danh mục:", error);
-    return res.status(500).json({ success: false, message: 'Lỗi server', error: error.message });
+    return res.status(error.status || (error.code === 11000 ? 409 : 500)).json({ success: false, message: error.status ? error.message : error.code === 11000 ? 'Tên danh mục đã tồn tại.' : 'Không thể xử lý danh mục.' });
   }
 };
 
@@ -195,6 +214,6 @@ export const getCategoryById = async (req, res) => {
     return res.status(200).json({ success: true, data: category });
   } catch (error) {
     console.error("❌ Lỗi khi lấy ID danh mục:", error);
-    return res.status(500).json({ success: false, message: 'Lỗi server', error: error.message });
+    return res.status(error.status || (error.code === 11000 ? 409 : 500)).json({ success: false, message: error.status ? error.message : error.code === 11000 ? 'Tên danh mục đã tồn tại.' : 'Không thể xử lý danh mục.' });
   }
 };

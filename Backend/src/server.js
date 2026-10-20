@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { claimConversation, openConversation } from './services/supportService.js';
 import express from 'express';
 import http from 'http'; 
 import socketUtil from './utils/socket.js'; 
@@ -7,7 +8,7 @@ import { connectDB } from './config/db.js';
 import categoryRoutes from './routes/categoryRoutes.js';
 import cartRoutes from './routes/cartRoutes.js';
 import productRoutes from './routes/productRoutes.js'
-import orderRoutes from './routes/orderRoutes.js';
+import { mountOrderRoutes } from './routes/orderRoutes.js';
 import reviewRoutes from './routes/reviewRoutes.js';
 import wishlistRoutes from './routes/wishlistRoutes.js';
 import couponRoutes from './routes/couponRoutes.js';
@@ -41,14 +42,15 @@ const endSession = async (customerIdStr, io, conversationIdStr) => {
     
     let conv;
     if (conversationIdStr) {
-        conv = await Conversation.findByIdAndUpdate(
-            conversationIdStr, 
+        conv = await Conversation.findOneAndUpdate(
+            { _id: conversationIdStr, status: 'active' },
             { status: 'resolved' }, 
             { new: true }
         ).populate('customerId', 'name email avatar')
          .populate('assignedAdminId', 'name');
     }
 
+    if (!conv) return;
     // Gửi tin báo kết thúc
     const sysMsg = await Message.create({
       conversationId: conversationIdStr,
@@ -77,9 +79,6 @@ const endSession = async (customerIdStr, io, conversationIdStr) => {
 // LẮNG NGHE BỘ ĐÀM
 // ==========================================
 // Hàm tạo mã Ticket ngẫu nhiên
-const generateTicketId = () => {
-  return '#TK-' + Math.floor(100000 + Math.random() * 900000); // VD: #TK-123456
-};
 
 io.on('connection', (socket) => {
   const authenticatedUserId = socket.user.id;
@@ -101,7 +100,7 @@ io.on('connection', (socket) => {
     try {
       const Message = (await import('./models/messageModel.js')).default;
       const Conversation = (await import('./models/conversationModel.js')).default;
-      const text = data?.text?.trim();
+      const text = typeof data?.text === 'string' ? data.text.trim() : '';
       if (!text || text.length > 2000) {
         if (typeof callback === 'function') {
           callback({ success: false, message: 'Tin nhắn phải có từ 1 đến 2000 ký tự.' });
@@ -114,19 +113,8 @@ io.on('connection', (socket) => {
       const sender = isSupportStaff ? 'admin' : 'customer';
 
       if (sender === 'customer') {
-        let conv = await Conversation.findOne({ 
-          customerId: authenticatedUserId,
-          status: { $in: ['pending', 'active'] } 
-        });
-
-        if (!conv) {
-          conv = await Conversation.create({
-            ticketId: generateTicketId(),
-            customerId: authenticatedUserId,
-            status: 'pending'
-          });
-
-          setTimeout(async () => {
+        const { conversation: conv, created } = await openConversation(authenticatedUserId);
+        if (created) {
             const autoMsg = await Message.create({
               conversationId: conv._id,
               customerId: authenticatedUserId,
@@ -137,14 +125,13 @@ io.on('connection', (socket) => {
             io.to('admin_room').emit('receive_message', autoMsg);
             io.to(`room_user_${authenticatedUserId}`).emit('receive_message', autoMsg);
             io.to('admin_room').emit('new_ticket_created', conv);
-          }, 1000);
         }
 
         conversationId = conv._id;
         await Conversation.findByIdAndUpdate(conv._id, { updatedAt: Date.now() });
       } else {
         const conv = await Conversation.findById(conversationId);
-        if (!conv) {
+        if (!conv || conv.status !== 'active') {
           if (typeof callback === 'function') callback({ success: false, message: 'Không tìm thấy ticket.' });
           return;
         }
@@ -204,19 +191,7 @@ io.on('connection', (socket) => {
       const Message = (await import('./models/messageModel.js')).default;
       const User = (await import('./models/userModel.js')).default;
 
-      const conv = await Conversation.findById(data.conversationId);
-      if (!conv) {
-        if (callback) callback({ success: false, message: "Không tìm thấy ticket." });
-        return;
-      }
-      if (conv.assignedAdminId && conv.assignedAdminId.toString() !== authenticatedUserId.toString()) {
-        if (callback) callback({ success: false, message: "Ticket này đã có Admin khác hỗ trợ." });
-        return;
-      }
-
-      conv.assignedAdminId = authenticatedUserId;
-      conv.status = 'active';
-      await conv.save();
+      const conv = await claimConversation(data.conversationId, authenticatedUserId);
       const admin = await User.findById(authenticatedUserId).select('name');
       const customerId = conv.customerId.toString();
 
@@ -243,6 +218,7 @@ io.on('connection', (socket) => {
       if (callback) callback({ success: true });
     } catch (err) {
       console.error("Lỗi claim_session:", err);
+      if (typeof callback === 'function') callback({ success: false, message: err.status ? err.message : 'Không thể nhận ticket.' });
     }
   });
 
@@ -269,13 +245,14 @@ io.on('connection', (socket) => {
       }
 
       const customerId = existingConversation.customerId.toString();
-      const conv = await Conversation.findByIdAndUpdate(
-        data.conversationId,
+      const conv = await Conversation.findOneAndUpdate(
+        { _id: data.conversationId, status: { $in: ['pending', 'active'] } },
         { status: 'resolved' },
         { new: true }
       ).populate('customerId', 'name email avatar')
        .populate('assignedAdminId', 'name');
 
+      if (!conv) { if (typeof callback === 'function') callback({ success: true }); return; }
       const sysMsg = await Message.create({
         conversationId: data.conversationId,
         customerId,
@@ -317,7 +294,7 @@ app.use(cors({
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
   credentials: true
 }));
-connectDB();
+await connectDB();
 startCronJobs();
 
 app.use(express.json({ limit: '50mb' })); 
@@ -332,7 +309,7 @@ app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/coupons', couponRoutes);
 app.use('/api/address', addressRoutes);
 app.use('/api/banners', bannerRoutes);
-app.use('/api/orders', orderRoutes);
+mountOrderRoutes(app);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/news', newsRoutes);
 app.post('/api/chat', askBot); // AI chat endpoint (Gemini)

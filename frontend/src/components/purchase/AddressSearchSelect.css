@@ -1,0 +1,15 @@
+.address-search { position: relative; }
+.address-search:focus-within { z-index: 5; }
+.address-search-control { position: relative; }
+.address-search-control input { padding-right: 35px; text-overflow: ellipsis; }
+.address-search-control input:disabled { background: #f0f2eb; cursor: not-allowed; color: #8b9581; }
+.address-search-control > span { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #7e9269; pointer-events: none; }
+.address-search-popup { position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 6; background: white; border: 1px solid #d5dfc8; border-radius: 10px; box-shadow: 0 9px 25px #29442b20; overflow: hidden; }
+.address-search-hint { padding: 11px 12px; font-size: 10px; line-height: 1.7; font-weight: 400; color: #71835f; background: #f6f8f0; border-bottom: 1px solid #e7ecde; }
+.address-search-popup ul { max-height: 230px; overflow-y: auto; overscroll-behavior: contain; padding: 4px; }
+.address-search-popup button { display: flex; justify-content: space-between; align-items: center; gap: 9px; width: 100%; min-height: 42px; padding: 10px; text-align: left; font-size: 12px; line-height: 1.6; font-weight: 400; color: #3f5b34; border-radius: 6px; overflow-wrap: anywhere; }
+.address-search-popup button:hover, .address-search-popup button.address-search-active { background: #edf3e2; }
+.address-search-popup button[aria-selected=true] { font-weight: 600; color: #294e3e; background: #f2f6ea; }
+.address-search-popup button svg { flex-shrink: 0; }
+.purchase-form fieldset:disabled .address-search-popup { display: none; }
+@media (max-width: 639px) { .address-search-control input { font-size: 16px; } .address-search-popup ul { max-height: 200px; } }

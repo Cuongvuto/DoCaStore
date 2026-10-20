@@ -1,8 +1,11 @@
 import mongoose from 'mongoose';
 import Notification from '../models/notificationModel.js';
 import NotificationRead from '../models/notificationReadModel.js';
-import Order from '../models/oderModel.js';
-import User from '../models/userModel.js';
+import { pagination, queryText, escapeRegex } from '../utils/adminQuery.js';
+import { contentError } from '../utils/contentValidation.js';
+import { failure } from '../services/commercePolicy.js';
+import { deliverNotification } from '../services/notificationService.js';
+
 import socketUtil from '../utils/socket.js';
 
 // ==========================================
@@ -13,9 +16,7 @@ import socketUtil from '../utils/socket.js';
 export const getUserNotifications = async (req, res) => {
   try {
     const userId = req.user.id || req.user._id;
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
+    const { page, limit, skip } = pagination(req.query);
 
     // TỐI ƯU QUERY: Lấy thông báo cá nhân HOẶC toàn hệ thống HOẶC thuộc nhóm được gửi
     const query = {
@@ -48,7 +49,7 @@ export const getUserNotifications = async (req, res) => {
     const mappedData = notifications.map(noti => {
       const isSystem = !noti.userId;
       return {
-        ...noti.toObject(),
+        ...noti.toObject(), targetUsers: undefined,
         isRead: isSystem ? readSystemSet.has(noti._id.toString()) : noti.isRead
       };
     });
@@ -60,7 +61,7 @@ export const getUserNotifications = async (req, res) => {
       data: mappedData 
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: 'Lỗi Server!', error: error.message });
+    return contentError(res, error);
   }
 };
 
@@ -73,6 +74,9 @@ export const markAsRead = async (req, res) => {
     const notification = await Notification.findById(id);
     if (!notification) return res.status(404).json({ success: false, message: 'Không tìm thấy!' });
 
+    const owns = notification.userId && String(notification.userId) === String(userId);
+    const visible = !notification.userId && (notification.targetAudience === 'all' || notification.targetAudience === 'group' && notification.targetUsers.some(id => String(id) === String(userId)));
+    if (!owns && !visible) return res.status(403).json({ success: false, message: 'Bạn không có quyền xem thông báo này.' });
     if (!notification.userId) {
       // Thông báo hệ thống/nhóm: Lưu vào NotificationRead
       await NotificationRead.updateOne(
@@ -115,8 +119,8 @@ export const markAllAsRead = async (req, res) => {
     const unreadIds = systemNotiIds.filter(id => !readIds.includes(id.toString()));
 
     if (unreadIds.length > 0) {
-      const bulkOps = unreadIds.map(id => ({ userId, notificationId: id }));
-      await NotificationRead.insertMany(bulkOps);
+      const bulkOps = unreadIds.map(id => ({ updateOne: { filter: { userId, notificationId: id }, update: { $setOnInsert: { userId, notificationId: id } }, upsert: true } }));
+      await NotificationRead.bulkWrite(bulkOps, { ordered: false });
     }
 
     return res.status(200).json({ success: true, message: 'Đã đánh dấu đọc tất cả!' });
@@ -193,94 +197,21 @@ export const pushNotification = async (userId, title, message, type = 'system', 
 // 1. Admin lấy toàn bộ thông báo (Giữ nguyên)
 export const getAllNotificationsAdmin = async (req, res) => {
   try {
-    const notifications = await Notification.find().sort({ createdAt: -1 });
-    return res.status(200).json({ success: true, data: notifications });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: 'Lỗi Server!' });
-  }
+    const { page, limit, skip } = pagination(req.query);
+    const search = queryText(req.query.search);
+    const filter = search ? { title: { $regex: escapeRegex(search), $options: 'i' } } : {};
+    const [data, totalCount] = await Promise.all([Notification.find(filter).select('-targetUsers').sort({ createdAt: -1, _id: -1 }).skip(skip).limit(limit), Notification.countDocuments(filter)]);
+    return res.json({ success: true, data, totalCount, currentPage: page, totalPages: Math.max(1, Math.ceil(totalCount / limit)) });
+  } catch (error) { return contentError(res, error); }
 };
-
-// 2. Admin tạo thông báo mới (ĐÃ ĐỘ THÊM SOCKET Ở CUỐI)
 export const createNotificationAdmin = async (req, res) => {
-  try {
-    const { title, message, type, linkUrl, targetAudience = 'all', userId, groupType } = req.body;
-    let targetUsersArray = [];
-
-    // XỬ LÝ LỌC NHÓM KHÁCH HÀNG 
-    if (targetAudience === 'group') {
-      let query = {};
-      if (groupType === 'premium') {
-        const now = new Date();
-        query = { 'membership.isPremium': true, 'membership.expireAt': { $gt: now } };
-      } 
-      else if (['newbie', 'normal', 'silver', 'gold', 'vip'].includes(groupType)) {
-        query = { tier: groupType };
-      } 
-      else if (groupType === 'inactive') {
-        query = { tier: 'newbie' };
-      }
-
-      const usersInGroup = await User.find(query).select('_id');
-      targetUsersArray = usersInGroup.map(u => u._id);
-
-      if (targetUsersArray.length === 0) {
-        return res.status(400).json({ success: false, message: 'Nhóm khách hàng này hiện tại không có ai!' });
-      }
-    }
-
-    // Tạo bản ghi 
-    const newNoti = new Notification({
-      userId: targetAudience === 'specific' ? userId : null,
-      title,
-      message,
-      type: type || 'system',
-      linkUrl,
-      targetAudience,
-      groupType: targetAudience === 'group' ? groupType : null,
-      targetUsers: targetUsersArray
-    });
-
-    await newNoti.save();
-
-    // ==================================================
-    // PHẦN SOCKET.IO: HÉT LÊN THEO ĐÚNG LOẠI ĐỐI TƯỢNG
-    // ==================================================
-    const io = socketUtil.getIo();
-
-    if (targetAudience === 'all') {
-      // 1. Báo cho toàn mạng (Ai đang online nhận hết)
-      io.emit('NEW_NOTIFICATION', { message: title, noti: newNoti });
-      
-    } else if (targetAudience === 'specific' && userId) {
-      // 2. Báo cho 1 ông cụ thể
-      const userSocketId = socketUtil.getUserSocket(userId.toString());
-      if (userSocketId) {
-        io.to(userSocketId).emit('NEW_NOTIFICATION', { message: title, noti: newNoti });
-      }
-      
-    } else if (targetAudience === 'group') {
-      // 3. Báo cho 1 nhóm (Duyệt qua mảng ID để gửi cho những ai đang online trong nhóm đó)
-      targetUsersArray.forEach(id => {
-        const userSocketId = socketUtil.getUserSocket(id.toString());
-        if (userSocketId) {
-          io.to(userSocketId).emit('NEW_NOTIFICATION', { message: title, noti: newNoti });
-        }
-      });
-    }
-
-    return res.status(201).json({ success: true, message: "Gửi thông báo thành công", data: newNoti });
-  } catch (error) {
-    console.error("Lỗi gửi thông báo admin:", error);
-    return res.status(500).json({ success: false, message: 'Lỗi Server!' });
-  }
+  try { return res.status(201).json({ success: true, data: await deliverNotification(req.body, req.user.id || req.user._id, req.get('Idempotency-Key')), message: 'Đã gửi thông báo.' }); }
+  catch (error) { return contentError(res, error); }
 };
-
-// 3. Admin xóa thông báo (Giữ nguyên)
 export const deleteNotificationAdmin = async (req, res) => {
   try {
-    await Notification.findByIdAndDelete(req.params.id);
-    return res.status(200).json({ success: true, message: "Đã xóa thông báo" });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: 'Lỗi Server!' });
-  }
+    if (!await Notification.findByIdAndDelete(req.params.id)) throw failure(404, 'Thông báo không còn tồn tại.');
+    await NotificationRead.deleteMany({ notificationId: req.params.id });
+    return res.json({ success: true, message: 'Đã xóa thông báo.' });
+  } catch (error) { return contentError(res, error); }
 };

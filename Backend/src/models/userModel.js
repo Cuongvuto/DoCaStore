@@ -1,6 +1,9 @@
 import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema({
+  checkoutVersion: { type: Number, default: 0 },
+  supportVersion: { type: Number, default: 0 },
+  nextNotificationAt: Date,
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },

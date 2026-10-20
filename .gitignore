@@ -1,0 +1,2 @@
+# Keep private database exports and review reports outside the deployment commit.
+/private-deploy-review/

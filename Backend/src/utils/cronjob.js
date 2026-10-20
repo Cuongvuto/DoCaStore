@@ -1,49 +1,61 @@
+import { retryUploadCleanup } from '../services/uploadService.js';
 import cron from 'node-cron';
 import Order from '../models/oderModel.js';
-import Product from '../models/productsModel.js';
-import Coupon from '../models/couponModel.js';
+import { transitionOrder, recordPayment } from '../services/orderService.js';
+import { readPaymentLink, cancelPaymentLink, abortPaymentSetup } from '../services/paymentService.js';
 
-export const startCronJobs = () => {
-  // Chạy tự động mỗi 5 phút một lần
-  cron.schedule('*/5 * * * *', async () => {
-    console.log("⏰ [CRONJOB] Đang quét dọn các đơn hàng VietQR quá hạn...");
+export async function expireOrders() {
+  const cutoff = new Date(Date.now() - 15 * 60 * 1000);
+  // Unknown legacy reservations must be reviewed before touching provider links.
+  // Filter before limit so legacy rows cannot starve new orders of maintenance.
+  const orders = await Order.find({ stockReserved: { $in: [true, false] }, paymentMethod: 'VietQR', status: 'pending', paymentStatus: 'pending', createdAt: { $lte: cutoff } }).sort({ createdAt: 1 }).limit(100);
+  for (const order of orders) {
     try {
-      // Tính mốc thời gian cách đây 15 phút
-      const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
-      
-      // Tìm các đơn VietQR đang pending và đã tạo quá 15 phút
-      const expiredOrders = await Order.find({
-        paymentMethod: 'VietQR',
-        status: 'pending',
-        createdAt: { $lt: fifteenMinutesAgo }
-      });
-
-      if(expiredOrders.length === 0) return;
-
-      for (const order of expiredOrders) {
-        // 1. Chuyển trạng thái thành Hủy
-        order.status = 'cancelled';
-        await order.save();
-
-        // 2. Hoàn lại tồn kho
-        for (const item of order.products) {
-          await Product.findByIdAndUpdate(item.productId, { $inc: { stock: item.quantity } });
-        }
-
-        // 3. Hoàn lại mã giảm giá (Nếu có)
-        if (order.couponCode) {
-          const coupon = await Coupon.findOne({ code: order.couponCode });
-          if (coupon) {
-            coupon.usedCount = Math.max(0, coupon.usedCount - 1);
-            coupon.usedBy = coupon.usedBy.filter(u => u.userId.toString() !== order.userId.toString());
-            await coupon.save();
-          }
-        }
-        
-        console.log(`♻️ Đã tự động hủy và hoàn kho đơn hàng hết hạn: ${order.payosOrderCode}`);
+      if (order.paymentLinkState === 'creating') {
+        await abortPaymentSetup(order);
+        continue;
       }
+      // Reconcile with the provider before releasing stock if the webhook was delayed.
+      const remote = await readPaymentLink(order.payosOrderCode);
+      if (remote.status === 'PAID') {
+        if (remote.amountPaid !== Math.round(order.totalPrice) || remote.amount !== Math.round(order.totalPrice)) {
+          await Order.updateOne({ _id: order._id }, { $set: { paymentReview: 'amount_mismatch' } });
+          continue;
+        }
+        const reference = remote.transactions?.[0]?.reference;
+        if (!reference) continue;
+        await recordPayment({ orderCode: order.payosOrderCode, amount: remote.amountPaid, currency: 'VND', reference });
+        continue;
+      }
+      if (remote.amountPaid > 0) {
+        await Order.updateOne({ _id: order._id }, { $set: { paymentReview: 'amount_mismatch' } });
+        continue;
+      }
+      if (!['CANCELLED', 'EXPIRED'].includes(remote.status)) await cancelPaymentLink(order.payosOrderCode, 'Quá hạn thanh toán');
+      await transitionOrder(order._id, 'cancelled', { kind: 'system' }, 'Quá hạn thanh toán');
     } catch (error) {
-      console.error("❌ Lỗi khi chạy cronjob hủy đơn:", error);
+      // A provider outage must not release inventory for a potentially paid order.
+      if (error.status !== 409) console.error('Order reconciliation:', String(order._id), error.message);
     }
-  });
+  }
+  const cancelled = await Order.find({ stockReserved: false, paymentMethod: 'VietQR', status: 'cancelled', paymentStatus: 'pending', linkCancelledAt: { $exists: false } }).sort({ createdAt: 1 }).limit(100);
+  for (const order of cancelled) {
+    try {
+      const remote = await readPaymentLink(order.payosOrderCode);
+      if (remote.status === 'PAID' && remote.transactions?.[0]?.reference) {
+        await recordPayment({ orderCode: order.payosOrderCode, amount: remote.amountPaid, currency: 'VND', reference: remote.transactions[0].reference });
+      } else if (!['CANCELLED', 'EXPIRED'].includes(remote.status)) {
+        await cancelPaymentLink(order.payosOrderCode, 'Đơn đã hủy');
+      }
+      await Order.updateOne({ _id: order._id }, { $set: { linkCancelledAt: new Date() } });
+    } catch (error) { console.error('Cancel payment link:', String(order._id), error.message); }
+  }
+}
+export const startCronJobs = () => {
+  // Explicit opt-in: starting a staging server must not cancel real payment links.
+  if (process.env.ENABLE_MAINTENANCE_JOBS !== 'true') {
+    console.info('Maintenance disabled. Set ENABLE_MAINTENANCE_JOBS=true after checking database and provider credentials.');
+    return null;
+  }
+  return cron.schedule('*/5 * * * *', async () => { try { await expireOrders(); await retryUploadCleanup(); } catch (error) { console.error('Maintenance:', error.message); } }, { noOverlap: true });
 };
