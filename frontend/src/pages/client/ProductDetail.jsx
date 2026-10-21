@@ -57,7 +57,7 @@ const ProductDetail = () => {
     }
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center font-medium text-[#5a8c76]">Đang tải siêu phẩm đồ câu...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center font-medium text-brand-700">Đang tải siêu phẩm đồ câu...</div>;
   if (!product) return <div className="text-center py-20 text-gray-500">Sản phẩm không tồn tại!</div>;
 
   const allImages = product.images?.length > 0 ? product.images : [product.imageUrl];
@@ -68,7 +68,7 @@ const ProductDetail = () => {
       <nav className="flex items-center gap-2 text-sm text-gray-400 mb-8 overflow-x-auto whitespace-nowrap">
         <span>Trang chủ</span> <ChevronRight size={14} />
         <span>Sản phẩm</span> <ChevronRight size={14} />
-        <span className="text-[#5a8c76] font-semibold">{product.name}</span>
+        <span className="text-brand-700 font-semibold">{product.name}</span>
       </nav>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
@@ -91,7 +91,7 @@ const ProductDetail = () => {
                 aria-label={`Xem ảnh ${index + 1} của ${product.name}`}
                 aria-pressed={activeImage === index}
                 className={`w-20 h-20 rounded-xl border-2 transition-all duration-300 overflow-hidden bg-gray-50 flex-shrink-0 ${
-                  activeImage === index ? 'border-[#5a8c76] scale-105 shadow-md' : 'border-transparent hover:border-gray-200'
+                  activeImage === index ? 'border-brand-700 scale-105 shadow-md' : 'border-transparent hover:border-gray-200'
                 }`}
               >
                 <img
@@ -127,14 +127,14 @@ const ProductDetail = () => {
           </div>
 
           <div className="mb-8">
-            <span className="text-4xl font-black text-[#5a8c76]">
+            <span className="text-4xl font-black text-brand-700">
               {Number(product.price).toLocaleString('vi-VN')} <span className="text-xl">VNĐ</span>
             </span>
           </div>
 
           {/* 🟢 THAY ĐỔI Ở ĐÂY: ĐƯA THÔNG SỐ KỸ THUẬT LÊN CẠNH ẢNH */}
-          <div className="bg-[#fcfdfc] p-6 rounded-2xl border border-[#e8f0ed] mb-8 animate-in fade-in duration-300">
-            <h3 className="text-lg font-bold mb-4 flex items-center gap-3 text-[#5a8c76]">
+          <div className="bg-brand-50 p-6 rounded-2xl border border-brand-200 mb-8 animate-in fade-in duration-300">
+            <h3 className="text-lg font-bold mb-4 flex items-center gap-3 text-brand-700">
               <Package size={22} /> Thông số kĩ thuật cốt lõi
             </h3>
             {/* Sử dụng font-mono và whitespace-pre-line để giữ định dạng đẹp cho specs */}
@@ -155,10 +155,10 @@ const ProductDetail = () => {
 
           {/* Nút bấm hành động */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
-            <button onClick={() => handleAddToCart(false)} disabled={adding || product.stock === 0} className="flex items-center justify-center gap-3 py-4 border-2 border-[#5a8c76] text-[#5a8c76] rounded-2xl font-black hover:bg-[#5a8c76] hover:text-white transition-all duration-300 disabled:opacity-50">
+            <button onClick={() => handleAddToCart(false)} disabled={adding || product.stock === 0} className="flex items-center justify-center gap-3 py-4 border-2 border-brand-700 text-brand-700 rounded-2xl font-black hover:bg-brand-700 hover:text-white transition-all duration-300 disabled:opacity-50">
               <ShoppingCart size={20} /> THÊM VÀO GIỎ
             </button>
-            <button onClick={() => handleAddToCart(true)} disabled={adding || product.stock === 0} className="flex items-center justify-center py-4 bg-[#5a8c76] text-white rounded-2xl font-black hover:bg-[#4a7562] shadow-xl shadow-green-100 transition-all duration-300 disabled:opacity-50">
+            <button onClick={() => handleAddToCart(true)} disabled={adding || product.stock === 0} className="flex items-center justify-center py-4 bg-sand-400 text-brand-700 rounded-2xl font-black hover:bg-sand-300 shadow-xl shadow-sand-100 transition-all duration-300 disabled:opacity-50">
               MUA NGAY
             </button>
           </div>
@@ -167,7 +167,7 @@ const ProductDetail = () => {
           <div className="grid grid-cols-3 gap-4 py-8 border-t border-gray-100 mt-auto">
             {[ { icon: Truck, text: 'Miễn phí ship', bg: 'bg-blue-50' }, { icon: ShieldCheck, text: 'Chính hãng', bg: 'bg-green-50' }, { icon: CheckCircle, text: 'Bảo hành 12th', bg: 'bg-orange-50' } ].map((item, i) => (
               <div key={i} className="flex flex-col items-center group cursor-default">
-                <div className={`w-10 h-10 rounded-full ${item.bg} flex items-center justify-center mb-2 group-hover:bg-[#5a8c76] group-hover:text-white transition-colors`}>
+                <div className={`w-10 h-10 rounded-full ${item.bg} flex items-center justify-center mb-2 group-hover:bg-brand-700 group-hover:text-white transition-colors`}>
                   <item.icon size={20} />
                 </div>
                 <span className="text-[11px] font-bold text-gray-500 uppercase tracking-tighter text-center">{item.text}</span>
@@ -185,11 +185,11 @@ const ProductDetail = () => {
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`text-xl font-black pb-4 transition-all uppercase tracking-widest relative ${
-                activeTab === tab ? 'text-[#5a8c76]' : 'text-gray-300 hover:text-gray-500'
+                activeTab === tab ? 'text-brand-700' : 'text-gray-300 hover:text-gray-500'
               }`}
             >
               {tab === 'detail' ? 'Mô tả chi tiết' : `Đánh giá (${product.numReviews || 0})`}
-              {activeTab === tab && <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#5a8c76] rounded-full" />}
+              {activeTab === tab && <div className="absolute bottom-0 left-0 right-0 h-1 bg-brand-700 rounded-full" />}
             </button>
           ))}
         </div>

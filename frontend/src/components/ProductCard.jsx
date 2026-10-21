@@ -104,7 +104,7 @@ const ProductCard = ({ product }) => {
         <div className="flex flex-col items-center">
           {/* Tên sản phẩm */}
           <Link to={`/product/${product._id}`}>
-            <h3 className="text-gray-800 font-bold text-[14px] hover:text-[#5a8c76] line-clamp-2 transition-colors leading-relaxed px-2">
+            <h3 className="text-gray-800 font-bold text-[14px] hover:text-brand-700 line-clamp-2 transition-colors leading-relaxed px-2">
               {product.name}
             </h3>
           </Link>
@@ -116,7 +116,7 @@ const ProductCard = ({ product }) => {
                 Hết hàng
               </span>
             ) : (
-              <span className="text-[12px] font-medium text-[#5a8c76]">
+              <span className="text-[12px] font-medium text-brand-700">
                 Kho: <span className="font-bold">{stock}</span>
               </span>
             )}
@@ -125,7 +125,7 @@ const ProductCard = ({ product }) => {
         
         {/* GIÁ & NÚT THÊM GIỎ HÀNG */}
         <div className="flex items-center justify-between pt-3 mt-auto px-2">
-          <span className={`font-black text-[16px] ${isOutOfStock ? 'text-gray-400 line-through' : 'text-[#5a8c76]'}`}>
+          <span className={`font-black text-[16px] ${isOutOfStock ? 'text-gray-400 line-through' : 'text-brand-700'}`}>
             {product.price?.toLocaleString('vi-VN')} đ
           </span>
           
@@ -136,7 +136,7 @@ const ProductCard = ({ product }) => {
             className={`p-2.5 rounded-full transition-all shadow-sm ${
               isOutOfStock 
                 ? 'bg-gray-100 text-gray-300 cursor-not-allowed' 
-                : 'bg-[#5a8c76] text-white hover:bg-yellow-400 hover:text-[#5a8c76] hover:-translate-y-1'
+                : 'bg-brand-700 text-white hover:bg-yellow-400 hover:text-brand-700 hover:-translate-y-1'
             }`}
           >
             <ShoppingCart size={18} />

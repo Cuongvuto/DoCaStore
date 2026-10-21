@@ -209,17 +209,17 @@ const CategoryManager = () => {
       return (
         <React.Fragment key={cat._id}>
           <div
-            className={`bg-[#19211f] rounded-xl shadow-sm border ${!cat.isActive ? 'border-dashed border-gray-700 opacity-70' : 'border-gray-700'} overflow-hidden transition-all duration-200 hover:shadow-md mb-3`}
+            className={`bg-brand-700 rounded-xl shadow-sm border ${!cat.isActive ? 'border-dashed border-gray-700 opacity-70' : 'border-gray-700'} overflow-hidden transition-all duration-200 hover:shadow-md mb-3`}
             style={{ marginLeft: `${Math.min(level, 3) * 1.5}rem` }}
           >
-            <div className={`flex flex-col sm:flex-row sm:justify-between sm:items-center p-4 transition-colors ${isTreeExpanded || isProductExpanded ? 'bg-slate-50 border-b border-gray-700' : 'hover:bg-[#101514]'}`}>
+            <div className={`flex flex-col sm:flex-row sm:justify-between sm:items-center p-4 transition-colors ${isTreeExpanded || isProductExpanded ? 'bg-brand-800 border-b border-gray-700' : 'hover:bg-brand-900'}`}>
 
               <div
                 className={`flex items-center gap-3 select-none flex-1 mb-3 sm:mb-0 ${hasChildren ? 'cursor-pointer' : ''}`}
                 onClick={() => hasChildren ? toggleTreeExpand(cat._id) : toggleExpandProducts(cat._id)}
               >
                 {/* 🟢 Nút mũi tên drop down (Chỉ hiện nếu có danh mục con) */}
-                <div className={`p-1.5 rounded-md transition-colors ${hasChildren ? (isTreeExpanded ? 'bg-[#5a8c76] text-white' : 'bg-gray-700 text-gray-300') : 'bg-transparent text-transparent'}`}>
+                <div className={`p-1.5 rounded-md transition-colors ${hasChildren ? (isTreeExpanded ? 'bg-sand-400 text-brand-700' : 'bg-gray-700 text-gray-300') : 'bg-transparent text-transparent'}`}>
                   {hasChildren ? (
                     isTreeExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />
                   ) : (
@@ -248,7 +248,7 @@ const CategoryManager = () => {
               <div className="flex items-center flex-wrap gap-2 shrink-0">
                 <button
                   onClick={() => toggleExpandProducts(cat._id)}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors border ${isProductExpanded ? 'bg-[#202c28] text-white border-gray-600' : 'text-gray-400 bg-[#202c28]/50 hover:bg-[#202c28] border-transparent'}`}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors border ${isProductExpanded ? 'bg-brand-800 text-white border-gray-600' : 'text-gray-400 bg-brand-800/50 hover:bg-brand-800 border-transparent'}`}
                 >
                   {isProductExpanded ? 'Đóng DS' : 'Xem SP'}
                 </button>
@@ -271,10 +271,10 @@ const CategoryManager = () => {
             {isProductExpanded && (
               <div className="p-4 bg-slate-50/50 animate-in fade-in slide-in-from-top-2 duration-200">
                 {categoryProducts.length > 0 ? (
-                  <div className="overflow-x-auto rounded-lg border border-gray-700 bg-[#19211f] shadow-sm">
+                  <div className="overflow-x-auto rounded-lg border border-gray-700 bg-brand-700 shadow-sm">
                     <table className="w-full text-left border-collapse text-sm">
                       <thead>
-                        <tr className="bg-[#101514] border-b border-gray-700 font-medium text-gray-400">
+                        <tr className="bg-brand-900 border-b border-gray-700 font-medium text-gray-400">
                           <th className="p-3 w-16">Ảnh</th>
                           <th className="p-3">Tên Sản Phẩm</th>
                           <th className="p-3 text-right">Giá bán</th>
@@ -284,7 +284,7 @@ const CategoryManager = () => {
                       </thead>
                       <tbody className="divide-y divide-gray-100">
                         {currentProducts.map(prod => (
-                          <tr key={prod._id} className="hover:bg-[#101514]/80">
+                          <tr key={prod._id} className="hover:bg-brand-900/80">
                             <td className="p-3">
                               <img
                                 src={(Array.isArray(prod.images) && prod.images.length > 0) ? prod.images[0] : (prod.imageUrl || 'https://picsum.photos/40')}
@@ -324,7 +324,7 @@ const CategoryManager = () => {
                     </table>
 
                     {totalPages > 1 && (
-                      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-700 bg-[#101514]">
+                      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-700 bg-brand-900">
                         <span className="text-sm text-gray-300">
                           Đang xem <span className="font-semibold">{currentProducts.length}</span> sp / Tổng số <span className="font-semibold">{categoryProducts.length}</span>
                         </span>
@@ -332,7 +332,7 @@ const CategoryManager = () => {
                           <button
                             disabled={currentPage === 1}
                             onClick={() => setCurrentPage(p => p - 1)}
-                            className="p-1.5 rounded border border-gray-700 bg-[#19211f] text-gray-300 disabled:opacity-50 hover:bg-gray-800"
+                            className="p-1.5 rounded border border-gray-700 bg-brand-700 text-gray-300 disabled:opacity-50 hover:bg-gray-800"
                           >
                             <ChevronLeft className="w-4 h-4" />
                           </button>
@@ -342,7 +342,7 @@ const CategoryManager = () => {
                           <button
                             disabled={currentPage === totalPages}
                             onClick={() => setCurrentPage(p => p + 1)}
-                            className="p-1.5 rounded border border-gray-700 bg-[#19211f] text-gray-300 disabled:opacity-50 hover:bg-gray-800"
+                            className="p-1.5 rounded border border-gray-700 bg-brand-700 text-gray-300 disabled:opacity-50 hover:bg-gray-800"
                           >
                             <ChevronRightIcon className="w-4 h-4" />
                           </button>
@@ -351,7 +351,7 @@ const CategoryManager = () => {
                     )}
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center p-6 text-gray-400 bg-[#19211f] rounded-lg border border-dashed border-gray-700">
+                  <div className="flex flex-col items-center justify-center p-6 text-gray-400 bg-brand-700 rounded-lg border border-dashed border-gray-700">
                     <Package className="w-8 h-8 text-gray-300 mb-2" />
                     <p className="text-sm">Chưa có sản phẩm nào thuộc khu vực này.</p>
                   </div>
@@ -375,12 +375,12 @@ const CategoryManager = () => {
     <div className="p-4 md:p-6 max-w-5xl mx-auto">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <h1 className="text-xl md:text-2xl font-bold text-white flex items-center gap-2">
-          <FolderTree className="w-6 h-6 text-[#5a8c76]" />
+          <FolderTree className="w-6 h-6 text-sand-400" />
           Quản lý Danh Mục
         </h1>
         <button
           onClick={() => openModal()}
-          className="w-full sm:w-auto flex items-center justify-center px-4 py-2.5 bg-[#5a8c76] text-white rounded-xl hover:bg-[#4a7562] transition-all shadow-lg shadow-[#5a8c76]/20 font-bold text-sm"
+          className="w-full sm:w-auto flex items-center justify-center px-4 py-2.5 bg-sand-400 text-brand-700 rounded-xl hover:bg-sand-300 transition-all shadow-lg shadow-brand-700/20 font-bold text-sm"
         >
           <Plus className="w-5 h-5 mr-2" /> Thêm Danh Mục
         </button>
@@ -388,11 +388,11 @@ const CategoryManager = () => {
 
       <div className="space-y-4">
         {isLoading ? (
-          <div className="p-12 text-center text-gray-500 bg-[#19211f] rounded-2xl shadow-sm border border-gray-700 font-medium">
+          <div className="p-12 text-center text-gray-500 bg-brand-700 rounded-2xl shadow-sm border border-gray-700 font-medium">
             Đang tải dữ liệu...
           </div>
         ) : categoriesTree.length === 0 ? (
-          <div className="p-12 text-center text-gray-500 bg-[#19211f] rounded-2xl shadow-sm border border-dashed border-gray-700 font-medium">
+          <div className="p-12 text-center text-gray-500 bg-brand-700 rounded-2xl shadow-sm border border-dashed border-gray-700 font-medium">
             Chưa có danh mục nào. Hãy thêm mới nhé!
           </div>
         ) : (
@@ -402,8 +402,8 @@ const CategoryManager = () => {
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-[#19211f] rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col border border-gray-700 transform transition-all">
-            <div className="flex justify-between items-center p-5 border-b border-gray-700 bg-[#19211f]">
+          <div className="bg-brand-700 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col border border-gray-700 transform transition-all">
+            <div className="flex justify-between items-center p-5 border-b border-gray-700 bg-brand-700">
               <h2 className="text-lg md:text-xl font-bold text-white tracking-wide">
                 {editingId ? 'Cập Nhật Danh Mục' : 'Thêm Danh Mục Mới'}
               </h2>
@@ -423,7 +423,7 @@ const CategoryManager = () => {
                     value={formData.name}
                     onChange={handleInputChange}
                     required
-                    className="w-full p-2.5 bg-[#101514] border border-gray-700 rounded-xl focus:ring-2 focus:ring-[#5a8c76] outline-none text-white text-sm transition-all"
+                    className="w-full p-2.5 bg-brand-900 border border-gray-700 rounded-xl focus:ring-2 focus:ring-sand-400 outline-none text-white text-sm transition-all"
                     placeholder="VD: Phụ Kiện Câu"
                     autoFocus
                   />
@@ -435,7 +435,7 @@ const CategoryManager = () => {
                     name="parentId"
                     value={formData.parentId}
                     onChange={handleInputChange}
-                    className="w-full p-2.5 bg-[#101514] border border-gray-700 rounded-xl focus:ring-2 focus:ring-[#5a8c76] outline-none text-white text-sm transition-all"
+                    className="w-full p-2.5 bg-brand-900 border border-gray-700 rounded-xl focus:ring-2 focus:ring-sand-400 outline-none text-white text-sm transition-all"
                   >
                     <option value="">-- Không có (Làm danh mục gốc) --</option>
                     {flatCategories
@@ -455,7 +455,7 @@ const CategoryManager = () => {
                     value={formData.description}
                     onChange={handleInputChange}
                     rows="2"
-                    className="w-full p-2.5 bg-[#101514] border border-gray-700 rounded-xl focus:ring-2 focus:ring-[#5a8c76] outline-none text-white text-sm transition-all resize-none"
+                    className="w-full p-2.5 bg-brand-900 border border-gray-700 rounded-xl focus:ring-2 focus:ring-sand-400 outline-none text-white text-sm transition-all resize-none"
                     placeholder="Mô tả công dụng hoặc thông tin phụ..."
                   ></textarea>
                 </div>
@@ -468,7 +468,7 @@ const CategoryManager = () => {
                     value={formData.sortOrder}
                     onChange={handleInputChange}
                     min="0"
-                    className="w-full p-2.5 bg-[#101514] border border-gray-700 rounded-xl focus:ring-2 focus:ring-[#5a8c76] outline-none text-white text-sm transition-all"
+                    className="w-full p-2.5 bg-brand-900 border border-gray-700 rounded-xl focus:ring-2 focus:ring-sand-400 outline-none text-white text-sm transition-all"
                   />
                   <p className="text-[10px] text-gray-500 mt-1 italic">Số nhỏ xếp trước (0, 1, 2...)</p>
                 </div>
@@ -480,9 +480,9 @@ const CategoryManager = () => {
                       name="isActive"
                       checked={formData.isActive}
                       onChange={handleInputChange}
-                      className="w-5 h-5 accent-[#5a8c76] border-gray-700 rounded cursor-pointer"
+                      className="w-5 h-5 accent-sand-400 border-gray-700 rounded cursor-pointer"
                     />
-                    <span className="text-sm font-bold text-gray-300 group-hover:text-[#5a8c76] transition-colors select-none uppercase tracking-tighter">
+                    <span className="text-sm font-bold text-gray-300 group-hover:text-sand-400 transition-colors select-none uppercase tracking-tighter">
                       Hiển thị danh mục
                     </span>
                   </label>
@@ -490,10 +490,10 @@ const CategoryManager = () => {
               </div>
 
               <div className="flex flex-col sm:flex-row justify-end gap-3 pt-6 border-t border-gray-700">
-                <button type="button" onClick={closeModal} className="w-full sm:w-auto px-6 py-2.5 text-gray-300 bg-[#101514] border border-gray-700 hover:bg-gray-800 rounded-xl transition-all font-bold text-sm">
+                <button type="button" onClick={closeModal} className="w-full sm:w-auto px-6 py-2.5 text-gray-300 bg-brand-900 border border-gray-700 hover:bg-gray-800 rounded-xl transition-all font-bold text-sm">
                   Hủy bỏ
                 </button>
-                <button type="submit" className="w-full sm:w-auto px-8 py-2.5 text-white bg-[#5a8c76] hover:bg-[#4a7562] rounded-xl transition-all font-bold shadow-lg shadow-[#5a8c76]/20 text-sm">
+                <button type="submit" className="w-full sm:w-auto px-8 py-2.5 text-brand-700 bg-sand-400 hover:bg-sand-300 rounded-xl transition-all font-bold shadow-lg shadow-brand-700/20 text-sm">
                   {editingId ? 'Lưu thay đổi' : 'Thêm mới'}
                 </button>
               </div>

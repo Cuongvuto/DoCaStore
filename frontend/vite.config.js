@@ -7,6 +7,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
   plugins: [react()],
+  optimizeDeps: {
+    // Prepare the article sanitizer before a lazy-loaded news page requests it.
+    include: ['dompurify'],
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

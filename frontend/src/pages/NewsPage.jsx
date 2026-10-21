@@ -1,7 +1,10 @@
+import Pagination from '../components/Pagination';
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axiosClient from '../api/axiosClient'; 
-import PageBanner from '../components/PageBanner'; 
+import { ChevronRight } from 'lucide-react';
+import OceanHero from '../components/OceanHero';
+import './StoreInfo.css';
 
 const NewsPage = () => {
   const [newsList, setNewsList] = useState([]);
@@ -43,24 +46,29 @@ const NewsPage = () => {
   };
 
   return (
-    <div className="w-full bg-gray-50 min-h-screen">
+    <div className="store-info-page w-full min-h-screen">
       
       {/* ======================================================== */}
       {/* COMPONENT BANNER TRÀN VIỀN */}
       {/* ======================================================== */}
-      <PageBanner 
-        title="TIN TỨC - KINH NGHIỆM" 
-        breadcrumbs={[
-          { name: 'Trang Chủ', link: '/' }, 
-          { name: 'TIN TỨC - KINH NGHIỆM' }
-        ]} 
-      />
+      <OceanHero>
+        <div className="store-info-container">
+          <nav className="store-info-breadcrumb" aria-label="Đường dẫn">
+            <Link to="/">Trang chủ</Link>
+            <ChevronRight size={14} aria-hidden="true" />
+            <span aria-current="page">Tin tức & kinh nghiệm</span>
+          </nav>
+          <p className="store-info-eyebrow">GÓC CHIA SẺ DOCASTORE</p>
+          <h1>Tin tức & kinh nghiệm<br /><span>Cho mỗi chuyến câu thêm trọn vẹn.</span></h1>
+          <p className="store-info-lead">Khám phá đồ nghề, chia sẻ kinh nghiệm câu cá và cập nhật những câu chuyện mới từ DocaStore.</p>
+        </div>
+      </OceanHero>
 
       {/* Khu vực chứa Grid bài viết */}
       <div className="container mx-auto px-4 py-12">
         {isLoading ? (
           <div className="text-center py-10 text-gray-500 font-bold flex justify-center items-center">
-            <svg className="animate-spin h-5 w-5 mr-3 text-[#5a8c76]" viewBox="0 0 24 24">
+            <svg className="animate-spin h-5 w-5 mr-3 text-brand-700" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
@@ -76,7 +84,7 @@ const NewsPage = () => {
                 <Link 
                   to={`/news/${item.slug}`} 
                   key={item._id} 
-                  className="block bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-lg hover:-translate-y-1 hover:border-[#5a8c76]/50 transition-all duration-300 overflow-hidden group"
+                  className="block bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-lg hover:-translate-y-1 hover:border-brand-700/50 transition-all duration-300 overflow-hidden group"
                 >
                   {/* ẢNH THUMBNAIL */}
                   <div className="overflow-hidden">
@@ -96,7 +104,7 @@ const NewsPage = () => {
                   {/* NỘI DUNG CARD */}
                   <div className="p-5">
                     {/* Tiêu đề */}
-                    <h3 className="text-lg font-bold text-gray-800 group-hover:text-[#5a8c76] transition-colors mb-3 line-clamp-2">
+                    <h3 className="text-lg font-bold text-gray-800 group-hover:text-brand-700 transition-colors mb-3 line-clamp-2">
                       {item.title}
                     </h3>
                     
@@ -117,52 +125,7 @@ const NewsPage = () => {
             {/* ======================================================== */}
             {/* 3. KHU VỰC NÚT PHÂN TRANG */}
             {/* ======================================================== */}
-            {totalPages > 1 && (
-              <div className="flex justify-center items-center gap-2 mt-12">
-                {/* Nút Trước */}
-                <button 
-                  onClick={() => paginate(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className={`px-4 py-2 rounded font-medium transition-colors ${
-                    currentPage === 1 
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                    : 'bg-white border border-gray-300 text-gray-600 hover:bg-[#5a8c76] hover:text-white hover:border-[#5a8c76]'
-                  }`}
-                >
-                  Trước
-                </button>
-
-                {/* Các số trang */}
-                <div className="flex gap-1">
-                  {[...Array(totalPages)].map((_, index) => (
-                    <button
-                      key={index + 1}
-                      onClick={() => paginate(index + 1)}
-                      className={`w-10 h-10 rounded font-bold transition-colors ${
-                        currentPage === index + 1 
-                        ? 'bg-[#5a8c76] text-white shadow-md' 
-                        : 'bg-white border border-gray-300 text-gray-600 hover:bg-gray-100'
-                      }`}
-                    >
-                      {index + 1}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Nút Sau */}
-                <button 
-                  onClick={() => paginate(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className={`px-4 py-2 rounded font-medium transition-colors ${
-                    currentPage === totalPages 
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                    : 'bg-white border border-gray-300 text-gray-600 hover:bg-[#5a8c76] hover:text-white hover:border-[#5a8c76]'
-                  }`}
-                >
-                  Sau
-                </button>
-              </div>
-            )}
+            <Pagination currentPage={currentPage} totalPages={totalPages} onChange={paginate} label="Phân trang tin tức" />
           </>
         )}
       </div>

@@ -44,12 +44,12 @@ const ProductSection = ({ title, identifier, limit = 5 }) => {
         <div className="flex justify-between items-end mb-6">
           <h2 className="text-2xl font-black text-gray-800 uppercase relative inline-block">
             {title}
-            <span className="absolute bottom-0 left-0 w-1/2 h-1 bg-[#5a8c76] rounded-full mt-2"></span>
+            <span className="absolute bottom-0 left-0 w-1/2 h-1 bg-brand-700 rounded-full mt-2"></span>
           </h2>
           
           <Link 
             to={`/category/${identifier}`}
-            className="flex items-center text-sm font-semibold text-[#5a8c76] hover:text-yellow-500 transition-colors group"
+            className="flex items-center text-sm font-semibold text-brand-700 hover:text-yellow-500 transition-colors group"
           >
             Xem tất cả
             <ChevronRight size={18} className="ml-1 group-hover:translate-x-1 transition-transform" />

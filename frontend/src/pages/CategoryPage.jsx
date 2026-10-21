@@ -1,6 +1,7 @@
+import Pagination from '../components/Pagination';
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Loader2, Search, Filter } from 'lucide-react';
+import { Loader2, Search, Filter } from 'lucide-react';
 import axiosClient from '../api/axiosClient';
 import ProductCard from '../components/ProductCard';
 import useDebouncedValue from '../hooks/useDebouncedValue';
@@ -62,7 +63,7 @@ const CategoryPage = () => {
   if (loading) {
     return (
       <div className="flex flex-col justify-center items-center h-screen gap-4 bg-gray-50">
-        <Loader2 className="animate-spin text-[#5a8c76]" size={40} />
+        <Loader2 className="animate-spin text-brand-700" size={40} />
         <p className="text-gray-500 font-medium italic">Đang tải đồ nghề cho sếp...</p>
       </div>
     );
@@ -73,7 +74,7 @@ const CategoryPage = () => {
       
       {/* --- BANNER --- */}
       <div 
-        className="relative bg-[#5a8c76] py-16 mb-8 shadow-inner bg-cover bg-center"
+        className="relative bg-brand-700 py-16 mb-8 shadow-inner bg-cover bg-center"
         style={{ backgroundImage: "url('/banner-bg.jpg')" }} 
       >
         <div className="absolute inset-0 bg-black/50"></div> 
@@ -81,7 +82,7 @@ const CategoryPage = () => {
           <h1 className="text-4xl font-black text-white uppercase tracking-[0.2em] drop-shadow-lg">
             {categoryName}
           </h1>
-          <div className="h-1.5 w-24 bg-yellow-400 mx-auto mt-5 rounded-full shadow-md"></div>
+          <div className="h-1.5 w-24 bg-sand-400 mx-auto mt-5 rounded-full shadow-md"></div>
         </div>
       </div>
 
@@ -98,7 +99,7 @@ const CategoryPage = () => {
                 setSearchTerm(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5a8c76]/40 focus:border-[#5a8c76] transition-all text-sm font-medium"
+              className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-700/40 focus:border-brand-700 transition-all text-sm font-medium"
             />
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
           </div>
@@ -111,7 +112,7 @@ const CategoryPage = () => {
                 setSortOrder(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full md:w-auto px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5a8c76]/40 focus:border-[#5a8c76] text-gray-700 cursor-pointer text-sm font-medium transition-all"
+              className="w-full md:w-auto px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-700/40 focus:border-brand-700 text-gray-700 cursor-pointer text-sm font-medium transition-all"
             >
               <option value="default">Mới nhất / Mặc định</option>
               <option value="price_asc">Giá: Thấp đến Cao</option>
@@ -123,7 +124,7 @@ const CategoryPage = () => {
         {/* --- KẾT QUẢ SẢN PHẨM --- */}
         {totalCount > 0 ? (
           <p className="text-gray-500 mb-4 text-sm font-medium">
-            Tìm thấy <strong className="text-[#5a8c76]">{totalCount}</strong> sản phẩm
+            Tìm thấy <strong className="text-brand-700">{totalCount}</strong> sản phẩm
           </p>
         ) : null}
 
@@ -141,35 +142,7 @@ const CategoryPage = () => {
         </div>
 
         {/* --- PHÂN TRANG --- */}
-        {totalPages > 1 && (
-          <div className="mt-16 flex justify-center items-center gap-3">
-             <button 
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-              className={`p-2.5 rounded-xl border transition-all ${
-                currentPage === 1 
-                ? 'text-gray-300 border-gray-100 cursor-not-allowed bg-white' 
-                : 'text-[#5a8c76] border-[#5a8c76] bg-white hover:bg-[#5a8c76] hover:text-white shadow-sm'
-              }`}
-            >
-              <ChevronLeft size={20} />
-            </button>
-            
-            <span className="font-medium text-gray-700">Trang {currentPage} / {totalPages}</span>
-            
-            <button 
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className={`p-2.5 rounded-xl border transition-all ${
-                currentPage === totalPages 
-                ? 'text-gray-300 border-gray-100 cursor-not-allowed bg-white' 
-                : 'text-[#5a8c76] border-[#5a8c76] bg-white hover:bg-[#5a8c76] hover:text-white shadow-sm'
-              }`}
-            >
-              <ChevronRight size={20} />
-            </button>
-          </div>
-        )}
+        <Pagination currentPage={currentPage} totalPages={totalPages} onChange={handlePageChange} label="Phân trang danh mục" />
       </div>
     </div>
   );

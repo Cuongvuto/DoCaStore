@@ -108,7 +108,7 @@ const Banner = () => {
               >
                 <Link 
                   to={toInternalPath(banner.linkUrl || banner.link, '/products')}
-                  className="inline-block bg-[#5a8c76] hover:bg-[#4a7562] text-white font-bold py-3 px-8 rounded-md transition-all duration-300 hover:scale-105 shadow-lg text-lg"
+                  className="inline-block bg-sand-400 hover:bg-sand-300 text-brand-700 font-bold py-3 px-8 rounded-md transition-all duration-300 hover:scale-105 shadow-lg text-lg"
                 >
                   MUA SẮM NGAY
                 </Link>
@@ -143,7 +143,7 @@ const Banner = () => {
                 key={index}
                 onClick={() => setCurrentSlide(index)}
                 className={`h-2.5 rounded-full transition-all duration-300 ${
-                  index === currentSlide ? 'bg-[#5a8c76] w-8' : 'bg-white/50 w-2.5 hover:bg-white'
+                  index === currentSlide ? 'bg-sand-400 w-8' : 'bg-white/50 w-2.5 hover:bg-white'
                 }`}
                 aria-label={`Go to slide ${index + 1}`}
               ></button>

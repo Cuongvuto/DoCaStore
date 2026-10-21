@@ -172,12 +172,12 @@ const NewsManager = () => {
   };
 
   return (
-    <div className="p-4 md:p-6 bg-[#101514] min-h-screen">
+    <div className="p-4 md:p-6 bg-brand-900 min-h-screen">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-        <h1 className="text-xl md:text-3xl font-black text-[#5a8c76] uppercase tracking-tighter">Quản lý Tin Tức</h1>
+        <h1 className="text-xl md:text-3xl font-black text-sand-400 uppercase tracking-tighter">Quản lý Tin Tức</h1>
         <button 
           onClick={() => { closeModal(); setIsModalOpen(true); }}
-          className="w-full sm:w-auto bg-[#5a8c76] text-white px-5 py-3 rounded-2xl font-bold hover:bg-[#4a7562] transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#5a8c76]/20 active:scale-95"
+          className="w-full sm:w-auto bg-sand-400 text-brand-700 px-5 py-3 rounded-2xl font-bold hover:bg-sand-300 transition-all flex items-center justify-center gap-2 shadow-lg shadow-brand-700/20 active:scale-95"
         >
           <Plus size={20} /> Viết bài mới
         </button>
@@ -185,10 +185,10 @@ const NewsManager = () => {
 
       {listError && <ErrorState message={listError} onRetry={() => fetchNews(currentPage)} />}
       {/* DANH SÁCH BÀI VIẾT */}
-      <div className="bg-[#19211f] rounded-3xl shadow-xl border border-gray-700 overflow-hidden">
+      <div className="bg-brand-700 rounded-3xl shadow-xl border border-gray-700 overflow-hidden">
         <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-left min-w-[700px]">
-            <thead className="bg-[#101514] text-gray-500 font-bold text-xs uppercase tracking-widest border-b border-gray-700">
+            <thead className="bg-brand-900 text-gray-500 font-bold text-xs uppercase tracking-widest border-b border-gray-700">
               <tr>
                 <th className="p-5 w-24">Ảnh bìa</th>
                 <th className="p-5">Tiêu đề bài viết</th>
@@ -210,7 +210,7 @@ const NewsManager = () => {
                       <p className="text-[10px] text-gray-500 mt-1.5 font-mono">/{item.slug}</p>
                     </td>
                     <td className="p-5">
-                      <span className="bg-[#5a8c76]/10 text-[#5a8c76] px-3 py-1 rounded-lg text-xs font-bold border border-[#5a8c76]/20">
+                      <span className="bg-brand-700/10 text-sand-400 px-3 py-1 rounded-lg text-xs font-bold border border-sand-400/20">
                         👁️ {item.views || 0}
                       </span>
                     </td>
@@ -241,7 +241,7 @@ const NewsManager = () => {
 
         {/* PHÂN TRANG */}
         {totalPages > 1 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-5 border-t border-gray-700 bg-[#101514]/50 gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-5 border-t border-gray-700 bg-brand-900/50 gap-4">
             <span className="text-xs md:text-sm text-gray-500">
               Trang <span className="text-white font-bold">{currentPage}</span> / <span className="text-white font-bold">{totalPages}</span> 
               <span className="hidden sm:inline"> (Tổng: {totalCount} bài)</span>
@@ -250,14 +250,14 @@ const NewsManager = () => {
               <button 
                 disabled={currentPage === 1} 
                 onClick={() => setCurrentPage(p => p - 1)} 
-                className="p-2.5 border border-gray-700 rounded-xl bg-[#19211f] text-gray-400 disabled:opacity-30 hover:bg-gray-800 transition-all"
+                className="p-2.5 border border-gray-700 rounded-xl bg-brand-700 text-gray-400 disabled:opacity-30 hover:bg-gray-800 transition-all"
               >
                 <ChevronLeft size={18}/>
               </button>
               <button 
                 disabled={currentPage === totalPages} 
                 onClick={() => setCurrentPage(p => p + 1)} 
-                className="p-2.5 border border-gray-700 rounded-xl bg-[#19211f] text-gray-400 disabled:opacity-30 hover:bg-gray-800 transition-all"
+                className="p-2.5 border border-gray-700 rounded-xl bg-brand-700 text-gray-400 disabled:opacity-30 hover:bg-gray-800 transition-all"
               >
                 <ChevronRight size={18}/>
               </button>
@@ -269,10 +269,10 @@ const NewsManager = () => {
       {/* MODAL THÊM/SỬA BÀI VIẾT (POPUP) */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto custom-scrollbar">
-          <div className="bg-[#19211f] w-full max-w-5xl rounded-3xl shadow-2xl my-auto overflow-hidden border border-gray-700 transform transition-all">
+          <div className="bg-brand-700 w-full max-w-5xl rounded-3xl shadow-2xl my-auto overflow-hidden border border-gray-700 transform transition-all">
             
-            <div className="flex justify-between items-center p-5 md:p-6 border-b border-gray-700 bg-[#19211f]">
-              <h2 className="text-lg md:text-xl font-black text-[#5a8c76] uppercase tracking-tight">
+            <div className="flex justify-between items-center p-5 md:p-6 border-b border-gray-700 bg-brand-700">
+              <h2 className="text-lg md:text-xl font-black text-sand-400 uppercase tracking-tight">
                 {editingId ? "Cập nhật bài viết" : "Soạn bài viết mới"}
               </h2>
               <button onClick={closeModal} className="p-2 hover:bg-gray-700 rounded-full transition-colors text-gray-400 hover:text-red-500">
@@ -287,13 +287,13 @@ const NewsManager = () => {
                   <div>
                     <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">Tiêu đề bài viết <span className="text-red-500">*</span></label>
                     <input type="text" required value={formData.title} onChange={handleTitleChange} 
-                      className="w-full bg-[#101514] px-4 py-3 rounded-2xl border border-gray-700 focus:ring-2 focus:ring-[#5a8c76] outline-none text-white transition-all font-bold text-sm md:text-base"
+                      className="w-full bg-brand-900 px-4 py-3 rounded-2xl border border-gray-700 focus:ring-2 focus:ring-sand-400 outline-none text-white transition-all font-bold text-sm md:text-base"
                       placeholder="VD: Kinh nghiệm chọn máy câu..." />
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">Đường dẫn SEO (Tự động)</label>
                     <input type="text" required value={formData.slug} readOnly
-                      className="w-full bg-[#101514]/50 px-4 py-3 rounded-2xl border border-gray-800 text-gray-500 outline-none font-mono text-[10px] md:text-xs cursor-not-allowed" />
+                      className="w-full bg-brand-900/50 px-4 py-3 rounded-2xl border border-gray-800 text-gray-500 outline-none font-mono text-[10px] md:text-xs cursor-not-allowed" />
                   </div>
                   
                   {/* UPLOAD FILE SECTION */}
@@ -310,15 +310,15 @@ const NewsManager = () => {
                            </button>
                         </div>
                       ) : (
-                        <label className="w-full sm:w-40 h-28 flex flex-col items-center justify-center border-2 border-dashed border-gray-700 rounded-2xl cursor-pointer hover:bg-[#101514] hover:border-[#5a8c76] transition-all group">
-                          <ImagePlus className="text-gray-500 group-hover:text-[#5a8c76] mb-1.5 transition-colors" size={28} />
-                          <span className="text-[10px] text-gray-500 font-bold uppercase tracking-tighter group-hover:text-[#5a8c76]">Chọn ảnh bìa</span>
+                        <label className="w-full sm:w-40 h-28 flex flex-col items-center justify-center border-2 border-dashed border-gray-700 rounded-2xl cursor-pointer hover:bg-brand-900 hover:border-sand-400 transition-all group">
+                          <ImagePlus className="text-gray-500 group-hover:text-sand-400 mb-1.5 transition-colors" size={28} />
+                          <span className="text-[10px] text-gray-500 font-bold uppercase tracking-tighter group-hover:text-sand-400">Chọn ảnh bìa</span>
                           <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
                         </label>
                       )}
                       <div className="flex-1 space-y-2">
                         <p className="text-[10px] md:text-xs text-gray-500 leading-relaxed font-medium italic">Kích thước khuyến nghị: 800x600px. Ảnh sẽ được tối ưu tự động.</p>
-                        {editingId && !imageFile && <p className="text-[10px] text-[#5a8c76] font-bold uppercase tracking-tighter">* Đang sử dụng ảnh cũ</p>}
+                        {editingId && !imageFile && <p className="text-[10px] text-sand-400 font-bold uppercase tracking-tighter">* Đang sử dụng ảnh cũ</p>}
                       </div>
                     </div>
                   </div>
@@ -326,7 +326,7 @@ const NewsManager = () => {
                   <div>
                     <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">Mô tả ngắn <span className="text-red-500">*</span></label>
                     <textarea required value={formData.shortDescription} onChange={(e) => setFormData({...formData, shortDescription: e.target.value})}
-                      className="w-full bg-[#101514] px-4 py-3 rounded-2xl border border-gray-700 focus:ring-2 focus:ring-[#5a8c76] outline-none text-white transition-all min-h-[120px] text-sm md:text-base leading-relaxed"
+                      className="w-full bg-brand-900 px-4 py-3 rounded-2xl border border-gray-700 focus:ring-2 focus:ring-sand-400 outline-none text-white transition-all min-h-[120px] text-sm md:text-base leading-relaxed"
                       placeholder="Viết 1-2 câu tóm tắt để thu hút người đọc..." />
                   </div>
                 </div>
@@ -334,7 +334,7 @@ const NewsManager = () => {
                 {/* Cột Phải - ReactQuill */}
                 <div className="flex flex-col min-h-[400px] md:min-h-[500px]">
                   <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">Nội dung bài viết <span className="text-red-500">*</span></label>
-                  <div className="flex-1 border border-gray-700 rounded-2xl overflow-hidden bg-[#101514] transition-all focus-within:ring-2 focus-within:ring-[#5a8c76]">
+                  <div className="flex-1 border border-gray-700 rounded-2xl overflow-hidden bg-brand-900 transition-all focus-within:ring-2 focus-within:ring-sand-400">
                     <ReactQuill 
                       theme="snow" 
                       value={formData.content} 
@@ -349,7 +349,7 @@ const NewsManager = () => {
                 <button type="button" onClick={closeModal} className="w-full sm:w-auto px-8 py-3 rounded-2xl font-bold text-gray-500 hover:bg-gray-800 transition-all text-sm uppercase tracking-wider">
                   Hủy bỏ
                 </button>
-                <button type="submit" disabled={isLoading} className="w-full sm:w-auto bg-[#5a8c76] text-white px-10 py-3 rounded-2xl font-bold hover:bg-[#4a7562] transition-all shadow-lg shadow-[#5a8c76]/20 disabled:opacity-50 active:scale-95 text-sm uppercase tracking-widest">
+                <button type="submit" disabled={isLoading} className="w-full sm:w-auto bg-sand-400 text-brand-700 px-10 py-3 rounded-2xl font-bold hover:bg-sand-300 transition-all shadow-lg shadow-brand-700/20 disabled:opacity-50 active:scale-95 text-sm uppercase tracking-widest">
                   {isLoading ? 'Đang xử lý...' : (editingId ? 'Lưu thay đổi' : 'Xuất bản ngay')}
                 </button>
               </div>

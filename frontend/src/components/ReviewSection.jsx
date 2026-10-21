@@ -85,11 +85,11 @@ const ReviewSection = ({ productId, onReviewAdded }) => {
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               placeholder="Cần câu này bén không sếp? Chia sẻ trải nghiệm cho anh em biết nhé..."
-              className="w-full p-4 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#5a8c76] focus:border-transparent outline-none min-h-[100px] text-sm"
+              className="w-full p-4 rounded-xl border border-gray-200 focus:ring-2 focus:ring-brand-700 focus:border-transparent outline-none min-h-[100px] text-sm"
             />
             <button
               disabled={loading}
-              className="absolute bottom-3 right-3 bg-[#5a8c76] text-white p-2 rounded-lg hover:bg-[#4a7562] disabled:bg-gray-400 transition-all shadow-md"
+              className="absolute bottom-3 right-3 bg-brand-700 text-white p-2 rounded-lg hover:bg-brand-800 disabled:bg-gray-400 transition-all shadow-md"
             >
               <Send size={18} />
             </button>
@@ -109,7 +109,7 @@ const ReviewSection = ({ productId, onReviewAdded }) => {
           reviews.map((rev) => (
             <div key={rev._id} className="flex gap-4 p-4 rounded-xl hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0">
               {/* Avatar khách */}
-              <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 text-[#5a8c76]">
+              <div className="w-12 h-12 rounded-full bg-brand-100 flex items-center justify-center flex-shrink-0 text-brand-700">
                 {rev.userId?.avatar ? (
                     <img src={rev.userId.avatar} alt={`Ảnh đại diện của ${rev.userId?.name || 'khách hàng'}`} loading="lazy" decoding="async" className="w-full h-full rounded-full object-cover" />
                 ) : (

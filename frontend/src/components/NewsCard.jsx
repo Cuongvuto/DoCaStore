@@ -23,12 +23,12 @@ const NewsCard = ({ news }) => {
       {/* NỘI DUNG */}
       <div className="p-4 flex flex-col flex-grow">
         <div className="flex items-center gap-2 text-xs text-gray-400 mb-2 font-medium">
-          <Calendar size={14} className="text-[#5a8c76]" />
+          <Calendar size={14} className="text-brand-700" />
           <span>{date}</span>
         </div>
         
         <Link to={slugLink}>
-          <h3 className="font-bold text-gray-800 text-[16px] group-hover:text-[#5a8c76] line-clamp-2 leading-snug mb-2 transition-colors">
+          <h3 className="font-bold text-gray-800 text-[16px] group-hover:text-brand-700 line-clamp-2 leading-snug mb-2 transition-colors">
             {news.title}
           </h3>
         </Link>

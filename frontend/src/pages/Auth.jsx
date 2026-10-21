@@ -251,7 +251,7 @@ const Auth = () => {
   return (
     <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-[url('https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=1920&auto=format&fit=crop')] bg-cover bg-center bg-no-repeat relative">
       {/* Dark overlay with gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-900/90 via-slate-900/80 to-slate-800/90 backdrop-blur-sm z-0"></div>
+      <div className="absolute inset-0 bg-gradient-to-br from-brand-900/95 via-brand-700/90 to-brand-900/95 backdrop-blur-sm z-0"></div>
 
       <div className="max-w-md w-full space-y-8 bg-white/10 backdrop-blur-xl p-10 rounded-[2.5rem] shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] relative z-10 border border-white/20 transform transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_16px_48px_0_rgba(0,0,0,0.4)]">
         <div>
@@ -270,7 +270,7 @@ const Auth = () => {
             {view === 'register' && (
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <User className="h-5 w-5 text-gray-400 group-focus-within:text-emerald-400 transition-colors duration-300" />
+                  <User className="h-5 w-5 text-gray-400 group-focus-within:text-sand-400 transition-colors duration-300" />
                 </div>
                 <input
                   type="text"
@@ -278,7 +278,7 @@ const Auth = () => {
                   value={formData.name}
                   onChange={handleChange}
                   required
-                  className="block w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:bg-white/10 focus:border-emerald-400/50 focus:ring-2 focus:ring-emerald-400/50 transition-all duration-300"
+                  className="block w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:bg-white/10 focus:border-sand-400/50 focus:ring-2 focus:ring-sand-400/50 transition-all duration-300"
                   placeholder="Họ và tên"
                 />
               </div>
@@ -288,7 +288,7 @@ const Auth = () => {
             {view !== 'reset' && view !== 'verify' && (
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400 group-focus-within:text-emerald-400 transition-colors duration-300" />
+                  <Mail className="h-5 w-5 text-gray-400 group-focus-within:text-sand-400 transition-colors duration-300" />
                 </div>
                 <input
                   type="email"
@@ -296,7 +296,7 @@ const Auth = () => {
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  className="block w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:bg-white/10 focus:border-emerald-400/50 focus:ring-2 focus:ring-emerald-400/50 transition-all duration-300"
+                  className="block w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:bg-white/10 focus:border-sand-400/50 focus:ring-2 focus:ring-sand-400/50 transition-all duration-300"
                   placeholder="Địa chỉ Email"
                 />
               </div>
@@ -307,7 +307,7 @@ const Auth = () => {
               <div className="space-y-4">
                 <div className="relative group">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <ShieldCheck className="h-5 w-5 text-gray-400 group-focus-within:text-emerald-400 transition-colors duration-300" />
+                    <ShieldCheck className="h-5 w-5 text-gray-400 group-focus-within:text-sand-400 transition-colors duration-300" />
                   </div>
                   <input
                     type="text"
@@ -316,20 +316,20 @@ const Auth = () => {
                     onChange={handleChange}
                     required
                     maxLength="6"
-                    className="block w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:bg-white/10 focus:border-emerald-400/50 focus:ring-2 focus:ring-emerald-400/50 transition-all duration-300 text-center tracking-[0.75em] font-bold text-xl"
+                    className="block w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:bg-white/10 focus:border-sand-400/50 focus:ring-2 focus:ring-sand-400/50 transition-all duration-300 text-center tracking-[0.75em] font-bold text-xl"
                     placeholder="------"
                   />
                 </div>
                 <div className="flex justify-end text-sm px-1">
                   {timer > 0 ? (
                     <span className="text-gray-400">
-                      Gửi lại mã sau <span className="text-emerald-400 font-bold">{timer}s</span>
+                      Gửi lại mã sau <span className="text-sand-400 font-bold">{timer}s</span>
                     </span>
                   ) : (
                     <button
                       type="button"
                       onClick={handleResendOTP}
-                      className="text-emerald-400 hover:text-emerald-300 font-medium transition-colors duration-200"
+                      className="text-sand-400 hover:text-sand-300 font-medium transition-colors duration-200"
                     >
                       Gửi lại mã OTP
                     </button>
@@ -342,7 +342,7 @@ const Auth = () => {
             {view !== 'forgot' && view !== 'verify' && (
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400 group-focus-within:text-emerald-400 transition-colors duration-300" />
+                  <Lock className="h-5 w-5 text-gray-400 group-focus-within:text-sand-400 transition-colors duration-300" />
                 </div>
                 <input
                   type="password"
@@ -350,7 +350,7 @@ const Auth = () => {
                   value={formData.password}
                   onChange={handleChange}
                   required
-                  className="block w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:bg-white/10 focus:border-emerald-400/50 focus:ring-2 focus:ring-emerald-400/50 transition-all duration-300"
+                  className="block w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:bg-white/10 focus:border-sand-400/50 focus:ring-2 focus:ring-sand-400/50 transition-all duration-300"
                   placeholder={view === 'reset' ? "Mật khẩu mới" : "Mật khẩu"}
                 />
               </div>
@@ -360,7 +360,7 @@ const Auth = () => {
             {view === 'reset' && (
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <KeyRound className="h-5 w-5 text-gray-400 group-focus-within:text-emerald-400 transition-colors duration-300" />
+                  <KeyRound className="h-5 w-5 text-gray-400 group-focus-within:text-sand-400 transition-colors duration-300" />
                 </div>
                 <input
                   type="password"
@@ -368,7 +368,7 @@ const Auth = () => {
                   value={formData.confirmPassword}
                   onChange={handleChange}
                   required
-                  className="block w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:bg-white/10 focus:border-emerald-400/50 focus:ring-2 focus:ring-emerald-400/50 transition-all duration-300"
+                  className="block w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:bg-white/10 focus:border-sand-400/50 focus:ring-2 focus:ring-sand-400/50 transition-all duration-300"
                   placeholder="Xác nhận mật khẩu mới"
                 />
               </div>
@@ -380,7 +380,7 @@ const Auth = () => {
               <button 
                 type="button"
                 onClick={() => setView('forgot')}
-                className="text-sm font-medium text-emerald-400 hover:text-emerald-300 transition-colors duration-200"
+                className="text-sm font-medium text-sand-400 hover:text-sand-300 transition-colors duration-200"
               >
                 Quên mật khẩu?
               </button>
@@ -391,14 +391,14 @@ const Auth = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className={`group relative w-full flex justify-center py-4 px-4 border border-transparent text-base font-bold rounded-2xl text-white ${
+              className={`group relative w-full flex justify-center py-4 px-4 border border-transparent text-base font-bold rounded-2xl ${
                 isLoading 
-                ? "bg-white/20 cursor-not-allowed" 
-                : "bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_25px_rgba(16,185,129,0.5)] transform hover:-translate-y-1"
-              } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 focus:ring-offset-slate-900 transition-all duration-300`}
+                ? "bg-white/20 text-white cursor-not-allowed"
+                : "text-brand-700 bg-gradient-to-r from-sand-400 to-sand-300 hover:from-sand-300 hover:to-sand-400 shadow-[0_0_20px_rgba(216,181,109,0.3)] hover:shadow-[0_0_25px_rgba(216,181,109,0.5)] transform hover:-translate-y-1"
+              } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sand-400 focus:ring-offset-brand-900 transition-all duration-300`}
             >
               <span className="absolute left-0 inset-y-0 flex items-center pl-4">
-                <BtnIcon className={`h-5 w-5 ${isLoading ? "text-gray-400" : "text-emerald-100 group-hover:text-white transition-colors duration-300"}`} />
+                <BtnIcon className={`h-5 w-5 ${isLoading ? "text-gray-400" : "text-brand-700 group-hover:text-brand-900 transition-colors duration-300"}`} />
               </span>
               {isLoading ? "Đang xử lý..." : btnText}
             </button>
@@ -410,7 +410,7 @@ const Auth = () => {
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-white/10"></div>
                 </div>
-                <div className="relative px-4 bg-[#0F172A]/90 text-xs text-gray-400 uppercase tracking-wider backdrop-blur-sm rounded-full py-0.5 border border-white/5">
+                <div className="relative px-4 bg-brand-900/90 text-xs text-gray-400 uppercase tracking-wider backdrop-blur-sm rounded-full py-0.5 border border-white/5">
                   Hoặc tiếp tục với
                 </div>
               </div>
@@ -434,14 +434,14 @@ const Auth = () => {
           )}
         </form>
         {pendingEmail && (view === 'login' || view === 'register') && (
-          <div className="mt-6 p-4 bg-emerald-500/10 border border-emerald-500/25 rounded-2xl flex items-center justify-between text-xs text-gray-300 backdrop-blur-md">
+          <div className="mt-6 p-4 bg-sand-400/10 border border-sand-400/25 rounded-2xl flex items-center justify-between text-xs text-gray-300 backdrop-blur-md">
             <div className="flex flex-col gap-0.5">
-              <span className="font-semibold text-emerald-400">Tài khoản chưa xác thực</span>
+              <span className="font-semibold text-sand-400">Tài khoản chưa xác thực</span>
               <span className="text-gray-400 truncate max-w-[180px]">{pendingEmail}</span>
             </div>
             <button
               onClick={() => handleResumeVerification(pendingEmail)}
-              className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl transition-all duration-200"
+              className="px-3 py-1.5 bg-sand-400 hover:bg-sand-400 text-slate-950 font-bold rounded-xl transition-all duration-200"
             >
               Xác thực ngay
             </button>

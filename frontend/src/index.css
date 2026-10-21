@@ -4,8 +4,37 @@
  
 @layer base {
   :root {
+    /* Ocean palette shared by storefront, purchase flows and admin. */
+    --brand-navy-rgb: 18 48 71;
+    --brand-navy: rgb(var(--brand-navy-rgb));
+    --brand-navy-hover-rgb: 27 66 94;
+    --brand-navy-hover: rgb(var(--brand-navy-hover-rgb));
+    --brand-navy-deep-rgb: 11 31 48;
+    --brand-navy-deep: rgb(var(--brand-navy-deep-rgb));
+    --brand-sand-rgb: 216 181 109;
+    --brand-sand: rgb(var(--brand-sand-rgb));
+    --brand-sand-hover-rgb: 228 199 141;
+    --brand-sand-hover: rgb(var(--brand-sand-hover-rgb));
+    --brand-sand-ink-rgb: 120 87 28;
+    --brand-sand-ink: rgb(var(--brand-sand-ink-rgb));
+    --brand-sand-soft-rgb: 250 244 232;
+    --brand-sand-soft: rgb(var(--brand-sand-soft-rgb));
+    --brand-surface-rgb: 244 246 248;
+    --brand-surface: rgb(var(--brand-surface-rgb));
+    --brand-soft-rgb: 234 240 245;
+    --brand-soft: rgb(var(--brand-soft-rgb));
+    --brand-soft-strong-rgb: 216 228 238;
+    --brand-soft-strong: rgb(var(--brand-soft-strong-rgb));
+    --brand-border-rgb: 220 227 233;
+    --brand-border: rgb(var(--brand-border-rgb));
+    --brand-ink-rgb: 36 52 71;
+    --brand-ink: rgb(var(--brand-ink-rgb));
+    --brand-muted-rgb: 88 107 123;
+    --brand-muted: rgb(var(--brand-muted-rgb));
+    --brand-inverse-rgb: 211 222 231;
+    --brand-inverse: rgb(var(--brand-inverse-rgb));
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --foreground: 212 33% 21%;
  
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
@@ -13,7 +42,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
  
-    --primary: 154 27% 33%;
+    --primary: 206 60% 17.5%;
     --primary-foreground: 0 0% 100%;
  
     --secondary: 210 40% 96.1%;
@@ -22,15 +51,15 @@
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
  
-    --accent: 48 96% 53%;
-    --accent-foreground: 154 27% 22%;
+    --accent: 40 58% 63.7%;
+    --accent-foreground: 206 60% 17.5%;
  
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
  
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 154 27% 33%;
+    --ring: 206 60% 35%;
  
     --radius: 0.5rem;
   }

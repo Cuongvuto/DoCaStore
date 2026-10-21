@@ -33,11 +33,11 @@ export default function ActivityChart() {
     <div className="p-5 h-[320px]">
       {error ? <ErrorState message={error} onRetry={() => setVersion(value => value + 1)} /> : loading ? <LoadingState /> : !data.some(row => row.value > 0) ? <EmptyState title="Chưa có doanh thu trong kỳ" message="Thử chọn khoảng thời gian khác." /> :
       <ResponsiveContainer width="100%" height="100%"><BarChart data={data} margin={{ top: 10, right: 0, left: 0, bottom: 5 }} accessibilityLayer>
-        <CartesianGrid vertical={false} stroke="#31413b" strokeDasharray="3 5" />
-        <XAxis dataKey="name" tick={{ fill: '#a6b7af', fontSize: 11 }} axisLine={false} tickLine={false} />
-        <YAxis width={58} tick={{ fill: '#a6b7af', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={value => new Intl.NumberFormat('vi-VN', { notation: 'compact' }).format(value)} />
-        <Tooltip contentStyle={{ backgroundColor: '#19211f', border: '1px solid #476453', borderRadius: 10, color: '#eef4f0' }} itemStyle={{ color: '#88d7ae' }} cursor={{ fill: '#ffffff08' }} formatter={value => [money(value), 'Doanh thu']} />
-        <Bar dataKey="value" fill="#88d7ae" radius={[5, 5, 0, 0]} maxBarSize={32} />
+        <CartesianGrid vertical={false} stroke="var(--admin-border)" strokeDasharray="3 5" />
+        <XAxis dataKey="name" tick={{ fill: 'var(--admin-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
+        <YAxis width={58} tick={{ fill: 'var(--admin-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={value => new Intl.NumberFormat('vi-VN', { notation: 'compact' }).format(value)} />
+        <Tooltip contentStyle={{ backgroundColor: 'var(--admin-surface)', border: '1px solid var(--admin-border)', borderRadius: 10, color: 'var(--admin-text)' }} itemStyle={{ color: 'var(--admin-accent)' }} cursor={{ fill: '#ffffff08' }} formatter={value => [money(value), 'Doanh thu']} />
+        <Bar dataKey="value" fill="var(--admin-accent)" radius={[5, 5, 0, 0]} maxBarSize={32} />
       </BarChart></ResponsiveContainer>}
     </div>
   </section>;

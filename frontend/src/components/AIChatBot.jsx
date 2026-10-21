@@ -118,26 +118,26 @@ const AIChatBot = () => {
           width: 56px;
           height: 56px;
           border-radius: 50%;
-          background: linear-gradient(135deg, #5a8c76 0%, #3d6b56 100%);
+          background: linear-gradient(135deg, var(--brand-navy) 0%, var(--brand-navy-hover) 100%);
           border: none;
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
-          box-shadow: 0 4px 20px rgba(90,140,118,0.45);
+          box-shadow: 0 4px 20px rgba(18, 48, 71,0.45);
           transition: transform 0.25s cubic-bezier(.34,1.56,.64,1), box-shadow 0.2s;
           position: relative;
           outline: none;
         }
         .ai-chat-fab:hover {
           transform: scale(1.1) rotate(-5deg);
-          box-shadow: 0 6px 28px rgba(90,140,118,0.6);
+          box-shadow: 0 6px 28px rgba(18, 48, 71,0.6);
         }
         .ai-chat-fab-pulse {
           position: absolute;
           inset: -4px;
           border-radius: 50%;
-          background: rgba(90,140,118,0.3);
+          background: rgba(18, 48, 71,0.3);
           animation: ai-pulse 2s ease-in-out infinite;
         }
         @keyframes ai-pulse {
@@ -183,7 +183,7 @@ const AIChatBot = () => {
 
         /* ===== HEADER ===== */
         .ai-chat-header {
-          background: linear-gradient(135deg, #5a8c76 0%, #3d6b56 100%);
+          background: linear-gradient(135deg, var(--brand-navy) 0%, var(--brand-navy-hover) 100%);
           padding: 16px 18px;
           display: flex;
           align-items: center;
@@ -253,7 +253,7 @@ const AIChatBot = () => {
           display: flex;
           flex-direction: column;
           gap: 12px;
-          background: #f8faf9;
+          background: var(--brand-surface);
           min-height: 200px;
           max-height: 340px;
         }
@@ -270,7 +270,7 @@ const AIChatBot = () => {
           width: 56px;
           height: 56px;
           border-radius: 50%;
-          background: linear-gradient(135deg, #5a8c76, #3d6b56);
+          background: linear-gradient(135deg, var(--brand-navy), var(--brand-navy-hover));
           display: flex;
           align-items: center;
           justify-content: center;
@@ -300,9 +300,9 @@ const AIChatBot = () => {
         .ai-chat-chip {
           padding: 6px 12px;
           border-radius: 20px;
-          border: 1.5px solid #5a8c76;
+          border: 1.5px solid var(--brand-navy);
           background: transparent;
-          color: #5a8c76;
+          color: var(--brand-navy);
           font-size: 11.5px;
           font-weight: 500;
           cursor: pointer;
@@ -310,10 +310,10 @@ const AIChatBot = () => {
           white-space: nowrap;
         }
         .ai-chat-chip:hover {
-          background: #5a8c76;
+          background: var(--brand-navy);
           color: white;
           transform: translateY(-1px);
-          box-shadow: 0 3px 10px rgba(90,140,118,0.3);
+          box-shadow: 0 3px 10px rgba(18, 48, 71,0.3);
         }
 
         /* ===== BUBBLES ===== */
@@ -338,7 +338,7 @@ const AIChatBot = () => {
           word-break: break-word;
         }
         .ai-chat-bubble--user {
-          background: linear-gradient(135deg, #5a8c76, #3d6b56);
+          background: linear-gradient(135deg, var(--brand-navy), var(--brand-navy-hover));
           color: white;
           border-bottom-right-radius: 4px;
         }
@@ -391,7 +391,7 @@ const AIChatBot = () => {
           transition: box-shadow 0.2s;
         }
         .ai-chat-inputform:focus-within {
-          box-shadow: 0 0 0 2px rgba(90,140,118,0.25);
+          box-shadow: 0 0 0 2px rgba(18, 48, 71,0.25);
           background: white;
         }
         .ai-chat-input {
@@ -408,7 +408,7 @@ const AIChatBot = () => {
           width: 36px;
           height: 36px;
           border-radius: 50%;
-          background: linear-gradient(135deg, #5a8c76, #3d6b56);
+          background: linear-gradient(135deg, var(--brand-navy), var(--brand-navy-hover));
           border: none;
           cursor: pointer;
           display: flex;
@@ -425,7 +425,7 @@ const AIChatBot = () => {
         }
         .ai-chat-send-btn:not(:disabled):hover {
           transform: scale(1.1);
-          box-shadow: 0 4px 12px rgba(90,140,118,0.4);
+          box-shadow: 0 4px 12px rgba(18, 48, 71,0.4);
         }
 
         /* ===== FOOTER LABEL ===== */

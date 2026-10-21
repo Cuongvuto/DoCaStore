@@ -42,7 +42,7 @@ const USER_ROLES = ['superadmin', 'admin'];
 const LoadingScreen = () => (
   <div className="min-h-[50vh] flex items-center justify-center bg-slate-50" role="status">
     <div className="flex items-center gap-3 text-sm font-semibold text-slate-600">
-      <span className="h-5 w-5 animate-spin rounded-full border-2 border-emerald-700 border-t-transparent" />
+      <span className="h-5 w-5 animate-spin rounded-full border-2 border-brand-700 border-t-transparent" />
       Đang tải nội dung...
     </div>
   </div>
@@ -97,10 +97,10 @@ const App = () => (
           path="*"
           element={
             <main className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-4 text-center">
-              <p className="text-7xl font-black text-emerald-800">404</p>
+              <p className="text-7xl font-black text-brand-800">404</p>
               <h1 className="mt-4 text-2xl font-bold text-slate-900">Không tìm thấy trang</h1>
               <p className="mt-2 text-slate-600">Đường dẫn bạn truy cập không tồn tại hoặc đã được thay đổi.</p>
-              <a href="/" className="mt-6 rounded-xl bg-emerald-800 px-5 py-3 font-bold text-white">
+              <a href="/" className="mt-6 rounded-xl bg-brand-800 px-5 py-3 font-bold text-white">
                 Về trang chủ
               </a>
             </main>

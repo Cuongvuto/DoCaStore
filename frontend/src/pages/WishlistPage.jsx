@@ -51,16 +51,16 @@ const WishlistPage = () => {
       <div className="container mx-auto px-4 py-12">
         {isLoading ? (
            <div className="flex flex-col justify-center items-center py-20">
-              <div className="w-10 h-10 border-4 border-[#5a8c76] border-t-transparent rounded-full animate-spin"></div>
+              <div className="w-10 h-10 border-4 border-brand-700 border-t-transparent rounded-full animate-spin"></div>
               <p className="mt-4 text-gray-500 font-medium">Đang tải danh sách yêu thích...</p>
            </div>
         ) : displayedItems.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-2xl shadow-sm border border-gray-100 max-w-2xl mx-auto">
-            <h2 className="text-2xl font-black text-[#5a8c76] mb-4 uppercase">Danh sách trống</h2>
+            <h2 className="text-2xl font-black text-brand-700 mb-4 uppercase">Danh sách trống</h2>
             <p className="text-gray-500 mb-8 font-medium">Sếp chưa lưu sản phẩm nào vào danh sách yêu thích.</p>
             <Link 
               to="/products" 
-              className="bg-[#5a8c76] text-white px-8 py-3 rounded-full hover:bg-yellow-400 hover:text-[#5a8c76] font-bold transition-all shadow-md active:scale-95 uppercase tracking-wide"
+              className="bg-brand-700 text-white px-8 py-3 rounded-full hover:bg-yellow-400 hover:text-brand-700 font-bold transition-all shadow-md active:scale-95 uppercase tracking-wide"
             >
               Khám phá ngay
             </Link>

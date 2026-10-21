@@ -35,13 +35,13 @@ const LatestNews = () => {
         
         <div className="flex justify-between items-end mb-8">
           <h2 className="text-2xl font-black text-gray-800 uppercase relative inline-flex items-center gap-2">
-            <Newspaper className="text-[#5a8c76]" size={28} />
+            <Newspaper className="text-brand-700" size={28} />
             Góc chia sẻ
-            <span className="absolute bottom-0 left-0 w-1/2 h-1 bg-[#5a8c76] rounded-full mt-2"></span>
+            <span className="absolute bottom-0 left-0 w-1/2 h-1 bg-brand-700 rounded-full mt-2"></span>
           </h2>
           <Link 
             to="/news" 
-            className="flex items-center text-sm font-semibold text-[#5a8c76] hover:text-yellow-500 transition-colors group"
+            className="flex items-center text-sm font-semibold text-brand-700 hover:text-yellow-500 transition-colors group"
           >
             Xem tất cả
             <ChevronRight size={18} className="ml-1 group-hover:translate-x-1 transition-transform" />

@@ -337,7 +337,7 @@ const NewsDetail = () => {
           font-size: 1.5rem;
           font-weight: 800;
           margin: 2rem 0 1rem;
-          border-left: 5px solid #5a8c76;
+          border-left: 5px solid var(--brand-navy);
           padding-left: 10px;
         }
 

@@ -70,7 +70,7 @@ const TrendingProducts = () => {
     <section className="py-16 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
       {/* Tiêu đề */}
       <div className="flex justify-between items-end mb-8">
-        <h2 className="text-2xl md:text-3xl font-bold text-gray-800 uppercase inline-block pb-2 border-b-4 border-[#5a8c76]">
+        <h2 className="text-2xl md:text-3xl font-bold text-gray-800 uppercase inline-block pb-2 border-b-4 border-brand-700">
           🔥 Sản Phẩm Nổi Bật
         </h2>
         
@@ -78,13 +78,13 @@ const TrendingProducts = () => {
         <div className="hidden md:flex gap-2">
           <button 
             onClick={() => scroll("left")} 
-            className="p-2 rounded-full border border-gray-300 text-gray-500 hover:bg-[#5a8c76] hover:text-white hover:border-[#5a8c76] transition-colors"
+            className="p-2 rounded-full border border-gray-300 text-gray-500 hover:bg-brand-700 hover:text-white hover:border-brand-700 transition-colors"
           >
             <ChevronLeft size={20} />
           </button>
           <button 
             onClick={() => scroll("right")} 
-            className="p-2 rounded-full border border-gray-300 text-gray-500 hover:bg-[#5a8c76] hover:text-white hover:border-[#5a8c76] transition-colors"
+            className="p-2 rounded-full border border-gray-300 text-gray-500 hover:bg-brand-700 hover:text-white hover:border-brand-700 transition-colors"
           >
             <ChevronRight size={20} />
           </button>
@@ -120,7 +120,7 @@ const TrendingProducts = () => {
       <div className="text-center mt-4">
         <Link 
           to="/products" 
-          className="inline-block border-2 border-[#5a8c76] text-[#5a8c76] hover:bg-[#5a8c76] hover:text-white font-semibold py-2.5 px-8 rounded-lg transition-all duration-300 hover:shadow-lg"
+          className="inline-block border-2 border-brand-700 text-brand-700 hover:bg-brand-700 hover:text-white font-semibold py-2.5 px-8 rounded-lg transition-all duration-300 hover:shadow-lg"
         >
           Xem Tất Cả Sản Phẩm
         </Link>

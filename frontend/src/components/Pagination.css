@@ -1,0 +1,9 @@
+.store-pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px; margin: 48px 0 12px; }
+.store-pagination-pages { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.store-pagination button { display: inline-flex; justify-content: center; align-items: center; gap: 6px; min-width: 44px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--brand-border, #dce3e9); border-radius: 9px; background: #fff; color: var(--brand-navy, #123047); font-size: 14px; font-weight: 650; transition: background .15s, color .15s, border-color .15s; }
+.store-pagination button:hover:not(:disabled) { background: var(--brand-soft, #eaf0f5); border-color: var(--brand-navy, #123047); }
+.store-pagination button[aria-current=page], .store-pagination button[aria-current=page]:hover { background: var(--brand-navy, #123047); color: #fff; border-color: var(--brand-navy, #123047); box-shadow: inset 0 -3px 0 var(--brand-sand, #d8b56d); opacity: 1; }
+.store-pagination button:disabled { background: var(--brand-surface, #f4f6f8); color: #657585; border-color: var(--brand-border, #dce3e9); cursor: not-allowed; }
+.store-pagination button:focus-visible { outline: 3px solid var(--brand-sand-ink, #78571c); outline-offset: 3px; }
+.store-pagination-gap { display: grid; place-items: center; min-width: 20px; color: var(--brand-muted, #586b7b); }
+@media (max-width: 480px) { .store-pagination { gap: 10px; margin-top: 32px; } .store-pagination-pages { order: 3; flex-basis: 100%; } .store-pagination-step { flex: 1; max-width: 150px; } }

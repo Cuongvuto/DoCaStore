@@ -16,17 +16,17 @@ const Home = () => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center divide-y md:divide-y-0 md:divide-x divide-gray-200">
                   <div className="flex flex-col items-center p-4">
-                      <ShieldCheck size={40} className="text-[#5a8c76] mb-3" />
+                      <ShieldCheck size={40} className="text-brand-700 mb-3" />
                       <h3 className="font-bold text-gray-800 text-lg">Hàng Chính Hãng 100%</h3>
                       <p className="text-gray-500 text-sm mt-1">Đảm bảo chất lượng từ Shimano, Daiwa</p>
                   </div>
                   <div className="flex flex-col items-center p-4">
-                      <Truck size={40} className="text-[#5a8c76] mb-3" />
+                      <Truck size={40} className="text-brand-700 mb-3" />
                       <h3 className="font-bold text-gray-800 text-lg">Giao Hàng Toàn Quốc</h3>
                       <p className="text-gray-500 text-sm mt-1">Nhận hàng kiểm tra rồi mới thanh toán</p>
                   </div>
                   <div className="flex flex-col items-center p-4">
-                      <Clock size={40} className="text-[#5a8c76] mb-3" />
+                      <Clock size={40} className="text-brand-700 mb-3" />
                       <h3 className="font-bold text-gray-800 text-lg">Hỗ Trợ 24/7</h3>
                       <p className="text-gray-500 text-sm mt-1">Tư vấn kỹ thuật câu và chọn đồ miễn phí</p>
                   </div>
