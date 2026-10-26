@@ -2,6 +2,8 @@
 
 **Dự án:** DocaStore
 
+**Cập nhật bảo mật tài khoản 22/10/2026 (local, chưa deploy):** thêm giới hạn API xác thực theo IP/email bằng MongoDB, thu hồi JWT sau reset mật khẩu/đổi quyền và kiểm tra lại phiên socket. Bổ sung form đổi mật khẩu tại Hồ sơ, API kiểm tra mật khẩu hiện tại và thu hồi phiên cũ. Backend 95/95 test đạt; frontend build và ESLint phần sửa đạt. Xem [test case bảo mật và điều kiện nghiệm thu](docs/AUTH_SECURITY_TEST_CASES.md). Google/SMTP thật và thao tác trình duyệt chưa được nghiệm thu trong đợt này.
+
 **Cập nhật chuẩn bị triển khai 19/10/2026:** xem [sửa lỗi ưu tiên, kiểm thử và điều kiện deploy lại](docs/DEPLOY_READINESS.md). Nội dung phía dưới ghi nhận đợt cải tiến trước đó.
 
 **Ngày hoàn thành:** 31/07/2026

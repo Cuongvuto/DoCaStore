@@ -1,18 +1,20 @@
 import { useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ArrowRight, BadgeCheck, ChevronRight, Clock3, Leaf, LifeBuoy, MapPin, PackageCheck, ShoppingBag, User, Wallet } from 'lucide-react';
+import { ArrowRight, BadgeCheck, ChevronRight, Clock3, Leaf, LifeBuoy, LockKeyhole, MapPin, PackageCheck, ShoppingBag, User, Wallet } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { PurchaseAlert, PurchaseCard, PurchaseLoading } from '../components/purchase/PurchaseUI';
 import { addressText, dateTime, money, orderLabels } from '../components/purchase/purchaseFormat';
 import ProfileAddresses from '../components/profile/ProfileAddresses';
 import ProfileOrders from '../components/profile/ProfileOrders';
 import ProfileSupport from '../components/profile/ProfileSupport';
+import ProfilePassword from '../components/profile/ProfilePassword';
 import { ProfileEmpty } from '../components/profile/ProfileUI';
 import useProfileResource from '../components/profile/useProfileResource';
 import './Profile.css';
 
 const tabs = [
   { id: 'info', label: 'Tổng quan tài khoản', icon: User },
+  { id: 'password', label: 'Đổi mật khẩu', icon: LockKeyhole },
   { id: 'orders', label: 'Đơn hàng của tôi', icon: ShoppingBag },
   { id: 'addresses', label: 'Sổ địa chỉ', icon: MapPin },
   { id: 'chat', label: 'Lịch sử hỗ trợ', icon: LifeBuoy },
@@ -30,6 +32,7 @@ function ProfileOverview({ user, ordersResource, addressesResource }) {
     <div className="profile-stats"><Link to="/profile?tab=orders"><span className="profile-stat-icon"><ShoppingBag size={20} /></span><div><strong>{count}</strong><span>Đơn đã đặt</span></div><ArrowRight size={15} /></Link><Link to="/profile?tab=orders&status=pending"><span className="profile-stat-icon"><Clock3 size={20} /></span><div><strong>{ordersResource.loading || ordersResource.error ? '—' : pending}</strong><span>Chờ xác nhận</span></div><div className="profile-stat-dot" /></Link><div><span className="profile-stat-icon"><Wallet size={20} /></span><div><strong>{money(user.totalSpent)}</strong><span>Chi tiêu từ đơn hoàn tất</span></div></div></div>
     <PurchaseCard title="Thông tin tài khoản" icon={User} action={user.isVerified && <span className="purchase-badge"><BadgeCheck size={13} /> Đã xác thực</span>}>
       <dl className="profile-details"><div><dt>Họ và tên</dt><dd>{user.name}</dd></div><div><dt>Địa chỉ email</dt><dd>{user.email}</dd></div><div><dt>Hạng thành viên</dt><dd>{tierLabels[user.tier] || tierLabels.newbie}</dd></div><div><dt>Ngày tham gia</dt><dd>{user.createdAt ? new Date(user.createdAt).toLocaleDateString('vi-VN') : 'Chưa có thông tin'}</dd></div></dl>
+      <Link className="cart-button cart-button-outline profile-password-shortcut" to="/profile?tab=password"><LockKeyhole size={16} aria-hidden="true" /> Đổi mật khẩu</Link>
     </PurchaseCard>
     <PurchaseCard title="Đơn hàng gần đây" icon={PackageCheck} action={<Link className="purchase-text-button" to="/profile?tab=orders">Xem tất cả</Link>}>
       {ordersResource.loading ? <PurchaseLoading /> : ordersResource.error ? <PurchaseAlert onRetry={ordersResource.refresh}>{ordersResource.error}</PurchaseAlert> : !orders.length ? <ProfileEmpty icon={ShoppingBag} title="Bạn chưa có đơn hàng nào" description="Những món đồ bạn chọn sẽ được lưu lại ở đây." /> : <div className="profile-recent-orders">{orders.slice(0, 3).map(order => <Link key={order._id} to={'/order-success/' + order._id}><span className="profile-recent-icon"><ShoppingBag size={19} /></span><div><strong>Đơn #{String(order._id).slice(-6).toUpperCase()}</strong><span>{dateTime(order.createdAt)}</span></div><span className={'profile-status profile-status-' + order.status}>{orderLabels[order.status] || 'Đang cập nhật'}</span><strong>{money(order.totalPrice)}</strong><ChevronRight size={16} /></Link>)}</div>}
@@ -59,6 +62,7 @@ function ProfileContent() {
       </aside>
       <div className="profile-content">
         {activeTab === 'info' && <ProfileOverview user={user} ordersResource={ordersResource} addressesResource={addressesResource} />}
+        {activeTab === 'password' && <ProfilePassword />}
         {activeTab === 'orders' && <ProfileOrders key={searchParams.get('status') || 'all'} resource={ordersResource} initialStatus={searchParams.get('status')} />}
         {activeTab === 'addresses' && <ProfileAddresses resource={addressesResource} />}
         {activeTab === 'chat' && <ProfileSupport userId={user._id || user.id} />}

@@ -21,9 +21,11 @@ import messageRoutes from './routes/messageRoutes.js'; // Added message routes
 import { askBot } from './controller/chatController.js'; // AI chat handler
 import cors from 'cors';
 import { startCronJobs } from './utils/cronjob.js'; 
+import { configureProxy } from './config/proxy.js';
 
 const PORT = process.env.PORT || 5001;
 const app = express();
+configureProxy(app);
 
 // 1. BỌC EXPRESS BẰNG HTTP SERVER ĐỂ CHẠY SOCKET
 const server = http.createServer(app);

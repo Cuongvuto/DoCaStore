@@ -13,7 +13,7 @@ import { useAuth } from './AuthContext';
 const NotificationContext = createContext(null);
 
 export const NotificationProvider = ({ children }) => {
-  const { user, token } = useAuth();
+  const { user, token, logout } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
 
   const socket = useMemo(() => {
@@ -46,17 +46,29 @@ export const NotificationProvider = ({ children }) => {
     const handleNotification = () => {
       void fetchUnreadCount();
     };
+    const handleAuthError = error => {
+      if (['AUTH_REQUIRED', 'AUTH_INVALID'].includes(error.message)) logout();
+    };
+    const handleDisconnect = reason => {
+      if (reason === 'io server disconnect') logout();
+    };
 
     socket.on('connect', handleNotification);
     socket.on('NEW_NOTIFICATION', handleNotification);
+    socket.on('AUTH_REVOKED', logout);
+    socket.on('connect_error', handleAuthError);
+    socket.on('disconnect', handleDisconnect);
     socket.connect();
 
     return () => {
       socket.off('connect', handleNotification);
       socket.off('NEW_NOTIFICATION', handleNotification);
+      socket.off('AUTH_REVOKED', logout);
+      socket.off('connect_error', handleAuthError);
+      socket.off('disconnect', handleDisconnect);
       socket.disconnect();
     };
-  }, [socket, fetchUnreadCount]);
+  }, [socket, fetchUnreadCount, logout]);
 
   const decreaseUnreadCount = useCallback(() => {
     setUnreadCount((previous) => Math.max(previous - 1, 0));

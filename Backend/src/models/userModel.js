@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema({
+  tokenVersion: { type: Number, default: 0 },
   checkoutVersion: { type: Number, default: 0 },
   supportVersion: { type: Number, default: 0 },
   nextNotificationAt: Date,

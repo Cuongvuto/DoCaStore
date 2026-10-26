@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner"; 
 import { Mail, Lock, User, LogIn, UserPlus, ArrowRight, ArrowLeft, KeyRound, ShieldCheck } from "lucide-react"; 
 import axiosClient from "../api/axiosClient";
@@ -7,11 +7,12 @@ import { useAuth } from "../context/AuthContext";
 
 const Auth = () => {
   const { token } = useParams(); 
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { login } = useAuth();
 
   // Thêm state 'verify' vào danh sách
-  const [view, setView] = useState(token ? 'reset' : 'login'); 
+  const [view, setView] = useState(token ? 'reset' : searchParams.get('view') === 'forgot' ? 'forgot' : 'login');
   const [isLoading, setIsLoading] = useState(false);
   
   const [formData, setFormData] = useState({

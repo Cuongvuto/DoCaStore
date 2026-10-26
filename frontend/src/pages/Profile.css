@@ -1,4 +1,20 @@
 .profile-heading { padding-bottom: 34px; }
+.profile-password-shortcut { margin-top: 24px; }
+.profile-password-form { max-width: 540px; }
+.profile-password-note, .profile-password-help { color: var(--brand-muted); font-size: 13px; line-height: 1.85; }
+.profile-password-note { margin-bottom: 24px; }
+.profile-password-field { margin-bottom: 20px; }
+.profile-password-field label { display: block; margin-bottom: 8px; font-size: 13px; font-weight: 600; color: var(--brand-ink); }
+.profile-password-input { display: flex; border: 1px solid var(--brand-border); border-radius: 9px; overflow: hidden; background: #fff; }
+.profile-password-input:focus-within { outline: 2px solid var(--brand-navy); outline-offset: 2px; }
+.profile-password-input input { width: 100%; min-width: 0; padding: 12px 14px; font-size: 16px; color: var(--brand-ink); background: transparent; border: 0; outline: none; }
+.profile-password-input button { display: grid; place-items: center; min-width: 44px; min-height: 44px; color: var(--brand-muted); }
+.profile-password-input button:hover { background: var(--brand-soft); }
+.profile-password-input button:focus-visible { outline: 2px solid var(--brand-navy); outline-offset: -3px; }
+.profile-password-form fieldset:disabled { opacity: .65; }
+.profile-password-actions { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; margin-top: 24px; }
+.profile-password-help { padding-top: 24px; margin-top: 24px; border-top: 1px solid var(--brand-border); }
+.profile-password-help a { color: var(--brand-navy); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
 .profile-layout { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 30px; align-items: start; }
 .profile-sidebar { position: sticky; top: var(--store-header-offset, 110px); background: #fff; border: 1px solid var(--cart-line); border-radius: 16px; overflow: hidden; }
 .profile-identity { text-align: center; padding: 28px 18px 25px; border-bottom: 1px solid var(--brand-border); }

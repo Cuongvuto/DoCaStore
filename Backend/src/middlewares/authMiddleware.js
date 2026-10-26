@@ -1,5 +1,4 @@
-import jwt from 'jsonwebtoken';
-import User from '../models/userModel.js';
+import { authenticateSession } from '../services/sessionService.js';
 import { STAFF_ROLES } from '../config/roles.js';
 
 export const verifyToken = async (req, res, next) => {
@@ -14,15 +13,7 @@ export const verifyToken = async (req, res, next) => {
     }
 
     const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id).select('_id role isVerified');
-    if (!user || !user.isVerified) {
-      return res.status(401).json({
-        success: false,
-        message: 'Tài khoản không còn hợp lệ hoặc chưa được xác thực.'
-      });
-    }
-    req.user = { ...decoded, id: user._id.toString(), role: user.role };
+    req.user = await authenticateSession(token);
     next();
   } catch (error) {
     return res.status(401).json({

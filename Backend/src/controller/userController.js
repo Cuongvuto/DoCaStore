@@ -8,6 +8,7 @@ import crypto from 'crypto';
 import { sendEmail } from '../utils/sendEmail.js';
 import { sendVerificationOTP } from '../utils/sendEmail.js';
 import { ALL_ROLES, canGrantRole, canManageAccount } from '../config/roles.js';
+import socketUtil from '../utils/socket.js';
 
 export const createUser = async (req, res) => {
   try {
@@ -256,7 +257,7 @@ export const logIn = async(req,res)=>{
     //ktra xem dien du chua
     const {email, password} = req.body;
 
-    if(!email || !password){
+    if(typeof email !== 'string' || !email.trim() || typeof password !== 'string' || !password){
       return res.status(400).json({
         success: false,
         message: 'Vui lòng nhập đầy đủ thông tin !'
@@ -292,9 +293,9 @@ export const logIn = async(req,res)=>{
 
     //Mật khẩu đúng -> Tạo Thẻ thông hành (JWT)
     const token = jwt.sign(
-      {id: user._id, role: user.role},
+      {id: user._id, role: user.role, tokenVersion: user.tokenVersion ?? 0},
       process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN }  /// thoi han token
+      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     );
 
     //Trả về kết quả cho Client
@@ -343,6 +344,7 @@ export const deleteUser = async (req,res) =>{
     }
 
     await targetUser.deleteOne();
+    socketUtil.revokeUser(userId);
 
    return res.status(200).json({
       success: true,
@@ -551,15 +553,56 @@ export const resetPassword = async (req, res) => {
     // Consume exactly this still-valid token in the same write as the password.
     const updated = await User.findOneAndUpdate(
       { _id: user._id, isVerified: true, resetPasswordToken, resetPasswordExpire: { $gt: new Date() } },
-      { $set: { password }, $unset: { resetPasswordToken: 1, resetPasswordExpire: 1 } },
+      { $set: { password }, $inc: { tokenVersion: 1 }, $unset: { resetPasswordToken: 1, resetPasswordExpire: 1 } },
       { new: true }
     );
     if (!updated) return res.status(409).json({ success: false, message: 'Mã đặt lại đã được sử dụng, thay đổi hoặc hết hạn.' });
+    socketUtil.revokeUser(user._id);
 
     res.status(200).json({ success: true, message: 'Đổi mật khẩu thành công! Bạn có thể đăng nhập ngay.' });
 
   } catch (error) {
     res.status(500).json({ success: false, message: 'Lỗi server', error: error.message });
+  }
+};
+
+// Change only the authenticated account; never accept a target user ID from the body.
+export const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword, confirmPassword } = req.body || {};
+    if (typeof currentPassword !== 'string' || !currentPassword || currentPassword.length > 1024
+      || typeof newPassword !== 'string' || newPassword.length < 8 || typeof confirmPassword !== 'string') {
+      return res.status(400).json({ success: false, message: 'Vui lòng nhập mật khẩu hiện tại, mật khẩu mới từ 8 ký tự và xác nhận mật khẩu.' });
+    }
+    if (Buffer.byteLength(newPassword, 'utf8') > 72) {
+      return res.status(400).json({ success: false, message: 'Mật khẩu mới quá dài. Vui lòng rút ngắn mật khẩu.' });
+    }
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ success: false, message: 'Xác nhận mật khẩu mới chưa khớp.' });
+    }
+    const user = await User.findById(req.user.id);
+    if (!user?.isVerified || (user.tokenVersion ?? 0) !== req.user.tokenVersion) {
+      return res.status(401).json({ success: false, message: 'Phiên đăng nhập đã hết hiệu lực. Vui lòng đăng nhập lại.' });
+    }
+    if (!await bcrypt.compare(currentPassword, user.password)) {
+      return res.status(400).json({ success: false, message: 'Mật khẩu hiện tại không chính xác.' });
+    }
+    if (await bcrypt.compare(newPassword, user.password)) {
+      return res.status(400).json({ success: false, message: 'Mật khẩu mới phải khác mật khẩu hiện tại.' });
+    }
+    const password = await bcrypt.hash(newPassword, 10);
+    const updated = await User.findOneAndUpdate({
+      _id: user._id, isVerified: true, password: user.password,
+      $expr: { $eq: [{ $ifNull: ['$tokenVersion', 0] }, req.user.tokenVersion] },
+    }, {
+      $set: { password }, $inc: { tokenVersion: 1 },
+      $unset: { resetPasswordToken: 1, resetPasswordExpire: 1 },
+    }, { returnDocument: 'after' });
+    if (!updated) return res.status(409).json({ success: false, message: 'Thông tin bảo mật vừa thay đổi. Vui lòng đăng nhập lại trước khi thử tiếp.' });
+    socketUtil.revokeUser(user._id);
+    return res.json({ success: true, message: 'Đổi mật khẩu thành công. Vui lòng đăng nhập lại bằng mật khẩu mới.' });
+  } catch {
+    return res.status(500).json({ success: false, message: 'Chưa thể đổi mật khẩu. Vui lòng thử lại sau.' });
   }
 };
 
@@ -614,10 +657,18 @@ export const changeUserRole = async (req, res) => {
       });
     }
 
-    targetUser.role = role;
-    await targetUser.save();
-    const updatedUser = targetUser.toObject();
-    delete updatedUser.password;
+    let savedUser = targetUser;
+    if (targetUser.role !== role) {
+      savedUser = await User.findOneAndUpdate(
+        { _id: userId, role: targetUser.role },
+        { $set: { role }, $inc: { tokenVersion: 1 } },
+        { returnDocument: 'after', runValidators: true }
+      );
+      if (!savedUser) return res.status(409).json({ success: false, message: 'Quyền tài khoản vừa thay đổi. Vui lòng tải lại danh sách.' });
+      socketUtil.revokeUser(userId);
+    }
+    const updatedUser = savedUser.toObject();
+    for (const field of ['password', 'verifyOtp', 'otpExpires', 'resetPasswordToken', 'resetPasswordExpire', 'tokenVersion']) delete updatedUser[field];
 
     return res.status(200).json({
       success: true,
@@ -747,7 +798,7 @@ export const googleLogin = async (req, res) => {
 
     // Tạo JWT Token
     const token = jwt.sign(
-      { id: user._id, role: user.role },
+      { id: user._id, role: user.role, tokenVersion: user.tokenVersion ?? 0 },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     );
