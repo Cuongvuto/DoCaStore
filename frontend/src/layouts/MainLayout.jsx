@@ -8,6 +8,12 @@ const AIChatBot = lazy(() => import('../components/AIChatBot'));
 
 const MainLayout = () => {
   const [showAssistant, setShowAssistant] = useState(false);
+  const [assistantOpenRequest, setAssistantOpenRequest] = useState(0);
+
+  const openAssistant = () => {
+    setShowAssistant(true);
+    setAssistantOpenRequest(value => value + 1);
+  };
 
   useEffect(() => {
     const schedule = window.requestIdleCallback || ((callback) => window.setTimeout(callback, 1200));
@@ -18,14 +24,15 @@ const MainLayout = () => {
 
   return (
     <div className="flex flex-col min-h-screen">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-brand-700 focus:px-4 focus:py-3 focus:font-semibold focus:text-white">Bỏ qua điều hướng đến nội dung</a>
       <Header />
-      <main className="flex-grow bg-gray-50">
-        <RouteErrorBoundary><Outlet /></RouteErrorBoundary>
+      <main id="main-content" tabIndex={-1} className="flex-grow bg-gray-50">
+        <RouteErrorBoundary><Outlet context={{ openAssistant }} /></RouteErrorBoundary>
       </main>
       <Footer />
       {showAssistant && (
         <Suspense fallback={null}>
-          <AIChatBot />
+          <AIChatBot openRequest={assistantOpenRequest} />
         </Suspense>
       )}
     </div>

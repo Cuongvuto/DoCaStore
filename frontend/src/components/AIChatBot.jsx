@@ -36,7 +36,7 @@ const renderBotText = (text) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-const AIChatBot = () => {
+const AIChatBot = ({ openRequest = 0 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([]); // { role: 'user'|'bot', text: string }
   const [inputText, setInputText] = useState('');
@@ -44,6 +44,10 @@ const AIChatBot = () => {
   const [hasNewMsg, setHasNewMsg] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (openRequest > 0) setIsOpen(true);
+  }, [openRequest]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {

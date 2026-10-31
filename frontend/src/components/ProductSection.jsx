@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import axiosClient from '../api/axiosClient';
@@ -7,34 +7,27 @@ import ProductCard from './ProductCard';
 const ProductSection = ({ title, identifier, limit = 5 }) => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [retry, setRetry] = useState(0);
 
   useEffect(() => {
+    const controller = new AbortController();
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        // Lưu ý: Đảm bảo đường dẫn này khớp 100% với Backend của bạn (/product/category hay /products/category)
-        const res = await axiosClient.get(`/product/category/${identifier}?limit=${limit}`);
-        
-        let data = res.data?.data || [];
-        
-        if (data.length > limit) {
-           data = data.slice(0, limit);
-        }
-        
-        setProducts(data);
-        console.log(`[DEBUG] Data của danh mục "${title}" (ID: ${identifier}):`, data); // Hiển thị ở F12
-      } catch (error) {
-        console.error(`[LỖI] Không tải được danh mục ${title}:`, error);
+        setError(false);
+        const res = await axiosClient.get(`/product/category/${encodeURIComponent(identifier)}`, { params: { limit }, signal: controller.signal });
+        if (!controller.signal.aborted) setProducts(Array.isArray(res.data?.data) ? res.data.data.slice(0, limit) : []);
+      } catch {
+        if (!controller.signal.aborted) setError(true);
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     };
 
-    if (identifier) fetchProducts();
-  }, [identifier, limit, title]);
-
-  // Tạm tắt dòng dưới đây để nếu danh mục bị rỗng, nó vẫn hiện Tiêu đề để bạn biết web không bị lỗi
-  // if (!loading && products.length === 0) return null;
+    if (identifier) void fetchProducts();
+    return () => controller.abort();
+  }, [identifier, limit, retry]);
 
   return (
     <section className="py-10 bg-white border-b border-gray-100">
@@ -57,20 +50,21 @@ const ProductSection = ({ title, identifier, limit = 5 }) => {
         </div>
 
         {/* LƯỚI SẢN PHẨM */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6" aria-busy={loading}>
           {loading ? (
-            [...Array(limit)].map((_, index) => (
-              <div key={index} className="bg-gray-100 rounded-xl h-[350px] animate-pulse"></div>
-            ))
+            <><span className="sr-only" role="status">Đang tải sản phẩm…</span>{[...Array(limit)].map((_, index) => (
+              <div key={index} className="aspect-[3/4] animate-pulse rounded-xl bg-brand-100" aria-hidden="true" />
+            ))}</>
+          ) : error ? (
+            <div className="col-span-full rounded-xl border border-brand-200 bg-brand-50 p-6 text-center text-brand-700" role="alert">Chưa tải được sản phẩm trong danh mục này. <button type="button" onClick={() => setRetry(value => value + 1)} className="font-semibold underline">Thử lại</button></div>
           ) : (
             products.length > 0 ? (
               products.map((product) => (
                 <ProductCard key={product._id} product={product} />
               ))
             ) : (
-              // Báo lỗi ra màn hình nếu không có sản phẩm nào
-              <div className="col-span-full py-10 text-center text-red-500 italic border-2 border-dashed border-red-200 rounded-xl">
-                ⚠️ Chưa có sản phẩm nào cho danh mục <b>{identifier}</b>. <br/> Hãy check lại xem truyền đúng "slug" hoặc "ID" chưa nhé!
+              <div className="col-span-full rounded-xl border border-dashed border-brand-200 bg-brand-50 py-10 text-center text-brand-700">
+                Chưa có sản phẩm trong danh mục này. <Link to="/products" className="font-semibold underline">Xem tất cả sản phẩm</Link>
               </div>
             )
           )}

@@ -1,0 +1,32 @@
+@media (max-width: 767px) {
+  .product-catalog-hero {
+    padding-top: 12px;
+    padding-bottom: 16px;
+  }
+
+  .product-catalog-hero .store-info-breadcrumb {
+    margin-bottom: 12px;
+  }
+
+  .product-catalog-hero .store-info-eyebrow {
+    margin-bottom: 8px;
+  }
+
+  .product-catalog-hero h1 {
+    font-size: clamp(24px, 7vw, 30px);
+    line-height: 1.18;
+  }
+
+  .product-catalog-hero .store-info-lead {
+    margin-top: 10px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+}
+
+@media (max-width: 1023px) {
+  body:has(.product-catalog-page) .ai-chat-widget:not(:has(.ai-chat-panel)) {
+    display: none;
+  }
+}

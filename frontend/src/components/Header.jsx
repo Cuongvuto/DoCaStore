@@ -45,6 +45,7 @@ export default function Header() {
   const [categoryLoading, setCategoryLoading] = useState(true);
   const [categoryError, setCategoryError] = useState(false);
   const [categoryVersion, setCategoryVersion] = useState(0);
+  const [activeCategoryId, setActiveCategoryId] = useState(null);
   const [menu, setMenu] = useState(null);
   const routeKey = location.key + ':' + (user?._id || user?.id || 'guest');
   const openMenu = menu?.routeKey === routeKey ? menu.name : null;
@@ -102,6 +103,9 @@ export default function Header() {
     : categoryError
       ? <div className="store-menu-feedback" role="alert">Chưa tải được danh mục. <button type="button" onClick={() => setCategoryVersion(value => value + 1)}>Thử lại</button></div>
       : !categories.length ? <p className="store-menu-feedback">Danh mục đang được cập nhật. Bạn có thể xem tất cả sản phẩm.</p> : null;
+  const activeCategory = categories.find(category => category._id === activeCategoryId)
+    || categories.find(category => category.children?.length > 0)
+    || categories[0];
   const initials = (user?.name || '').trim().split(/\s+/).slice(-2).map(part => part[0]).join('').toLocaleUpperCase('vi-VN');
   const currentSearch = location.pathname === '/products' ? new URLSearchParams(location.search).get('search') || '' : '';
 
@@ -123,12 +127,43 @@ export default function Header() {
       </div>
     </div>
     <div className="store-navigation-bar"><div className="store-header-container store-navigation-inner">
-      <div className="store-categories" ref={categoryRoot}><button type="button" ref={categoryButton} className="store-category-toggle" onClick={() => toggle('categories')} aria-expanded={openMenu === 'categories'} aria-controls="store-category-navigation"><LayoutGrid size={16} />Danh mục sản phẩm<ChevronDown size={13} /></button>
-        {openMenu === 'categories' && <nav id="store-category-navigation" className="store-category-menu" aria-label="Danh mục sản phẩm"><div className="store-category-menu-heading"><div><span>KHÁM PHÁ DOCA STORE</span><h2>Chọn đồ nghề cho chuyến câu</h2></div><Link to="/products" onClick={close}>Tất cả sản phẩm <ArrowRight size={15} /></Link></div>{categoryFeedback}<div className="store-category-grid">{!categoryLoading && !categoryError && categories.map(category => <div key={category._id}><Link className="store-category-parent" to={'/category/' + encodeURIComponent(category.slug)} onClick={close}>{category.name}<ChevronRight size={14} /></Link>{category.children?.length > 0 && <ul>{category.children.map(child => <li key={child._id}><Link to={'/category/' + encodeURIComponent(child.slug)} onClick={close}>{child.name}</Link></li>)}</ul>}</div>)}</div></nav>}
+      <div className="store-categories" ref={categoryRoot}><button type="button" ref={categoryButton} className="store-category-toggle" onClick={() => toggle('categories')} aria-expanded={openMenu === 'categories'} aria-controls="store-category-navigation"><LayoutGrid size={16} aria-hidden="true" />Danh mục sản phẩm<ChevronDown size={13} aria-hidden="true" /></button>
+        {openMenu === 'categories' && <nav id="store-category-navigation" className={`store-category-menu${categoryFeedback ? ' is-feedback' : ''}`} aria-label="Danh mục sản phẩm">
+          <div className="store-category-menu-heading">
+            <div><h2>Danh mục sản phẩm</h2><p>Chọn nhóm đồ câu bạn muốn khám phá</p></div>
+            <Link to="/products" onClick={close}>Tất cả sản phẩm <ArrowRight size={16} aria-hidden="true" /></Link>
+          </div>
+          {categoryFeedback || <div className="store-category-menu-body">
+            <div className="store-category-list" role="group" aria-label="Nhóm sản phẩm">
+              {categories.map(category => <button
+                key={category._id}
+                type="button"
+                className="store-category-choice"
+                aria-pressed={activeCategory?._id === category._id}
+                aria-controls="store-category-details"
+                onClick={() => setActiveCategoryId(category._id)}
+                onMouseEnter={() => setActiveCategoryId(category._id)}
+                onFocus={() => setActiveCategoryId(category._id)}
+              >
+                <span>{category.name}</span>
+                <ChevronRight size={16} aria-hidden="true" />
+              </button>)}
+            </div>
+            {activeCategory && <div className="store-category-details" id="store-category-details" role="region" aria-label={`Danh mục con của ${activeCategory.name}`}>
+              <div className="store-category-details-heading">
+                <div><span>ĐANG XEM</span><h3>{activeCategory.name}</h3></div>
+                <Link to={'/category/' + encodeURIComponent(activeCategory.slug)} onClick={close}>Xem cả nhóm <ArrowRight size={16} aria-hidden="true" /></Link>
+              </div>
+              {activeCategory.children?.length > 0 ? <ul className="store-category-children">
+                {activeCategory.children.map(child => <li key={child._id}><Link to={'/category/' + encodeURIComponent(child.slug)} onClick={close}>{child.name}<ChevronRight size={15} aria-hidden="true" /></Link></li>)}
+              </ul> : <div className="store-category-empty"><p>Nhóm này chưa chia thành danh mục con.</p><Link to={'/category/' + encodeURIComponent(activeCategory.slug)} onClick={close}>Xem sản phẩm trong nhóm <ArrowRight size={16} aria-hidden="true" /></Link></div>}
+            </div>}
+          </div>}
+        </nav>}
       </div>
       <nav className="store-navigation" aria-label="Điều hướng chính">{navigation.map(item => <NavLink key={item.to} to={item.to} end={item.end} onClick={close} className={({ isActive }) => isActive || (item.to === '/products' && /^\/(category|product)\//.test(location.pathname)) ? 'store-nav-link store-nav-active' : 'store-nav-link'}>{item.label}</NavLink>)}</nav>
       <span className="store-tagline"><span />Đồng hành cùng cần thủ</span>
     </div></div>
-    {openMenu === 'mobile' && <nav id="store-mobile-navigation" className="store-mobile-panel" ref={mobilePanel} aria-label="Điều hướng trên điện thoại"><div className="store-mobile-links">{navigation.map(item => <NavLink key={item.to} to={item.to} end={item.end} onClick={close}>{item.label}<ChevronRight size={15} /></NavLink>)}</div><div className="store-mobile-categories"><h2>Danh mục sản phẩm</h2>{categoryFeedback}{!categoryLoading && !categoryError && categories.map(category => category.children?.length ? <details key={category._id}><summary>{category.name}<ChevronDown size={15} /></summary><Link to={'/category/' + encodeURIComponent(category.slug)} onClick={close}>Xem tất cả {category.name.toLocaleLowerCase('vi-VN')}</Link>{category.children.map(child => <Link key={child._id} to={'/category/' + encodeURIComponent(child.slug)} onClick={close}>{child.name}</Link>)}</details> : <Link key={category._id} to={'/category/' + encodeURIComponent(category.slug)} onClick={close}>{category.name}<ChevronRight size={14} /></Link>)}</div><div className="store-mobile-quick"><Link to="/wishlist" onClick={close}><Heart size={16} />Yêu thích{user && wishlist?.length > 0 && <span>{wishlist.length}</span>}</Link><Link to="/profile?tab=orders" onClick={close}><Package size={16} />Đơn hàng của tôi</Link></div></nav>}
+    {openMenu === 'mobile' && <nav id="store-mobile-navigation" className="store-mobile-panel" ref={mobilePanel} aria-label="Điều hướng trên điện thoại"><div className="store-mobile-links">{navigation.map(item => <NavLink key={item.to} to={item.to} end={item.end} onClick={close}>{item.label}<ChevronRight size={15} /></NavLink>)}</div><div className="store-mobile-categories"><div className="store-mobile-categories-heading"><h2>Danh mục sản phẩm</h2><Link to="/products" onClick={close}>Xem tất cả <ArrowRight size={15} aria-hidden="true" /></Link></div>{categoryFeedback}{!categoryLoading && !categoryError && categories.map(category => category.children?.length ? <details key={category._id}><summary>{category.name}<ChevronDown size={15} aria-hidden="true" /></summary><Link to={'/category/' + encodeURIComponent(category.slug)} onClick={close}>Xem tất cả {category.name.toLocaleLowerCase('vi-VN')}</Link>{category.children.map(child => <Link key={child._id} to={'/category/' + encodeURIComponent(child.slug)} onClick={close}>{child.name}</Link>)}</details> : <Link key={category._id} to={'/category/' + encodeURIComponent(category.slug)} onClick={close}>{category.name}<ChevronRight size={14} aria-hidden="true" /></Link>)}</div><div className="store-mobile-quick"><Link to="/wishlist" onClick={close}><Heart size={16} />Yêu thích{user && wishlist?.length > 0 && <span>{wishlist.length}</span>}</Link><Link to="/profile?tab=orders" onClick={close}><Package size={16} />Đơn hàng của tôi</Link></div></nav>}
   </header>;
 }
